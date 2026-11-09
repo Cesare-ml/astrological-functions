@@ -38,3 +38,16 @@ test('aspect orb exact boundary and directional source ownership',()=>{
   assert.equal(reverse[0].source.name,'Sun');
   assert.throws(()=>calculateCrossAspects({direction:'NONE',sourcePoints:a,targetPoints:b,aspectDefinitions:defs}),e=>e.code==='INVALID_DIRECTION');
 });
+
+test('experimental provider boundary accepts only apparent Earth-centered ecliptic-of-date', async()=>{
+  const { calculateNatalWithProvider } = await import('../src/index.mjs');
+  const input={datetimeUtc:'2026-11-09T12:00:00Z',latitudeDeg:44.8,longitudeDegEast:11.9,bodyNames:['Sun']};
+  const good={getGeocentricEcliptic:async()=>({longitudeDeg:359.5,latitudeDeg:0,longitudeSpeedDegPerDay:1,
+    metadata:{center:'EARTH',frame:'ECLIPTIC_OF_DATE',corrections:'APPARENT',engineVersion:'synthetic-test'}})};
+  const result=await calculateNatalWithProvider({...input,provider:good});
+  assert.equal(result.bodies.Sun.zodiacSignIndex,11);
+  assert.equal(result.houses,null);
+  const geometric={getGeocentricEcliptic:async()=>({longitudeDeg:359,latitudeDeg:0,
+    metadata:{center:'EARTH',frame:'J2000',corrections:'GEOMETRIC'}})};
+  await assert.rejects(()=>calculateNatalWithProvider({...input,provider:geometric}),e=>e.code==='INCOMPATIBLE_EPHEMERIS');
+});
