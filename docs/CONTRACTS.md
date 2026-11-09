@@ -93,3 +93,10 @@ Stage API changes as versioned pure functions; route production via backend comp
 `virgostars-ephemeris` now has experimental `projectGeometricJ2000` and `solveOneWayLightTime`. They provide an **approximate mean ecliptic J2000 geometric projection** and a **light-time-only retarded vector**, respectively. Neither satisfies `EphemerisProvider.getGeocentricEcliptic` for `APPARENT/ECLIPTIC_OF_DATE`. Do NOT relax `calculateNatalWithProvider`'s current metadata checks or reinterpret these as the positions of a real tropical natal chart.
 
 The dependent milestone is [Ephemeris E3 issue #4](https://github.com/Cesare-ml/virgostars-ephemeris/issues/4), itself blocked on official real-kernel validation [issue #3](https://github.com/Cesare-ml/virgostars-ephemeris/issues/3). `astrological-functions` remains on a mock ephemeris until both precision and semantics are demonstrated. No code or production behavior changes implied.
+
+
+## IAU 2006 mean precession available upstream — 2026-11-09
+
+The public Ephemeris PR #1 now includes independent IAU 2006 P03 bias+precession and geometric **MEAN_ECLIPTIC_OF_DATE** projection. Its numerical matrix/mean obliquity formulas were tested against ERFA conformance reference values: **5/5 new tests passed** on Node 22, maximum observed absolute matrix-element error ~1.1e-16; see [IAU 2006 benchmark](https://github.com/Cesare-ml/VirgoStars-Ephemeris/blob/docs/astrology-engines-foundation-20261109/docs/IAU2006_MEAN_PRECESSION.md).
+
+This is **not** true/apparent ecliptic of date. It intentionally omits nutation, aberration, and date-frame rates. **Do not change** `calculateNatalWithProvider` to accept `MEAN_ECLIPTIC_OF_DATE/GEOMETRIC` as `ECLIPTIC_OF_DATE/APPARENT`. The public Ephemeris SPK parser still awaits genuine NASA DE440s scientific validation; the 5 new precession tests do not close that gate. All production integration remains deferred.
