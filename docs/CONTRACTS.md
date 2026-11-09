@@ -86,3 +86,10 @@ This is a **shape proposal, not a real result**. Existing VirgoStars `NatalChart
 ## Consumer compatibility
 
 Stage API changes as versioned pure functions; route production via backend compatibility layer. Renderer uses positions and aspect facts provided; backend separately enriches with any private knowledge.
+
+
+## Ephemeris E3 dependency — 9 November 2026
+
+`virgostars-ephemeris` now has experimental `projectGeometricJ2000` and `solveOneWayLightTime`. They provide an **approximate mean ecliptic J2000 geometric projection** and a **light-time-only retarded vector**, respectively. Neither satisfies `EphemerisProvider.getGeocentricEcliptic` for `APPARENT/ECLIPTIC_OF_DATE`. Do NOT relax `calculateNatalWithProvider`'s current metadata checks or reinterpret these as the positions of a real tropical natal chart.
+
+The dependent milestone is [Ephemeris E3 issue #4](https://github.com/Cesare-ml/virgostars-ephemeris/issues/4), itself blocked on official real-kernel validation [issue #3](https://github.com/Cesare-ml/virgostars-ephemeris/issues/3). `astrological-functions` remains on a mock ephemeris until both precision and semantics are demonstrated. No code or production behavior changes implied.
