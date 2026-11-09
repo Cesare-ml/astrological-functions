@@ -15,4 +15,4 @@
 9. Work on branches/PR; manually run documented tests **only when code exists**. Do not introduce GitHub Actions or claim unexecuted test success.
 10. Before public release, perform an explicit source/license/privacy review and decide outbound licensing. This private repo **does not currently grant a public reuse license**.
 
-Labels: DESIGNED, IMPLEMENTED_ISOLATED, VALIDATED_LOCAL, RELEASE_CANDIDATE, RELEASED. Current status is DESIGNED.
+Labels: DESIGNED, IMPLEMENTED_ISOLATED, VALIDATED_LOCAL, RELEASE_CANDIDATE, RELEASED. Current status is IMPLEMENTED_ISOLATED for synthetic math and mock-provider tests; full astronomical integration remains DESIGNED.
