@@ -4,17 +4,17 @@
 
 ## Source
 
-- `src/index.mjs`: `normalize360`, `signedAngularDistance`, `angularSeparation`, `zodiacSignIndex`, `dodecatemoriaLongitude`, `locateLongitudeInHouses`, `calculateCrossAspects`.
+- `src/index.mjs`: `calculateNatalWithProvider` (strict provider contract on apparent Earth-centered ecliptic-of-date data), `normalize360`, `signedAngularDistance`, `angularSeparation`, `zodiacSignIndex`, `dodecatemoriaLongitude`, `locateLongitudeInHouses`, `calculateCrossAspects`.
 - `test/math.test.mjs`: synthetic tests covering 360° wrap, cusps, exact/near orb and A→B/B→A directional aspect facts.
 - `package.json`: dependency-free Node.js ESM, Node >=20, `private: true`, `npm test`.
 
 ## Local validation evidence
 
-Node.js 22.16.0; command: `npm test`; result: **3 passed, 0 failed** in the isolated prototype workspace. The Git blob hashes of the committed `src/index.mjs` and `test/math.test.mjs` matched the locally tested source files. No GitHub Actions were used.
+Node.js 22.16.0; command: `npm test`; result: **4 passed, 0 failed** in the isolated prototype workspace. The Git blob hashes of the committed `src/index.mjs` and `test/math.test.mjs` matched the locally tested source files. No GitHub Actions were used.
 
 ## Deliberate limitations
 
-This code is mathematically testable but does not calculate real planet positions, lunar nodes, house cusps or a complete natal chart. It expects house cusps from an upstream method and rejects non-forward house arrangements. A real `EphemerisProvider` integration is still future work. Synthetic compatibility does not establish correctness against Swiss Ephemeris or JPL Horizons.
+This code is mathematically testable but does not calculate real planet positions, lunar nodes, house cusps or a complete natal chart. It expects house cusps from an upstream method and rejects non-forward house arrangements. A real `EphemerisProvider` integration is still future work. The mock-provider test verifies frame/corrections boundaries and intentionally rejects the current geometric J2000 SPK output. Synthetic compatibility does not establish correctness against Swiss Ephemeris or JPL Horizons.
 
 ## Next steps
 
