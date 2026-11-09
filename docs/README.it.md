@@ -1,6 +1,6 @@
 # Astrological Functions — sintesi italiana
 
-**Stato: progettazione. Repository privato; possibile apertura futura, non ancora autorizzata.**
+**Stato: prototipo isolato di matematica astrologica e contratto provider, con 4 test locali superati. Repository privato; possibile apertura futura non autorizzata.**
 
 `astrological-functions` raccoglierà soltanto le funzioni astrologiche riutilizzabili (tema natale, posizioni zodiacali, case, aspetti, sinastria, transiti, rivoluzioni, sinodi, ore planetarie ed eventuali estensioni). Non è un duplicato del backend; alcune routine legacy rimarranno applicative o saranno abbandonate dopo verifica.
 
