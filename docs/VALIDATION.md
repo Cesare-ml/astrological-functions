@@ -44,3 +44,10 @@ Suggested states: `DESIGNED -> IMPLEMENTED_ISOLATED -> VALIDATED_LOCAL -> BACKEN
 ## Release prohibition
 
 No production migration while: ephemeris accuracy unspecified; legacy critical methods untested; source provenance unresolved; unsupported body returns fake data; no rollback; or unsound timezone/observer defaults.
+
+
+## Executed standalone V8 test logic — 9 November 2026
+
+The exact GitHub `src/index.mjs` and `test/math.test.mjs` blobs from the active feature branch were executed in an isolated JavaScript V8 runtime, with `node:test` and `node:assert/strict` semantics adapted for that runtime. **4/4 existing test cases passed**, including the async mock `calculateNatalWithProvider` test that rejects geometric J2000 data for apparent-of-date natal requirements.
+
+Independently, the upstream public Ephemeris branch ran **33/33 test cases** in a similar V8 execution of the actual GitHub JavaScript source (including IAU 2000B full nutation), with binary/URL adapters where necessary. These are NOT full native Node.js `npm test` results, and neither group represents real NASA/JPL SPK/Horizons scientific validation. The strict `APPARENT/ECLIPTIC_OF_DATE` contract remains unchanged.
