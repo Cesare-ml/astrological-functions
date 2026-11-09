@@ -8,7 +8,7 @@
 
 Build a modular, testable, framework-independent JavaScript/TypeScript library for astrology. Its independent astronomical backend is planned to be [VirgoStars Ephemeris](https://github.com/Cesare-ml/virgostars-ephemeris), which uses NASA/JPL SPK data rather than Swiss Ephemeris. Do not vendor Swiss Ephemeris or copy code from it.
 
-The source of existing VirgoStars behavior remains the private monorepo `Cesare-ml/virgo-stars` until migration is tested and approved. This library may extract/reimplement **selected** methods: it is *not* a promise to migrate every legacy script.
+**Language boundary:** This library stays in **TypeScript**; its independent astronomical dependency will have a **single Rust core** exposed to JS/TS via WASM, and separately to Python via PyO3/maturin. No astronomy algorithms are duplicated here. See [ADR-0001](docs/ADR-0001-RUST-CORE-AND-BINDINGS.md).\n\nThe source of existing VirgoStars behavior remains the private monorepo `Cesare-ml/virgo-stars` until migration is tested and approved. This library may extract/reimplement **selected** methods: it is *not* a promise to migrate every legacy script.
 
 ### Inside this package
 
@@ -29,7 +29,7 @@ The source of existing VirgoStars behavior remains the private monorepo `Cesare-
 
 ## Documentation
 
-- [Architecture and package boundaries](docs/ARCHITECTURE.md)
+- [Architecture and package boundaries](docs/ARCHITECTURE.md)\n- [Rust Ephemeris dependency and bindings — ADR-0001](docs/ADR-0001-RUST-CORE-AND-BINDINGS.md)
 - [Legacy extraction inventory](docs/MIGRATION_INVENTORY.md)
 - [Roadmap and migration gates](docs/ROADMAP.md)
 - [Contracts with Ephemeris](docs/CONTRACTS.md)
