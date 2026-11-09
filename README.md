@@ -2,7 +2,7 @@
 
 **Private extraction and redesign workspace for the astrological calculations used by VirgoStars and Astrolabio.**
 
-**Status: DOCUMENTATION / DESIGN ONLY.** This repository is not yet a working package or the production source of truth. Public release is possible later, only after code provenance, dependency licenses, and privacy/security reviews.
+**Status: ISOLATED EXPERIMENTAL PROTOTYPE, NOT PRODUCTION.** The initial pure-math Node.js package and local tests exist on the feature branch; this is not yet a complete astrology engine, public package or production source of truth. Public release is possible later, only after code provenance, dependency licenses, and privacy/security reviews.
 
 ## Mission
 
@@ -43,3 +43,9 @@ The source of existing VirgoStars behavior remains the private monorepo `Cesare-
 No production changes, DB migrations, precomputation rewrites, Astrolabio field updates, npm release, public switch or GitHub Actions as a side effect of extraction.
 
 **License:** no public reuse license has yet been granted by this private repository. MIT is a candidate for **original, legally cleared** code; deciding to publish requires a separate review and explicit approval.
+
+## Implementation checkpoint — 9 November 2026
+
+The first independent **pure-math** implementation is now proposed in PR #1: `src/index.mjs` provides angle normalization, zodiac sign indices, dodecatemoria, forward-ordered house-cusp placement and directional aspect calculations with caller-defined aspect angles/orbs. It has **no Swiss import**, no DB and no interpretation content. Node.js 22.16.0 local tests: **3/3 passed** on synthetic mathematical cases (not a real astronomical integration test). The exact source/test Git blobs were checked against the locally executed copies. `package.json` is private to prevent accidental publishing. The `EphemerisProvider` interface remains designed but **not yet wired to a real ephemeris**.
+
+See [implementation checkpoint](docs/IMPLEMENTATION_CHECKPOINT_2026-11-09.md). No VirgoStars route, database, frontend, deployed Astrolabio or public repository visibility was modified.
