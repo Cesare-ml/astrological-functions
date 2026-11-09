@@ -100,3 +100,10 @@ The dependent milestone is [Ephemeris E3 issue #4](https://github.com/Cesare-ml/
 The public Ephemeris PR #1 now includes independent IAU 2006 P03 bias+precession and geometric **MEAN_ECLIPTIC_OF_DATE** projection. Its numerical matrix/mean obliquity formulas were tested against ERFA conformance reference values: **5/5 new tests passed** on Node 22, maximum observed absolute matrix-element error ~1.1e-16; see [IAU 2006 benchmark](https://github.com/Cesare-ml/VirgoStars-Ephemeris/blob/docs/astrology-engines-foundation-20261109/docs/IAU2006_MEAN_PRECESSION.md).
 
 This is **not** true/apparent ecliptic of date. It intentionally omits nutation, aberration, and date-frame rates. **Do not change** `calculateNatalWithProvider` to accept `MEAN_ECLIPTIC_OF_DATE/GEOMETRIC` as `ECLIPTIC_OF_DATE/APPARENT`. The public Ephemeris SPK parser still awaits genuine NASA DE440s scientific validation; the 5 new precession tests do not close that gate. All production integration remains deferred.
+
+
+## Ephemeris IAU 2000B true-of-date capability — 9 November 2026
+
+The public ephemeris PR #1 adds a complete IAU 2000B 77-term nutation series, including ERFA/BSD numerical data attribution, and `GEOMETRIC/TRUE_ECLIPTIC_OF_DATE` projection in an explicit approximate IAU 2006/2000B combination. Independent JS mathematical checks against ERFA `nut00b` and `num00b` passed at approximately 1e-20 radians and 5.6e-17 matrix-element residuals. Five new Node cases were added but were not rerun with the full test suite.
+
+This still **does not satisfy** `calculateNatalWithProvider` (which requires Earth-centered `APPARENT/ECLIPTIC_OF_DATE` with consistent reference model, light time and aberration). Do not infer longitudinal motion or station state from `velocityKmPerSec:null`. Maintain the strict rejection in the adapter until the upstream real NASA kernel, apparent correction and rate validation gates (#3 and #4) pass.
