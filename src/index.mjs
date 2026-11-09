@@ -82,3 +82,40 @@ export function calculateCrossAspects({direction,sourcePoints,targetPoints,aspec
   }
   return Object.freeze(matches);
 }
+
+/**
+ * Experimental provider boundary. Providers must supply apparent geocentric
+ * ecliptic-of-date positions. Current VirgoStars Ephemeris SPK prototype only
+ * supplies geometric J2000 vectors and therefore CANNOT satisfy this yet.
+ */
+export async function calculateNatalWithProvider({ datetimeUtc, latitudeDeg, longitudeDegEast, bodyNames, provider }) {
+  if (typeof datetimeUtc !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(datetimeUtc) ||
+      Number.isNaN(Date.parse(datetimeUtc)))
+    throw new AstrologyError('INVALID_UTC', 'Explicit ISO UTC instant ending Z is required');
+  finite(latitudeDeg, 'latitudeDeg'); finite(longitudeDegEast, 'longitudeDegEast');
+  if (latitudeDeg < -90 || latitudeDeg > 90 || longitudeDegEast < -180 || longitudeDegEast > 180)
+    throw new AstrologyError('INVALID_COORDINATES', 'Geographic coordinates outside valid bounds');
+  if (!Array.isArray(bodyNames) || bodyNames.length === 0 || bodyNames.length > 32 ||
+      bodyNames.some(n => typeof n !== 'string' || !n.trim()) || new Set(bodyNames).size !== bodyNames.length)
+    throw new AstrologyError('INVALID_BODIES', '1..32 unique named bodies required');
+  if (!provider || typeof provider.getGeocentricEcliptic !== 'function')
+    throw new AstrologyError('MISSING_PROVIDER', 'Explicit independent ephemeris provider required');
+  const bodies = {};
+  for (const bodyName of bodyNames) {
+    const state = await provider.getGeocentricEcliptic({ datetimeUtc, bodyName, corrections:'APPARENT', frame:'ECLIPTIC_OF_DATE' });
+    if (!state || state.metadata?.center !== 'EARTH' || state.metadata?.frame !== 'ECLIPTIC_OF_DATE' ||
+        state.metadata?.corrections !== 'APPARENT')
+      throw new AstrologyError('INCOMPATIBLE_EPHEMERIS', 'Provider must return apparent Earth-centered ecliptic-of-date coordinates');
+    finite(state.longitudeDeg, 'longitudeDeg'); finite(state.latitudeDeg, 'latitudeDeg');
+    const lon = normalize360(state.longitudeDeg);
+    bodies[bodyName] = Object.freeze({ name:bodyName, longitudeDeg:lon, latitudeDeg:state.latitudeDeg,
+      zodiacSignIndex:zodiacSignIndex(lon), longitudeSpeedDegPerDay:
+        typeof state.longitudeSpeedDegPerDay === 'number' && Number.isFinite(state.longitudeSpeedDegPerDay)
+          ? state.longitudeSpeedDegPerDay : null,
+      ephemerisMetadata:Object.freeze({ ...state.metadata }) });
+  }
+  return Object.freeze({ contract:'NatalChartResult', contractVersion:'0.1.0-experimental',
+    datetimeUtc, latitudeDeg, longitudeDegEast, bodies:Object.freeze(bodies),
+    houses:null, angles:null,
+    warnings:Object.freeze([{code:'houses_unavailable',message:'House algorithms not yet integrated'}]) });
+}
