@@ -120,3 +120,15 @@ turning a malformed speed into an unavailable value. Missing/null speed remains
 unavailable (null). These checks do not establish astronomical accuracy.
 House computation remains unavailable. Preserve visible project attribution:
 [VirgoStars](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+## UTC calendar validation checkpoint — 2026-11-10
+
+The experimental `calculateNatalWithProvider` entry point now rejects calendar
+rollovers that JavaScript `Date.parse` may normalize (such as February 30 or
+24:00), before making any ephemeris call. It requires explicit UTC `Z`,
+valid calendar/clock fields, and retains fractional-second inputs. Leap-day
+cases are covered by synthetic-provider regression tests in
+`tests/utc-validation.test.mjs`. This is input-contract hardening, **not**
+scientific validation or a claim of a real Rust/WASM provider. The actual
+astronomical engine remains [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris),
+subject to its separate apparent-of-date validation gates.
