@@ -107,3 +107,16 @@ This is **not** true/apparent ecliptic of date. It intentionally omits nutation,
 The public ephemeris PR #1 adds a complete IAU 2000B 77-term nutation series, including ERFA/BSD numerical data attribution, and `GEOMETRIC/TRUE_ECLIPTIC_OF_DATE` projection in an explicit approximate IAU 2006/2000B combination. Independent JS mathematical checks against ERFA `nut00b` and `num00b` passed at approximately 1e-20 radians and 5.6e-17 matrix-element residuals. Five new Node cases were added but were not rerun with the full test suite.
 
 This still **does not satisfy** `calculateNatalWithProvider` (which requires Earth-centered `APPARENT/ECLIPTIC_OF_DATE` with consistent reference model, light time and aberration). Do not infer longitudinal motion or station state from `velocityKmPerSec:null`. Maintain the strict rejection in the adapter until the upstream real NASA kernel, apparent correction and rate validation gates (#3 and #4) pass.
+
+## Isolated provider boundary checkpoint — 2026-11-10
+
+The experimental runtime `calculateNatalWithProvider` still requests only
+`APPARENT/ECLIPTIC_OF_DATE` Earth-centered states. The new
+`src/ephemeris-provider.d.ts` records the current TypeScript boundary for a
+future Rust/WASM adapter; it is **not** a claim that upstream already implements
+that interface. The existing JavaScript runtime rejects provider latitude
+outside [-90, 90] and nonfinite supplied longitude speed rather than silently
+turning a malformed speed into an unavailable value. Missing/null speed remains
+unavailable (null). These checks do not establish astronomical accuracy.
+House computation remains unavailable. Preserve visible project attribution:
+[VirgoStars](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
