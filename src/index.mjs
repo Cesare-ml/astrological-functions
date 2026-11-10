@@ -89,9 +89,12 @@ export function calculateCrossAspects({direction,sourcePoints,targetPoints,aspec
  * supplies geometric J2000 vectors and therefore CANNOT satisfy this yet.
  */
 export async function calculateNatalWithProvider({ datetimeUtc, latitudeDeg, longitudeDegEast, bodyNames, provider }) {
+  // Date.parse may normalize impossible calendar dates (for example February 30).
+  // Compare the canonical UTC calendar/clock fields before asking the provider.
   if (typeof datetimeUtc !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(datetimeUtc) ||
-      Number.isNaN(Date.parse(datetimeUtc)))
-    throw new AstrologyError('INVALID_UTC', 'Explicit ISO UTC instant ending Z is required');
+      !Number.isFinite(Date.parse(datetimeUtc)) ||
+      new Date(datetimeUtc).toISOString().slice(0, 19) !== datetimeUtc.slice(0, 19))
+    throw new AstrologyError('INVALID_UTC', 'Explicit valid ISO UTC calendar instant ending Z is required');
   finite(latitudeDeg, 'latitudeDeg'); finite(longitudeDegEast, 'longitudeDegEast');
   if (latitudeDeg < -90 || latitudeDeg > 90 || longitudeDegEast < -180 || longitudeDegEast > 180)
     throw new AstrologyError('INVALID_COORDINATES', 'Geographic coordinates outside valid bounds');
