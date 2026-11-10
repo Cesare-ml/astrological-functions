@@ -109,7 +109,10 @@ export async function calculateNatalWithProvider({ datetimeUtc, latitudeDeg, lon
   // Null prototype prevents names such as '__proto__' from mutating the result map.
   const bodies = Object.create(null);
   for (const bodyName of requestedBodyNames) {
-    const state = await provider.getGeocentricEcliptic({ datetimeUtc, bodyName, corrections:'APPARENT', frame:'ECLIPTIC_OF_DATE' });
+    // Each call receives its own immutable request: adapters cannot rewrite the
+    // requested frame, correction policy or body identifier by accident.
+    const request = Object.freeze({ datetimeUtc, bodyName, corrections:'APPARENT', frame:'ECLIPTIC_OF_DATE' });
+    const state = await provider.getGeocentricEcliptic(request);
     if (!state || state.metadata?.center !== 'EARTH' || state.metadata?.frame !== 'ECLIPTIC_OF_DATE' ||
         state.metadata?.corrections !== 'APPARENT')
       throw new AstrologyError('INCOMPATIBLE_EPHEMERIS', 'Provider must return apparent Earth-centered ecliptic-of-date coordinates');
