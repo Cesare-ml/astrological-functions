@@ -165,3 +165,7 @@ The sole planned astronomical backend remains
 ## Immutable provider request objects — 10 November 2026
 
 The isolated `calculateNatalWithProvider` prototype passes a fresh, frozen request object to `getGeocentricEcliptic` for each body. This prevents a provider adapter from accidentally rewriting the requested body, UTC instant, `APPARENT` correction mode or `ECLIPTIC_OF_DATE` frame in place. Providers should treat requests as read-only and construct a separate object for any internal transformation. The synthetic regression is `test/provider-request-immutability.test.mjs`; this does **not** establish compatibility with a real Rust/WASM adapter or scientific accuracy. [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the sole intended astronomical engine.
+
+## Immutable natal warning records — 10 November 2026
+
+The isolated natal assembler freezes each warning object as well as the warning array, so consumers cannot accidentally rewrite the `houses_unavailable` code in a shared result. `test/natal-warning-immutability.test.mjs` provides a synthetic regression. This is an API integrity guarantee only; house calculations remain unavailable and no astronomical accuracy is implied. [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the sole planned Rust astronomy engine.
