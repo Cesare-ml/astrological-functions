@@ -103,7 +103,8 @@ export async function calculateNatalWithProvider({ datetimeUtc, latitudeDeg, lon
     throw new AstrologyError('INVALID_BODIES', '1..32 unique named bodies required');
   if (!provider || typeof provider.getGeocentricEcliptic !== 'function')
     throw new AstrologyError('MISSING_PROVIDER', 'Explicit independent ephemeris provider required');
-  const bodies = {};
+  // Null prototype prevents names such as '__proto__' from mutating the result map.
+  const bodies = Object.create(null);
   for (const bodyName of bodyNames) {
     const state = await provider.getGeocentricEcliptic({ datetimeUtc, bodyName, corrections:'APPARENT', frame:'ECLIPTIC_OF_DATE' });
     if (!state || state.metadata?.center !== 'EARTH' || state.metadata?.frame !== 'ECLIPTIC_OF_DATE' ||
