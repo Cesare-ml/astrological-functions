@@ -210,3 +210,16 @@ at compile time. Execute with:
 This is API boundary hardening only, not scientific validation of a real
 Rust/WASM adapter. [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris)
 remains the sole intended astronomical engine.
+
+## UTC subsecond precision guard — 2026-11-10
+
+The experimental natal input currently accepts an explicit UTC `Z` timestamp
+with zero to **three** fractional second digits (millisecond precision).
+JavaScript `Date` silently truncates additional fractional digits; accepting
+nanosecond-like input without a versioned higher-precision time contract would
+risk incorrect chart instants at the Rust/WASM boundary. Values with four or
+more fractional digits therefore fail with `INVALID_UTC` **before** any
+provider call. Existing whole-second and 1–3 digit inputs are unchanged.
+Future sub-millisecond support requires an explicit, tested time representation
+agreed with [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris),
+not silent truncation. This is contract validation, not astronomical accuracy.
