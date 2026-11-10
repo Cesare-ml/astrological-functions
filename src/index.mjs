@@ -49,6 +49,34 @@ export function locateLongitudeInHouses(longitude, cusps) {
   throw new AstrologyError('INVALID_CUSPS','Unable to place longitude in house intervals');
 }
 
+/**
+ * Normalize a house-system identifier without calculating astronomical angles.
+ * Legacy Italian labels are accepted only under an explicit compatibility profile.
+ * 'egizia' means Vehlow in the historical VirgoStars adapter, not a
+ * universally defined Egyptian house system.
+ */
+export function resolveHouseSystem({ houseSystem, calculationProfile }) {
+  if (!['CANONICAL_V1', 'VIRGOSTARS_LEGACY_V1'].includes(calculationProfile))
+    throw new AstrologyError('INVALID_PROFILE', 'Explicit supported calculation profile required');
+  const canonical = ['VEHLOW', 'PLACIDUS', 'KOCH', 'REGIOMONTANUS', 'PORPHYRY'];
+  if (typeof houseSystem !== 'string' || !houseSystem.trim())
+    throw new AstrologyError('INVALID_HOUSE_SYSTEM', 'Explicit house system required');
+  if (canonical.includes(houseSystem))
+    return Object.freeze({ houseSystem, calculationProfile });
+  const legacy = Object.freeze({
+    egizia: 'VEHLOW',
+    placido: 'PLACIDUS',
+    koch: 'KOCH',
+    'regio-montano': 'REGIOMONTANUS',
+    porfirio: 'PORPHYRY'
+  });
+  if (calculationProfile === 'VIRGOSTARS_LEGACY_V1' &&
+      Object.hasOwn(legacy, houseSystem))
+    return Object.freeze({ houseSystem: legacy[houseSystem], calculationProfile });
+  throw new AstrologyError('INVALID_HOUSE_SYSTEM',
+    'Unknown house system or legacy label without explicit legacy profile');
+}
+
 function point(p) {
   if (!p || typeof p.name!=='string' || !p.name.trim())
     throw new AstrologyError('INVALID_POINT', 'Every point requires a nonempty name');
