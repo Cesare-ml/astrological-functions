@@ -185,3 +185,14 @@ adapter is already available. Synthetic coverage is in
 `test/provider-provenance-consistency.test.mjs`.
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris)
 remains the sole planned astronomical engine.
+
+## Natal-level provenance snapshot — 2026-11-10
+
+The experimental natal result now exposes a frozen `ephemerisProvenance`
+object with `engineVersion`, `kernelSetId`, and `timeModel` (each string or
+`null`). It reflects the already-validated consistent provenance across
+requested bodies, without requiring chart consumers to inspect each body.
+Missing provenance remains explicitly `null`, never inferred. This is an
+additive **experimental** result field, not a scientific validation of
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris)
+or a production integration.
