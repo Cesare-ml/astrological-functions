@@ -5,7 +5,7 @@ export interface ApparentGeocentricState {
   longitudeDeg: number;
   latitudeDeg: number;
   longitudeSpeedDegPerDay?: number | null;
-  metadata: {
+  metadata: Readonly<{
     center: 'EARTH';
     frame: 'ECLIPTIC_OF_DATE';
     corrections: 'APPARENT';
@@ -13,15 +13,17 @@ export interface ApparentGeocentricState {
     kernelSetId?: string;
     timeModel?: string;
     [key: string]: unknown;
-  };
+  }>;
+}
+/** Runtime passes frozen requests to the future Rust/WASM adapter. */
+export interface EphemerisRequest {
+  readonly datetimeUtc: string;
+  readonly bodyName: string;
+  readonly corrections: 'APPARENT';
+  readonly frame: 'ECLIPTIC_OF_DATE';
 }
 export interface EphemerisProvider {
-  getGeocentricEcliptic(input: {
-    datetimeUtc: string;
-    bodyName: string;
-    corrections: 'APPARENT';
-    frame: 'ECLIPTIC_OF_DATE';
-  }): Promise<ApparentGeocentricState>;
+  getGeocentricEcliptic(input: Readonly<EphemerisRequest>): Promise<ApparentGeocentricState>;
 }
 export interface NatalInput {
   datetimeUtc: string;
@@ -53,6 +55,6 @@ export interface ExperimentalNatalResult {
   }>;
   houses: null;
   angles: null;
-  warnings: ReadonlyArray<{code: string; message: string}>;
+  warnings: ReadonlyArray<Readonly<{code: string; message: string}>>;
 }
 export declare function calculateNatalWithProvider(input: NatalInput): Promise<ExperimentalNatalResult>;
