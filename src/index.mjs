@@ -108,6 +108,11 @@ export async function calculateNatalWithProvider({ datetimeUtc, latitudeDeg, lon
   const requestedBodyNames = Object.freeze([...bodyNames]);
   // Null prototype prevents names such as '__proto__' from mutating the result map.
   const bodies = Object.create(null);
+  // Every position in one chart must come from the same optional engine/kernel/time model.
+  // Missing provenance is tolerated for existing mock providers but may not be mixed
+  // with present provenance in another body's response.
+  const provenanceKeys = ['engineVersion', 'kernelSetId', 'timeModel'];
+  let expectedProvenance = null;
   for (const bodyName of requestedBodyNames) {
     // Each call receives its own immutable request: adapters cannot rewrite the
     // requested frame, correction policy or body identifier by accident.
@@ -121,6 +126,18 @@ export async function calculateNatalWithProvider({ datetimeUtc, latitudeDeg, lon
       throw new AstrologyError('INVALID_EPHEMERIS_RESULT', 'Ecliptic latitude must be within -90..90 degrees');
     if (state.longitudeSpeedDegPerDay !== undefined && state.longitudeSpeedDegPerDay !== null)
       finite(state.longitudeSpeedDegPerDay, 'longitudeSpeedDegPerDay');
+    const provenance = provenanceKeys.map(key => {
+      const value = state.metadata[key];
+      if (value === undefined || value === null) return null;
+      if (typeof value !== 'string' || !value.trim())
+        throw new AstrologyError('INVALID_EPHEMERIS_RESULT', `${key} must be a nonempty string when provided`);
+      return value;
+    });
+    if (expectedProvenance !== null &&
+        provenance.some((value, index) => value !== expectedProvenance[index]))
+      throw new AstrologyError('INCONSISTENT_EPHEMERIS',
+        'Chart bodies must use one ephemeris engine version, kernel set and time model');
+    expectedProvenance ??= provenance;
     const lon = normalize360(state.longitudeDeg);
     bodies[bodyName] = Object.freeze({ name:bodyName, longitudeDeg:lon, latitudeDeg:state.latitudeDeg,
       zodiacSignIndex:zodiacSignIndex(lon), longitudeSpeedDegPerDay:
