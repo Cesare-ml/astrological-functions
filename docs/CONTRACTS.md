@@ -156,3 +156,7 @@ immutable or establish scientific accuracy. A synthetic regression test lives
 in `test/body-list-snapshot.test.mjs`; native Node execution is still required.
 The sole planned astronomical backend remains
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+## Readonly body-list contract — 2026-11-10
+
+`NatalInput.bodyNames` accepts a TypeScript `readonly string[]` and a frozen JavaScript array. The natal assembler copies and freezes the validated list before the first asynchronous provider request; it never mutates the caller's array. This is defensive input ownership only, not a new astronomical capability. The synthetic regression in `test/body-list-snapshot.test.mjs` covers frozen input and asynchronous mutation. Native `npm test` and TypeScript compilation have not been run in this connector-only change. Rust via [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the sole planned astronomy engine.
