@@ -45,6 +45,12 @@ export interface ExperimentalNatalResult {
   latitudeDeg: number;
   longitudeDegEast: number;
   bodies: Readonly<Record<string, Readonly<NatalBody>>>;
+  /** Snapshot of the consistent provider provenance; null means unavailable. */
+  ephemerisProvenance: Readonly<{
+    engineVersion: string | null;
+    kernelSetId: string | null;
+    timeModel: string | null;
+  }>;
   houses: null;
   angles: null;
   warnings: ReadonlyArray<{code: string; message: string}>;
