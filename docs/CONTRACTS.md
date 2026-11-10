@@ -169,3 +169,19 @@ The isolated `calculateNatalWithProvider` prototype passes a fresh, frozen reque
 ## Immutable natal warning records — 10 November 2026
 
 The isolated natal assembler freezes each warning object as well as the warning array, so consumers cannot accidentally rewrite the `houses_unavailable` code in a shared result. `test/natal-warning-immutability.test.mjs` provides a synthetic regression. This is an API integrity guarantee only; house calculations remain unavailable and no astronomical accuracy is implied. [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the sole planned Rust astronomy engine.
+
+## Per-chart ephemeris provenance consistency — 2026-11-10
+
+The experimental natal assembler rejects mixing planetary results from different
+`engineVersion`, `kernelSetId` or `timeModel` metadata in one result. Each
+optional field must be a nonempty string when present; missing/null and
+present values cannot be mixed across bodies. Providers that omit all three
+fields for all bodies (including existing synthetic mocks) remain compatible.
+Matching is exact, without normalization or implicit fallback. The rejection
+code is `INCONSISTENT_EPHEMERIS`; malformed populated values yield
+`INVALID_EPHEMERIS_RESULT`. This is a provenance/contract safeguard, **not**
+a proof of astronomical accuracy or a requirement that a real Rust/WASM
+adapter is already available. Synthetic coverage is in
+`test/provider-provenance-consistency.test.mjs`.
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris)
+remains the sole planned astronomical engine.
