@@ -131,5 +131,5 @@ export async function calculateNatalWithProvider({ datetimeUtc, latitudeDeg, lon
   return Object.freeze({ contract:'NatalChartResult', contractVersion:'0.1.0-experimental',
     datetimeUtc, latitudeDeg, longitudeDegEast, bodies:Object.freeze(bodies),
     houses:null, angles:null,
-    warnings:Object.freeze([{code:'houses_unavailable',message:'House algorithms not yet integrated'}]) });
+    warnings:Object.freeze([Object.freeze({code:'houses_unavailable',message:'House algorithms not yet integrated'})]) });
 }
