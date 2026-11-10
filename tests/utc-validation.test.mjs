@@ -10,7 +10,8 @@ test('rejects normalized impossible UTC dates before invoking ephemeris', async 
   for (const datetimeUtc of [
     '2026-02-30T12:00:00Z', '2025-02-29T12:00:00Z',
     '2026-13-01T12:00:00Z', '2026-11-09T24:00:00Z',
-    '2026-11-09T12:60:00Z', '2026-11-09T12:00:60Z'
+    '2026-11-09T12:60:00Z', '2026-11-09T12:00:60Z',
+    '2026-11-09T12:00:00.1234Z', '2026-11-09T12:00:00.000000001Z'
   ]) {
     await assert.rejects(
       calculateNatalWithProvider({ ...base, datetimeUtc, provider }),
@@ -24,7 +25,8 @@ test('accepts leap day and fractional UTC time with apparent mock provider', asy
     longitudeDeg: 359.5, latitudeDeg: 0,
     metadata: { center: 'EARTH', frame: 'ECLIPTIC_OF_DATE', corrections: 'APPARENT' }
   }) };
-  for (const datetimeUtc of ['2024-02-29T12:00:00Z', '2024-02-29T12:00:00.123Z']) {
+  for (const datetimeUtc of ['2024-02-29T12:00:00Z', '2024-02-29T12:00:00.1Z',
+    '2024-02-29T12:00:00.12Z', '2024-02-29T12:00:00.123Z']) {
     const result = await calculateNatalWithProvider({ ...base, datetimeUtc, provider });
     assert.equal(result.bodies.Sun.zodiacSignIndex, 11);
     assert.equal(result.datetimeUtc, datetimeUtc);
