@@ -105,7 +105,7 @@ export async function calculateNatalWithProvider({ datetimeUtc, latitudeDeg, lon
     throw new AstrologyError('MISSING_PROVIDER', 'Explicit independent ephemeris provider required');
   // Snapshot validated identifiers before awaiting a potentially reentrant provider.
   // The caller may mutate its array while an earlier body request is pending.
-  const requestedBodyNames = [...bodyNames];
+  const requestedBodyNames = Object.freeze([...bodyNames]);
   // Null prototype prevents names such as '__proto__' from mutating the result map.
   const bodies = Object.create(null);
   for (const bodyName of requestedBodyNames) {
