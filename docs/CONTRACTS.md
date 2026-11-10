@@ -144,3 +144,15 @@ This is a structural boundary hardening, not astronomical validation.
 The Rust/WASM ephemeris remains the sole future astronomy engine; visible
 [VirgoStars project credit](https://github.com/Cesare-ml/VirgoStars-Ephemeris)
 is retained.
+
+## Asynchronous natal input stability — 2026-11-10
+
+The experimental natal assembler snapshots the validated `bodyNames` array before
+awaiting provider calls. A caller mutating the original array during an async
+request cannot silently change the requested body set, call order, or result
+keys. This protects the TypeScript/Rust-WASM provider boundary without adding
+astronomical calculations. The snapshot does **not** make the provider itself
+immutable or establish scientific accuracy. A synthetic regression test lives
+in `test/body-list-snapshot.test.mjs`; native Node execution is still required.
+The sole planned astronomical backend remains
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
