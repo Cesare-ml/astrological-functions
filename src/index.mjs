@@ -107,6 +107,10 @@ export async function calculateNatalWithProvider({ datetimeUtc, latitudeDeg, lon
         state.metadata?.corrections !== 'APPARENT')
       throw new AstrologyError('INCOMPATIBLE_EPHEMERIS', 'Provider must return apparent Earth-centered ecliptic-of-date coordinates');
     finite(state.longitudeDeg, 'longitudeDeg'); finite(state.latitudeDeg, 'latitudeDeg');
+    if (state.latitudeDeg < -90 || state.latitudeDeg > 90)
+      throw new AstrologyError('INVALID_EPHEMERIS_RESULT', 'Ecliptic latitude must be within -90..90 degrees');
+    if (state.longitudeSpeedDegPerDay !== undefined && state.longitudeSpeedDegPerDay !== null)
+      finite(state.longitudeSpeedDegPerDay, 'longitudeSpeedDegPerDay');
     const lon = normalize360(state.longitudeDeg);
     bodies[bodyName] = Object.freeze({ name:bodyName, longitudeDeg:lon, latitudeDeg:state.latitudeDeg,
       zodiacSignIndex:zodiacSignIndex(lon), longitudeSpeedDegPerDay:
