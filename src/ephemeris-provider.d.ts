@@ -58,3 +58,12 @@ export interface ExperimentalNatalResult {
   warnings: ReadonlyArray<Readonly<{code: string; message: string}>>;
 }
 export declare function calculateNatalWithProvider(input: NatalInput): Promise<ExperimentalNatalResult>;
+
+/** Identifier-only house-system compatibility; does not compute house cusps. */
+export type CalculationProfile = 'CANONICAL_V1' | 'VIRGOSTARS_LEGACY_V1';
+export type CanonicalHouseSystem = 'VEHLOW' | 'PLACIDUS' | 'KOCH' | 'REGIOMONTANUS' | 'PORPHYRY';
+export type LegacyHouseSystemLabel = 'egizia' | 'placido' | 'koch' | 'regio-montano' | 'porfirio';
+export declare function resolveHouseSystem(input: Readonly<{
+  houseSystem: CanonicalHouseSystem | LegacyHouseSystemLabel;
+  calculationProfile: CalculationProfile;
+}>): Readonly<{ houseSystem: CanonicalHouseSystem; calculationProfile: CalculationProfile }>;
