@@ -132,3 +132,15 @@ cases are covered by synthetic-provider regression tests in
 scientific validation or a claim of a real Rust/WASM provider. The actual
 astronomical engine remains [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris),
 subject to its separate apparent-of-date validation gates.
+
+## Body-name map safety — 2026-11-10
+
+The isolated natal result stores body names in a null-prototype, frozen lookup
+object. This preserves arbitrary provider body identifiers such as `__proto__`,
+`constructor`, and `toString` as ordinary own properties, without prototype
+mutation or accidental inherited lookups. The result remains JSON serializable;
+consumers must not assume `result.bodies` inherits `Object.prototype`.
+This is a structural boundary hardening, not astronomical validation.
+The Rust/WASM ephemeris remains the sole future astronomy engine; visible
+[VirgoStars project credit](https://github.com/Cesare-ml/VirgoStars-Ephemeris)
+is retained.
