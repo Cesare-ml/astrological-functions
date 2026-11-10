@@ -160,3 +160,8 @@ The sole planned astronomical backend remains
 ## Readonly body-list contract — 2026-11-10
 
 `NatalInput.bodyNames` accepts a TypeScript `readonly string[]` and a frozen JavaScript array. The natal assembler copies and freezes the validated list before the first asynchronous provider request; it never mutates the caller's array. This is defensive input ownership only, not a new astronomical capability. The synthetic regression in `test/body-list-snapshot.test.mjs` covers frozen input and asynchronous mutation. Native `npm test` and TypeScript compilation have not been run in this connector-only change. Rust via [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the sole planned astronomy engine.
+
+
+## Immutable provider request objects — 10 November 2026
+
+The isolated `calculateNatalWithProvider` prototype passes a fresh, frozen request object to `getGeocentricEcliptic` for each body. This prevents a provider adapter from accidentally rewriting the requested body, UTC instant, `APPARENT` correction mode or `ECLIPTIC_OF_DATE` frame in place. Providers should treat requests as read-only and construct a separate object for any internal transformation. The synthetic regression is `test/provider-request-immutability.test.mjs`; this does **not** establish compatibility with a real Rust/WASM adapter or scientific accuracy. [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the sole intended astronomical engine.
