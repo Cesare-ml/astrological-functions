@@ -51,3 +51,18 @@ test('experimental provider boundary accepts only apparent Earth-centered eclipt
     metadata:{center:'EARTH',frame:'J2000',corrections:'GEOMETRIC'}})};
   await assert.rejects(()=>calculateNatalWithProvider({...input,provider:geometric}),e=>e.code==='INCOMPATIBLE_EPHEMERIS');
 });
+
+test('provider rejects impossible ecliptic latitude and nonfinite motion', async()=>{
+  const { calculateNatalWithProvider } = await import('../src/index.mjs');
+  const input={datetimeUtc:'2026-11-09T12:00:00Z',latitudeDeg:44,longitudeDegEast:12,bodyNames:['Sun']};
+  const metadata={center:'EARTH',frame:'ECLIPTIC_OF_DATE',corrections:'APPARENT'};
+  const provider=(state)=>({getGeocentricEcliptic:async()=>({...state,metadata})});
+  await assert.rejects(
+    ()=>calculateNatalWithProvider({...input,provider:provider({longitudeDeg:20,latitudeDeg:91})}),
+    e=>e.code==='INVALID_EPHEMERIS_RESULT');
+  await assert.rejects(
+    ()=>calculateNatalWithProvider({...input,provider:provider({longitudeDeg:20,latitudeDeg:0,longitudeSpeedDegPerDay:Infinity})}),
+    e=>e.code==='INVALID_ANGLE');
+  const result=await calculateNatalWithProvider({...input,provider:provider({longitudeDeg:20,latitudeDeg:-90,longitudeSpeedDegPerDay:null})});
+  assert.equal(result.bodies.Sun.longitudeSpeedDegPerDay,null);
+});
