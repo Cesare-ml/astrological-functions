@@ -223,3 +223,20 @@ provider call. Existing whole-second and 1–3 digit inputs are unchanged.
 Future sub-millisecond support requires an explicit, tested time representation
 agreed with [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris),
 not silent truncation. This is contract validation, not astronomical accuracy.
+
+## House-system identifier compatibility (isolated) — 2026-11-11
+
+The pure `resolveHouseSystem({houseSystem, calculationProfile})` helper
+normalizes **identifiers only**, without computing cusps, angles, or any
+astronomical quantity. Canonical identifiers are `VEHLOW`, `PLACIDUS`,
+`KOCH`, `REGIOMONTANUS`, and `PORPHYRY`. The explicit
+`VIRGOSTARS_LEGACY_V1` profile additionally recognizes historical labels
+`egizia`→`VEHLOW`, `placido`→`PLACIDUS`, `koch`→`KOCH`,
+`regio-montano`→`REGIOMONTANUS`, and `porfirio`→`PORPHYRY`.
+The `CANONICAL_V1` profile rejects those aliases; missing profiles, unknown
+systems, and inherited JavaScript property names are rejected explicitly.
+The result is immutable. This does **not** implement the historical
+`houses_pos` semantics, southern hemisphere inversion, polar behavior or
+any house-cusp algorithms. Those remain separate validation gates.
+The astronomical backend remains Rust via
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
