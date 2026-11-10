@@ -11,6 +11,7 @@ export interface ApparentGeocentricState {
     corrections: 'APPARENT';
     engineVersion?: string;
     kernelSetId?: string;
+    timeModel?: string;
     [key: string]: unknown;
   };
 }
