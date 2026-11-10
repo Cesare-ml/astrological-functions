@@ -196,3 +196,17 @@ Missing provenance remains explicitly `null`, never inferred. This is an
 additive **experimental** result field, not a scientific validation of
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris)
 or a production integration.
+
+## Readonly Rust/WASM provider boundary — 2026-11-10
+
+The experimental TypeScript contract now exports `EphemerisRequest` with
+readonly request fields; `EphemerisProvider` consumes this readonly input.
+This matches the runtime's per-body frozen requests. Returned ephemeris
+metadata and natal warning records are also typed as readonly snapshots,
+consistent with their runtime freezing. A strict TypeScript negative fixture
+at `test/types/provider-readonly.test.ts` asserts that mutation is rejected
+at compile time. Execute with:
+`tsc --strict --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext test/types/provider-readonly.test.ts`.
+This is API boundary hardening only, not scientific validation of a real
+Rust/WASM adapter. [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris)
+remains the sole intended astronomical engine.
