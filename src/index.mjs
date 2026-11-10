@@ -147,6 +147,8 @@ export async function calculateNatalWithProvider({ datetimeUtc, latitudeDeg, lon
   }
   return Object.freeze({ contract:'NatalChartResult', contractVersion:'0.1.0-experimental',
     datetimeUtc, latitudeDeg, longitudeDegEast, bodies:Object.freeze(bodies),
+    ephemerisProvenance:Object.freeze(Object.fromEntries(
+      provenanceKeys.map((key, index) => [key, expectedProvenance[index]]))),
     houses:null, angles:null,
     warnings:Object.freeze([Object.freeze({code:'houses_unavailable',message:'House algorithms not yet integrated'})]) });
 }
