@@ -26,7 +26,7 @@ export interface NatalInput {
   datetimeUtc: string;
   latitudeDeg: number;
   longitudeDegEast: number;
-  bodyNames: string[];
+  bodyNames: readonly string[];
   provider: EphemerisProvider;
 }
 export interface NatalBody {
