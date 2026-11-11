@@ -200,7 +200,8 @@ export function placeNatalBodiesInHouses(input = {}) {
   const { chart, cuspSet, birthTimeKnown } = input;
   if (birthTimeKnown !== true)
     throw new AstrologyError('BIRTH_TIME_REQUIRED', 'House placement requires an explicitly known birth time');
-  if (!chart || !chart.bodies || typeof chart.bodies !== 'object' ||
+  if (!chart || typeof chart !== 'object' || Array.isArray(chart) ||
+      !chart.bodies || typeof chart.bodies !== 'object' ||
       Array.isArray(chart.bodies) || Object.keys(chart.bodies).length === 0)
     throw new AstrologyError('INVALID_ARGUMENT', 'Chart must contain named body positions');
   const validated = validateHouseCuspContext({ chart, cuspSet });
