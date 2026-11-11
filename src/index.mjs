@@ -80,6 +80,27 @@ export function resolveHouseSystem(input) {
     'Unknown house system or legacy label without explicit legacy profile');
 }
 
+/**
+ * Explicit house-placement compatibility gate. Cusp intervals are geometric
+ * only; historical Swiss houses_pos is a distinct, currently unsupported
+ * method and must never silently fall back to cusp placement.
+ */
+export function resolveHousePlacementPolicy(input) {
+  if (input === null || typeof input !== 'object' || Array.isArray(input))
+    throw new AstrologyError('INVALID_ARGUMENT', 'House placement options must be an object');
+  const { houseSystem, calculationProfile, placementMethod } = input;
+  const resolved = resolveHouseSystem({ houseSystem, calculationProfile });
+  if (placementMethod === 'LEGACY_HOUSES_POS') {
+    if (calculationProfile !== 'VIRGOSTARS_LEGACY_V1')
+      throw new AstrologyError('INVALID_HOUSE_PLACEMENT', 'Legacy houses_pos requires legacy profile');
+    throw new AstrologyError('UNSUPPORTED_HOUSE_PLACEMENT',
+      'Historical houses_pos needs separate validated implementation; cusp intervals are not equivalent');
+  }
+  if (placementMethod !== 'CUSP_INTERVAL')
+    throw new AstrologyError('INVALID_HOUSE_PLACEMENT', 'Explicit supported house placement method required');
+  return Object.freeze({ ...resolved, placementMethod });
+}
+
 function point(p) {
   if (!p || typeof p.name!=='string' || !p.name.trim())
     throw new AstrologyError('INVALID_POINT', 'Every point requires a nonempty name');
