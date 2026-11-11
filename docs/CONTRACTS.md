@@ -404,3 +404,15 @@ credit is retained.
 ## Cross-aspect point type validation — 2026-11-11
 
 `calculateCrossAspects` accepts an optional `type` for each source/target point. When omitted or null it defaults to `body`; when supplied it must be a nonempty string. Numbers, booleans, arrays, objects and whitespace-only strings raise `AstrologyError('INVALID_POINT')` rather than entering the result contract as arbitrary values. This applies equally to both directional point lists. Synthetic regression coverage: `test/cross-aspect-point-types.test.mjs` (native Node test execution pending). This is astrology data-shape validation only: no astronomical algorithms are implemented here. [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the planned Rust astronomy engine.
+
+## Provider adapter container shape — 2026-11-11
+
+The isolated `calculateNatalWithProvider` boundary rejects arrays masquerading
+as ephemeris provider objects, even if a `getGeocentricEcliptic` function has
+been attached to the array. Such input fails before any provider invocation
+with `MISSING_PROVIDER`. Ordinary object adapters and callable adapters
+with that method remain accepted. Regression:
+`test/provider-adapter-shape.test.mjs`. This is JavaScript input-shape
+hardening, **not** Rust/WASM integration or scientific validation.
+Astronomy remains exclusively the responsibility of
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
