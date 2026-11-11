@@ -332,3 +332,7 @@ Astronomy remains exclusively with
 ## House-placement identifier and input regressions — 2026-11-11
 
 `test/natal-house-placement.test.mjs` now covers reserved JavaScript body identifiers (`__proto__`, `constructor`, `toString`) in the null-prototype placement map, plus nonfinite and nonnumeric body longitudes. These are synthetic contract regression cases only; they do not assert astronomical correctness or house-system parity. Run `npm test` in a Node checkout before promoting the PR. Rust via [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the only intended astronomical engine.
+
+### House cusp context option validation (isolated checkpoint)
+
+`validateHouseCuspContext(input)` rejects null, arrays, primitive top-level inputs and missing `chart`/`cuspSet` with `AstrologyError` code `INVALID_ARGUMENT`, rather than exposing a JavaScript destructuring error. This is a contract guard only: it does not calculate cusps or establish scientific compatibility. Synthetic regression cases live in `test/house-cusp-context-input.test.mjs`; native Node and Rust/WASM integration still require validation. Astronomical computation remains solely with [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
