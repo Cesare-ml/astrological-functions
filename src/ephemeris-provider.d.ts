@@ -96,3 +96,22 @@ export declare function locateLongitudeWithHousePolicy(input: Readonly<{
   endDeg: number;
   distanceFromCuspDeg: number;
 }>;
+
+
+/** Validates an externally calculated cusp payload; no astronomical calculation. */
+export interface HouseCuspSetInput {
+  readonly houseSystem: CanonicalHouseSystem | LegacyHouseSystemLabel;
+  readonly calculationProfile: CalculationProfile;
+  readonly cusps: readonly number[];
+  readonly metadata: Readonly<{
+    houseSystem: CanonicalHouseSystem;
+    placementMethod: HousePlacementMethod;
+  }>;
+}
+export declare function validateHouseCuspSet(input: Readonly<HouseCuspSetInput>): Readonly<{
+  houseSystem: CanonicalHouseSystem;
+  calculationProfile: CalculationProfile;
+  placementMethod: 'CUSP_INTERVAL';
+  cusps: readonly number[];
+  metadata: Readonly<{houseSystem: CanonicalHouseSystem; placementMethod: 'CUSP_INTERVAL'}>;
+}>;
