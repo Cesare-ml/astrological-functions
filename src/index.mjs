@@ -194,7 +194,10 @@ export function validateHouseCuspContext(input = {}) {
  * the provider result. Requires an explicitly known birth time and matching
  * externally computed cusp context. Never synthesizes ascendant or angles.
  */
-export function placeNatalBodiesInHouses({ chart, cuspSet, birthTimeKnown } = {}) {
+export function placeNatalBodiesInHouses(input = {}) {
+  if (!input || typeof input !== 'object' || Array.isArray(input))
+    throw new AstrologyError('INVALID_ARGUMENT', 'Natal house placement options must be an object');
+  const { chart, cuspSet, birthTimeKnown } = input;
   if (birthTimeKnown !== true)
     throw new AstrologyError('BIRTH_TIME_REQUIRED', 'House placement requires an explicitly known birth time');
   if (!chart || !chart.bodies || typeof chart.bodies !== 'object' ||
