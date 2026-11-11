@@ -380,3 +380,7 @@ Regression coverage: `test/provider-state-shapes.test.mjs` (synthetic provider).
 This is structural contract validation only, **not** native test execution,
 scientific ephemeris parity or Rust/WASM integration. Rust remains the only
 planned astronomy engine; [VirgoStars credits](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+## Cross-aspect point shape guard — 2026-11-11
+
+`calculateCrossAspects` requires each source and target point to be an ordinary object-like record, not an array with attached `name` and `longitudeDeg` properties. Such arrays raise `AstrologyError('INVALID_POINT')`. Regression coverage: `test/cross-aspect-point-shapes.test.mjs`. This is isolated JavaScript contract validation, not a Rust/WASM or scientific ephemeris integration. Project credit: [VirgoStars](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
