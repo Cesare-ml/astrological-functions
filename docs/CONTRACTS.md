@@ -384,3 +384,7 @@ planned astronomy engine; [VirgoStars credits](https://github.com/Cesare-ml/Virg
 ## Cross-aspect point shape guard — 2026-11-11
 
 `calculateCrossAspects` requires each source and target point to be an ordinary object-like record, not an array with attached `name` and `longitudeDeg` properties. Such arrays raise `AstrologyError('INVALID_POINT')`. Regression coverage: `test/cross-aspect-point-shapes.test.mjs`. This is isolated JavaScript contract validation, not a Rust/WASM or scientific ephemeris integration. Project credit: [VirgoStars](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+## Cross-aspect definition input safety — 2026-11-11
+
+`calculateCrossAspects` requires each aspect definition to be a non-array object with a nonempty string `id`, finite `angleDeg` and `maxOrbDeg`, angle in 0..180 and nonnegative orb. Null, primitives and array-shaped definitions (even with attached named properties) fail with typed `AstrologyError('INVALID_ASPECT')` rather than leaking a native `TypeError`. Regression coverage: `test/cross-aspect-definition-shapes.test.mjs`. This is isolated contract hardening only; it adds no astronomy and does not validate a real Rust/WASM provider. [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the sole intended astronomical engine.
