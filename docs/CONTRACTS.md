@@ -365,3 +365,7 @@ remains the sole planned astronomy engine through
 ## House provenance array-shape regression — 2026-11-11
 
 `validateHouseCuspContext` now rejects arrays used as either chart-level or cusp-level `ephemerisProvenance` with `INVALID_HOUSE_METADATA`, even if arbitrary named fields have been attached to those arrays. This closes the gap covered by the existing synthetic `test/house-cusp-context-shapes.test.mjs` regression. No astronomical calculation is performed in TypeScript. Native Node.js tests and Rust/WASM scientific integration remain outstanding; the provider must ultimately be backed by [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+## Cross-aspect options input gate — 2026-11-11
+
+`calculateCrossAspects` now rejects missing, null, primitive, and array-shaped option containers with typed `AstrologyError('INVALID_ARGUMENT')`, rather than allowing an uncontrolled JavaScript destructuring error. Valid object inputs retain existing direction and array validation, including the valid empty-set result. Synthetic regressions are in `test/cross-aspect-options.test.mjs`. Native Node `npm test` and TypeScript verification remain pending; no scientific astronomy validation is claimed. Rust via [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the sole intended astronomy engine.
