@@ -388,3 +388,15 @@ planned astronomy engine; [VirgoStars credits](https://github.com/Cesare-ml/Virg
 ## Cross-aspect definition input safety — 2026-11-11
 
 `calculateCrossAspects` requires each aspect definition to be a non-array object with a nonempty string `id`, finite `angleDeg` and `maxOrbDeg`, angle in 0..180 and nonnegative orb. Null, primitives and array-shaped definitions (even with attached named properties) fail with typed `AstrologyError('INVALID_ASPECT')` rather than leaking a native `TypeError`. Regression coverage: `test/cross-aspect-definition-shapes.test.mjs`. This is isolated contract hardening only; it adds no astronomy and does not validate a real Rust/WASM provider. [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the sole intended astronomical engine.
+
+
+## Individual natal house-placement body shape — 2026-11-11
+
+`placeNatalBodiesInHouses` rejects null, primitive and array-valued individual
+body records (including arrays with manually attached `name` properties) with
+a typed `INVALID_POINT` error. Each body must be a non-array object with a
+`name` equal to its chart map key; longitude validation remains delegated to
+`locateLongitudeInHouses`. This guards the isolated TypeScript-facing boundary,
+not astronomical correctness. The Rust/WASM provider remains the only planned
+astronomical source; [VirgoStars](https://github.com/Cesare-ml/VirgoStars-Ephemeris)
+credit is retained.
