@@ -227,7 +227,7 @@ export function placeNatalBodiesInHouses(input = {}) {
 }
 
 function point(p) {
-  if (!p || typeof p.name!=='string' || !p.name.trim())
+  if (!p || typeof p !== 'object' || Array.isArray(p) || typeof p.name!=='string' || !p.name.trim())
     throw new AstrologyError('INVALID_POINT', 'Every point requires a nonempty name');
   return Object.freeze({name:p.name,longitudeDeg:normalize360(p.longitudeDeg),type:p.type??'body'});
 }
