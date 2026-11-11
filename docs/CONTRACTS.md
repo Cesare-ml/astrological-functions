@@ -434,3 +434,8 @@ astronomical engine remains [VirgoStars Ephemeris](https://github.com/Cesare-ml/
 ## Provider longitude-speed error classification — 2026-11-11
 
 The isolated `calculateNatalWithProvider` adapter rejects a supplied longitude speed that is not a finite JavaScript number with `AstrologyError` code `INVALID_EPHEMERIS_RESULT`, consistent with malformed provider longitude and latitude. Missing (`undefined`) or `null` speed remains unavailable (`null`) in the natal result; finite values, including zero and negative retrograde speeds, are preserved. This is input-contract validation only, not a velocity calculation or proof of Rust/WASM scientific parity. Regression coverage: `test/provider-speed-error-code.test.mjs`. Native `npm test` and TypeScript checks must be run before promotion.
+
+
+## Sparse natal body identifiers — 2026-11-11
+
+`calculateNatalWithProvider` requires a dense array of 1–32 unique, nonempty body-name strings. JavaScript array holes are invalid (`INVALID_BODIES`), just like explicit `undefined`; the provider must not be called for such requests. This validation is at the TypeScript/JavaScript boundary and does not calculate astronomy. See `test/provider-sparse-body-names.test.mjs` (native Node test execution still required).
