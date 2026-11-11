@@ -264,7 +264,10 @@ export function calculateCrossAspects({direction,sourcePoints,targetPoints,aspec
  * ecliptic-of-date positions. Current VirgoStars Ephemeris SPK prototype only
  * supplies geometric J2000 vectors and therefore CANNOT satisfy this yet.
  */
-export async function calculateNatalWithProvider({ datetimeUtc, latitudeDeg, longitudeDegEast, bodyNames, provider }) {
+export async function calculateNatalWithProvider(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input))
+    throw new AstrologyError('INVALID_ARGUMENT', 'Natal calculation options must be an object');
+  const { datetimeUtc, latitudeDeg, longitudeDegEast, bodyNames, provider } = input;
   // Date.parse may normalize impossible calendar dates (for example February 30).
   // Compare the canonical UTC calendar/clock fields before asking the provider.
   if (typeof datetimeUtc !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(datetimeUtc) ||
