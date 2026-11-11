@@ -243,7 +243,10 @@ function definition(d) {
  * Directional cross-aspect facts; zero symbolic interpretation claims.
  * No implicit aspect definitions or orb limits.
  */
-export function calculateCrossAspects({direction,sourcePoints,targetPoints,aspectDefinitions}) {
+export function calculateCrossAspects(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input))
+    throw new AstrologyError('INVALID_ARGUMENT', 'Cross-aspect options must be an object');
+  const { direction, sourcePoints, targetPoints, aspectDefinitions } = input;
   if(!['A_TO_B','B_TO_A','SKY_TO_NATAL'].includes(direction))
     throw new AstrologyError('INVALID_DIRECTION','Explicit A_TO_B/B_TO_A/SKY_TO_NATAL direction is required');
   if(!Array.isArray(sourcePoints)||!Array.isArray(targetPoints)||!Array.isArray(aspectDefinitions))
