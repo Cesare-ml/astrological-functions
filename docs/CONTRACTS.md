@@ -313,3 +313,18 @@ in `test/house-cusp-context.test.mjs`. This is **not** an astronomical
 calculation, proof of source authenticity, natal house assembly, or real
 Rust/WASM integration. [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris)
 remains the only planned astronomical engine.
+
+
+## Separate natal house placement assembly — 2026-11-11
+
+The isolated `placeNatalBodiesInHouses({chart,cuspSet,birthTimeKnown:true})`
+helper assigns existing chart body longitudes to externally supplied,
+context-validated cusp intervals. It requires an explicitly known birth time,
+a nonempty body map and a full matching cusp context (UTC, coordinates and
+engine/kernel/time-model provenance). It returns a frozen, separate placement
+map rather than mutating the natal chart or fabricating ascendant/MC. A
+missing/false birth-time flag fails with `BIRTH_TIME_REQUIRED`; legacy
+`houses_pos` still fails closed. This is synthetic geometry, **not** an
+implemented Rust/WASM house solver or scientific verification.
+Astronomy remains exclusively with
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
