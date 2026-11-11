@@ -361,3 +361,7 @@ remains the sole planned astronomy engine through
 ### House context shape validation — 2026-11-11
 
 `validateHouseCuspContext` requires plain object-shaped chart and cusp-set containers (arrays are rejected with `INVALID_ARGUMENT`). Chart and cusp-set `ephemerisProvenance` containers must likewise not be arrays (`INVALID_HOUSE_METADATA`). These are structural checks only: matching mock provenance does not establish scientific correctness. Synthetic regression cases are in `test/house-cusp-context-shapes.test.mjs`; native Node execution is still required.
+
+## House provenance array-shape regression — 2026-11-11
+
+`validateHouseCuspContext` now rejects arrays used as either chart-level or cusp-level `ephemerisProvenance` with `INVALID_HOUSE_METADATA`, even if arbitrary named fields have been attached to those arrays. This closes the gap covered by the existing synthetic `test/house-cusp-context-shapes.test.mjs` regression. No astronomical calculation is performed in TypeScript. Native Node.js tests and Rust/WASM scientific integration remain outstanding; the provider must ultimately be backed by [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
