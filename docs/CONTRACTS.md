@@ -400,3 +400,7 @@ a typed `INVALID_POINT` error. Each body must be a non-array object with a
 not astronomical correctness. The Rust/WASM provider remains the only planned
 astronomical source; [VirgoStars](https://github.com/Cesare-ml/VirgoStars-Ephemeris)
 credit is retained.
+
+## Cross-aspect point type validation — 2026-11-11
+
+`calculateCrossAspects` accepts an optional `type` for each source/target point. When omitted or null it defaults to `body`; when supplied it must be a nonempty string. Numbers, booleans, arrays, objects and whitespace-only strings raise `AstrologyError('INVALID_POINT')` rather than entering the result contract as arbitrary values. This applies equally to both directional point lists. Synthetic regression coverage: `test/cross-aspect-point-types.test.mjs` (native Node test execution pending). This is astrology data-shape validation only: no astronomical algorithms are implemented here. [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the planned Rust astronomy engine.
