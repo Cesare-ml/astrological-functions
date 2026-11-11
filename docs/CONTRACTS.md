@@ -439,3 +439,8 @@ The isolated `calculateNatalWithProvider` adapter rejects a supplied longitude s
 ## Sparse natal body identifiers — 2026-11-11
 
 `calculateNatalWithProvider` requires a dense array of 1–32 unique, nonempty body-name strings. JavaScript array holes are invalid (`INVALID_BODIES`), just like explicit `undefined`; the provider must not be called for such requests. This validation is at the TypeScript/JavaScript boundary and does not calculate astronomy. See `test/provider-sparse-body-names.test.mjs` (native Node test execution still required).
+
+
+## Sparse cross-aspect arrays — 2026-11-12
+
+`calculateCrossAspects` rejects holes in `sourcePoints` and `targetPoints` with `INVALID_POINT`, and holes in `aspectDefinitions` with `INVALID_ASPECT`. Sparse arrays must not silently omit requested work. `Array.from` validates every slot; valid dense arrays retain their prior directional aspect behavior. Regression coverage: `test/cross-aspect-sparse-arrays.test.mjs`. This is pure TypeScript/JavaScript input validation, not astronomical computation; native Node tests remain required before promotion.
