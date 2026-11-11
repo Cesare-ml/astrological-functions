@@ -143,6 +143,48 @@ export function validateHouseCuspSet(input) {
   });
 }
 
+
+/** Verify that externally calculated house cusps match a chart context. No astronomy. */
+export function validateHouseCuspContext({ chart, cuspSet } = {}) {
+  if (!chart || !cuspSet || typeof chart !== 'object' || typeof cuspSet !== 'object')
+    throw new AstrologyError('INVALID_ARGUMENT', 'Chart and cusp set are required');
+  const { datetimeUtc, latitudeDeg, longitudeDegEast, ephemerisProvenance } = chart;
+  if (typeof datetimeUtc !== 'string' || !Number.isFinite(Date.parse(datetimeUtc)) ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(datetimeUtc) || new Date(datetimeUtc).toISOString().slice(0,19) !== datetimeUtc.slice(0,19))
+    throw new AstrologyError('INVALID_UTC', 'Valid explicit UTC instant required');
+  finite(latitudeDeg, 'latitudeDeg');
+  finite(longitudeDegEast, 'longitudeDegEast');
+  if (latitudeDeg < -90 || latitudeDeg > 90 || longitudeDegEast < -180 || longitudeDegEast > 180)
+    throw new AstrologyError('INVALID_COORDINATES', 'Chart coordinates outside valid bounds');
+  const metadata = cuspSet.metadata;
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata))
+    throw new AstrologyError('INVALID_HOUSE_METADATA', 'House metadata required');
+  if (metadata.datetimeUtc !== datetimeUtc ||
+      metadata.latitudeDeg !== latitudeDeg ||
+      metadata.longitudeDegEast !== longitudeDegEast)
+    throw new AstrologyError('INCOMPATIBLE_HOUSE_CONTEXT', 'House cusp date or location differs from chart');
+  const keys = ['engineVersion', 'kernelSetId', 'timeModel'];
+  if (!ephemerisProvenance || typeof ephemerisProvenance !== 'object' ||
+      !metadata.ephemerisProvenance || typeof metadata.ephemerisProvenance !== 'object')
+    throw new AstrologyError('INVALID_HOUSE_METADATA', 'Explicit chart and house provenance required');
+  for (const key of keys) {
+    const a = ephemerisProvenance[key], b = metadata.ephemerisProvenance[key];
+    if (typeof a !== 'string' || !a.trim() || typeof b !== 'string' || !b.trim())
+      throw new AstrologyError('INVALID_HOUSE_METADATA', 'Complete nonempty provenance required');
+    if (a !== b)
+      throw new AstrologyError('INCOMPATIBLE_HOUSE_CONTEXT', 'House cusp provenance differs from chart');
+  }
+  const validated = validateHouseCuspSet(cuspSet);
+  return Object.freeze({
+    ...validated,
+    metadata: Object.freeze({
+      ...validated.metadata, datetimeUtc, latitudeDeg, longitudeDegEast,
+      ephemerisProvenance: Object.freeze(Object.fromEntries(
+        keys.map(key => [key, ephemerisProvenance[key]])))
+    })
+  });
+}
+
 function point(p) {
   if (!p || typeof p.name!=='string' || !p.name.trim())
     throw new AstrologyError('INVALID_POINT', 'Every point requires a nonempty name');
