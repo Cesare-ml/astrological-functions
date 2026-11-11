@@ -185,6 +185,39 @@ export function validateHouseCuspContext({ chart, cuspSet } = {}) {
   });
 }
 
+
+/**
+ * Add geometric house placements to a synthetic natal result without changing
+ * the provider result. Requires an explicitly known birth time and matching
+ * externally computed cusp context. Never synthesizes ascendant or angles.
+ */
+export function placeNatalBodiesInHouses({ chart, cuspSet, birthTimeKnown } = {}) {
+  if (birthTimeKnown !== true)
+    throw new AstrologyError('BIRTH_TIME_REQUIRED', 'House placement requires an explicitly known birth time');
+  if (!chart || !chart.bodies || typeof chart.bodies !== 'object' ||
+      Array.isArray(chart.bodies) || Object.keys(chart.bodies).length === 0)
+    throw new AstrologyError('INVALID_ARGUMENT', 'Chart must contain named body positions');
+  const validated = validateHouseCuspContext({ chart, cuspSet });
+  const placements = Object.create(null);
+  for (const [name, body] of Object.entries(chart.bodies)) {
+    if (!body || body.name !== name)
+      throw new AstrologyError('INVALID_POINT', 'Body identifier must match its chart key');
+    placements[name] = locateLongitudeWithHousePolicy({
+      longitudeDeg: body.longitudeDeg, cusps: validated.cusps,
+      houseSystem: validated.houseSystem,
+      calculationProfile: validated.calculationProfile,
+      placementMethod: validated.placementMethod
+    });
+  }
+  return Object.freeze({
+    houseSystem: validated.houseSystem,
+    calculationProfile: validated.calculationProfile,
+    placementMethod: validated.placementMethod,
+    metadata: validated.metadata,
+    placements: Object.freeze(placements)
+  });
+}
+
 function point(p) {
   if (!p || typeof p.name!=='string' || !p.name.trim())
     throw new AstrologyError('INVALID_POINT', 'Every point requires a nonempty name');
