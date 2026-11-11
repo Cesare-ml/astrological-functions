@@ -149,7 +149,8 @@ export function validateHouseCuspContext(input = {}) {
   if (!input || typeof input !== 'object' || Array.isArray(input))
     throw new AstrologyError('INVALID_ARGUMENT', 'House context options must be an object');
   const { chart, cuspSet } = input;
-  if (!chart || !cuspSet || typeof chart !== 'object' || Array.isArray(chart) ||\n      typeof cuspSet !== 'object' || Array.isArray(cuspSet))
+  if (!chart || !cuspSet || typeof chart !== 'object' || Array.isArray(chart) ||
+      typeof cuspSet !== 'object' || Array.isArray(cuspSet))
     throw new AstrologyError('INVALID_ARGUMENT', 'Chart and cusp set are required');
   const { datetimeUtc, latitudeDeg, longitudeDegEast, ephemerisProvenance } = chart;
   if (typeof datetimeUtc !== 'string' || !Number.isFinite(Date.parse(datetimeUtc)) ||
