@@ -267,3 +267,19 @@ or numerical equivalence claim. Synthetic regression coverage:
 requires independently licensed implementation and verified fixtures.
 Astronomy remains solely with Rust via
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+## Explicit cusp-placement entry point — 2026-11-11
+
+`locateLongitudeWithHousePolicy` composes the existing house-system and
+placement-policy guards with the geometric `locateLongitudeInHouses` helper.
+It requires a named system, explicit profile and `CUSP_INTERVAL` method;
+`LEGACY_HOUSES_POS` still raises `UNSUPPORTED_HOUSE_PLACEMENT` and cannot
+silently fall back to geometric cusp intervals. The function takes **already
+computed** cusp longitudes and returns an immutable placement with the resolved
+system/profile/method; it does not compute cusps, ascendant, sidereal time or
+Swiss `houses_pos` behavior. The supplied cusps are not independently certified
+as belonging to the named system: callers must obtain and validate those via
+the future Rust-backed provider integration. Synthetic tests cover exact cusp,
+wrap-around, invalid cusp order and fail-closed legacy behavior.
+The sole planned astronomical backend remains
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
