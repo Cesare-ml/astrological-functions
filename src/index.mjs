@@ -314,8 +314,9 @@ export async function calculateNatalWithProvider(input) {
       throw new AstrologyError('INVALID_EPHEMERIS_RESULT', 'Provider longitude and latitude must be finite numbers');
     if (state.latitudeDeg < -90 || state.latitudeDeg > 90)
       throw new AstrologyError('INVALID_EPHEMERIS_RESULT', 'Ecliptic latitude must be within -90..90 degrees');
-    if (state.longitudeSpeedDegPerDay !== undefined && state.longitudeSpeedDegPerDay !== null)
-      finite(state.longitudeSpeedDegPerDay, 'longitudeSpeedDegPerDay');
+    if (state.longitudeSpeedDegPerDay !== undefined && state.longitudeSpeedDegPerDay !== null &&
+        (typeof state.longitudeSpeedDegPerDay !== 'number' || !Number.isFinite(state.longitudeSpeedDegPerDay)))
+      throw new AstrologyError('INVALID_EPHEMERIS_RESULT', 'Provider longitude speed must be a finite number when supplied');
     const provenance = provenanceKeys.map(key => {
       const value = state.metadata[key];
       if (value === undefined || value === null) return null;
