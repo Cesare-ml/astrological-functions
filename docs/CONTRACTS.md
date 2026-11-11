@@ -429,3 +429,8 @@ normalized modulo 360; finite latitudes outside -90..90 continue to fail as
 valid synthetic control). This does not implement astronomy, prove scientific
 parity or authorize integration with a real kernel. The only intended
 astronomical engine remains [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+
+## Provider longitude-speed error classification — 2026-11-11
+
+The isolated `calculateNatalWithProvider` adapter rejects a supplied longitude speed that is not a finite JavaScript number with `AstrologyError` code `INVALID_EPHEMERIS_RESULT`, consistent with malformed provider longitude and latitude. Missing (`undefined`) or `null` speed remains unavailable (`null`) in the natal result; finite values, including zero and negative retrograde speeds, are preserved. This is input-contract validation only, not a velocity calculation or proof of Rust/WASM scientific parity. Regression coverage: `test/provider-speed-error-code.test.mjs`. Native `npm test` and TypeScript checks must be run before promotion.
