@@ -168,8 +168,8 @@ export function validateHouseCuspContext(input = {}) {
       metadata.longitudeDegEast !== longitudeDegEast)
     throw new AstrologyError('INCOMPATIBLE_HOUSE_CONTEXT', 'House cusp date or location differs from chart');
   const keys = ['engineVersion', 'kernelSetId', 'timeModel'];
-  if (!ephemerisProvenance || typeof ephemerisProvenance !== 'object' ||
-      !metadata.ephemerisProvenance || typeof metadata.ephemerisProvenance !== 'object')
+  if (!ephemerisProvenance || typeof ephemerisProvenance !== 'object' || Array.isArray(ephemerisProvenance) ||
+      !metadata.ephemerisProvenance || typeof metadata.ephemerisProvenance !== 'object' || Array.isArray(metadata.ephemerisProvenance))
     throw new AstrologyError('INVALID_HOUSE_METADATA', 'Explicit chart and house provenance required');
   for (const key of keys) {
     const a = ephemerisProvenance[key], b = metadata.ephemerisProvenance[key];
