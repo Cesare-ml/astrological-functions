@@ -286,7 +286,8 @@ export async function calculateNatalWithProvider(input) {
   if (!Array.isArray(bodyNames) || bodyNames.length === 0 || bodyNames.length > 32 ||
       bodyNames.some(n => typeof n !== 'string' || !n.trim()) || new Set(bodyNames).size !== bodyNames.length)
     throw new AstrologyError('INVALID_BODIES', '1..32 unique named bodies required');
-  if (!provider || typeof provider.getGeocentricEcliptic !== 'function')
+  if (!provider || (typeof provider !== 'object' && typeof provider !== 'function') ||
+      Array.isArray(provider) || typeof provider.getGeocentricEcliptic !== 'function')
     throw new AstrologyError('MISSING_PROVIDER', 'Explicit independent ephemeris provider required');
   // Snapshot validated identifiers before awaiting a potentially reentrant provider.
   // The caller may mutate its array while an earlier body request is pending.
