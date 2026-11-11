@@ -67,3 +67,15 @@ export declare function resolveHouseSystem(input: Readonly<{
   houseSystem: CanonicalHouseSystem | LegacyHouseSystemLabel;
   calculationProfile: CalculationProfile;
 }>): Readonly<{ houseSystem: CanonicalHouseSystem; calculationProfile: CalculationProfile }>;
+
+/** House placement policy only: no cusp computation or Swiss houses_pos port. */
+export type HousePlacementMethod = 'CUSP_INTERVAL' | 'LEGACY_HOUSES_POS';
+export declare function resolveHousePlacementPolicy(input: Readonly<{
+  houseSystem: CanonicalHouseSystem | LegacyHouseSystemLabel;
+  calculationProfile: CalculationProfile;
+  placementMethod: HousePlacementMethod;
+}>): Readonly<{
+  houseSystem: CanonicalHouseSystem;
+  calculationProfile: CalculationProfile;
+  placementMethod: 'CUSP_INTERVAL';
+}>;
