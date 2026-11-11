@@ -115,6 +115,34 @@ export function locateLongitudeWithHousePolicy(input) {
   return Object.freeze({ ...policy, ...placement });
 }
 
+
+/**
+ * Validate an externally computed cusp set before house placement.
+ * This does not calculate angles or infer a house system from cusp geometry.
+ * A Rust/WASM adapter must explicitly declare the requested method.
+ */
+export function validateHouseCuspSet(input) {
+  if (input === null || typeof input !== 'object' || Array.isArray(input))
+    throw new AstrologyError('INVALID_ARGUMENT', 'House cusp set must be an object');
+  const { houseSystem, calculationProfile, cusps, metadata } = input;
+  const policy = resolveHouseSystem({ houseSystem, calculationProfile });
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata))
+    throw new AstrologyError('INVALID_HOUSE_METADATA', 'House cusp metadata required');
+  if (metadata.houseSystem !== policy.houseSystem)
+    throw new AstrologyError('INCOMPATIBLE_HOUSE_SYSTEM', 'Cusp system differs from requested house system');
+  if (metadata.placementMethod !== 'CUSP_INTERVAL')
+    throw new AstrologyError('UNSUPPORTED_HOUSE_PLACEMENT', 'Only validated cusp intervals are supported');
+  if (!Array.isArray(cusps) || cusps.length !== 12)
+    throw new AstrologyError('INVALID_CUSPS', 'Exactly twelve cusp longitudes required');
+  const snapshot = Object.freeze(cusps.map((cusp) => normalize360(cusp)));
+  // Reuse the existing forward-order gate, including wrap-around and zero spans.
+  locateLongitudeInHouses(snapshot[0], snapshot);
+  return Object.freeze({
+    ...policy, placementMethod: 'CUSP_INTERVAL', cusps: snapshot,
+    metadata: Object.freeze({ houseSystem: policy.houseSystem, placementMethod: 'CUSP_INTERVAL' })
+  });
+}
+
 function point(p) {
   if (!p || typeof p.name!=='string' || !p.name.trim())
     throw new AstrologyError('INVALID_POINT', 'Every point requires a nonempty name');
