@@ -81,3 +81,11 @@ test('malformed placement options fail with typed INVALID_ARGUMENT',()=>{
       e=>e.name==='AstrologyError' && e.code==='INVALID_ARGUMENT');
   }
 });
+
+
+test('rejects array chart containers before inspecting body positions',()=>{
+  const arrayChart = [];
+  arrayChart.bodies = chart.bodies;
+  assert.throws(()=>placeNatalBodiesInHouses({chart:arrayChart,cuspSet,birthTimeKnown:true}),
+    e=>e.name==='AstrologyError' && e.code==='INVALID_ARGUMENT');
+});
