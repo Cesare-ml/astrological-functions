@@ -89,3 +89,13 @@ test('rejects array chart containers before inspecting body positions',()=>{
   assert.throws(()=>placeNatalBodiesInHouses({chart:arrayChart,cuspSet,birthTimeKnown:true}),
     e=>e.name==='AstrologyError' && e.code==='INVALID_ARGUMENT');
 });
+
+
+test('rejects malformed individual house-placement bodies with typed INVALID_POINT',()=>{
+  const invalidBodies = [null, undefined, 1, 'Sun', true, [], Object.assign([], {name:'Sun', longitudeDeg:345})];
+  for (const body of invalidBodies) {
+    assert.throws(() => placeNatalBodiesInHouses({
+      chart:{...chart,bodies:{Sun:body}}, cuspSet, birthTimeKnown:true
+    }), error => error instanceof Error && error.name === 'AstrologyError' && error.code === 'INVALID_POINT');
+  }
+});
