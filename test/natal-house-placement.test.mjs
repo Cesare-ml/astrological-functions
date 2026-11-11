@@ -74,3 +74,10 @@ test('nonfinite body longitude fails without producing partial placements',()=>{
     }),e=>e.code==='INVALID_ANGLE');
   }
 });
+
+test('malformed placement options fail with typed INVALID_ARGUMENT',()=>{
+  for (const input of [null, false, 0, 'invalid', [], 42]) {
+    assert.throws(()=>placeNatalBodiesInHouses(input),
+      e=>e.name==='AstrologyError' && e.code==='INVALID_ARGUMENT');
+  }
+});
