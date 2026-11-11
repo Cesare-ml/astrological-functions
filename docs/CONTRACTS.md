@@ -356,3 +356,8 @@ UTC, coordinate, body-list and provider checks. Synthetic regression coverage:
 not a claim of native test execution or real astronomical integration. Rust
 remains the sole planned astronomy engine through
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+
+### House context shape validation — 2026-11-11
+
+`validateHouseCuspContext` requires plain object-shaped chart and cusp-set containers (arrays are rejected with `INVALID_ARGUMENT`). Chart and cusp-set `ephemerisProvenance` containers must likewise not be arrays (`INVALID_HOUSE_METADATA`). These are structural checks only: matching mock provenance does not establish scientific correctness. Synthetic regression cases are in `test/house-cusp-context-shapes.test.mjs`; native Node execution is still required.
