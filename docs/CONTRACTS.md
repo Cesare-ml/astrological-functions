@@ -336,3 +336,7 @@ Astronomy remains exclusively with
 ### House cusp context option validation (isolated checkpoint)
 
 `validateHouseCuspContext(input)` rejects null, arrays, primitive top-level inputs and missing `chart`/`cuspSet` with `AstrologyError` code `INVALID_ARGUMENT`, rather than exposing a JavaScript destructuring error. This is a contract guard only: it does not calculate cusps or establish scientific compatibility. Synthetic regression cases live in `test/house-cusp-context-input.test.mjs`; native Node and Rust/WASM integration still require validation. Astronomical computation remains solely with [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+### Natal house placement input guard — 2026-11-11
+
+`placeNatalBodiesInHouses` rejects null, arrays and primitive top-level options with typed `AstrologyError('INVALID_ARGUMENT')`, instead of exposing a JavaScript destructuring `TypeError`. A separate regression covers six malformed shapes. This does not alter valid placement semantics, invent cusp values, or implement `LEGACY_HOUSES_POS`. The astronomy source remains [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) (Rust). Native Node and full TypeScript checks are still required.
