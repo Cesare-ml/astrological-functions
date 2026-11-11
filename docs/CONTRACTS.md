@@ -328,3 +328,7 @@ missing/false birth-time flag fails with `BIRTH_TIME_REQUIRED`; legacy
 implemented Rust/WASM house solver or scientific verification.
 Astronomy remains exclusively with
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+## House-placement identifier and input regressions — 2026-11-11
+
+`test/natal-house-placement.test.mjs` now covers reserved JavaScript body identifiers (`__proto__`, `constructor`, `toString`) in the null-prototype placement map, plus nonfinite and nonnumeric body longitudes. These are synthetic contract regression cases only; they do not assert astronomical correctness or house-system parity. Run `npm test` in a Node checkout before promoting the PR. Rust via [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the only intended astronomical engine.
