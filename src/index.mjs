@@ -301,7 +301,9 @@ export async function calculateNatalWithProvider(input) {
     // requested frame, correction policy or body identifier by accident.
     const request = Object.freeze({ datetimeUtc, bodyName, corrections:'APPARENT', frame:'ECLIPTIC_OF_DATE' });
     const state = await provider.getGeocentricEcliptic(request);
-    if (!state || state.metadata?.center !== 'EARTH' || state.metadata?.frame !== 'ECLIPTIC_OF_DATE' ||
+    if (!state || typeof state !== 'object' || Array.isArray(state) ||
+        !state.metadata || typeof state.metadata !== 'object' || Array.isArray(state.metadata) ||
+        state.metadata.center !== 'EARTH' || state.metadata.frame !== 'ECLIPTIC_OF_DATE' ||
         state.metadata?.corrections !== 'APPARENT')
       throw new AstrologyError('INCOMPATIBLE_EPHEMERIS', 'Provider must return apparent Earth-centered ecliptic-of-date coordinates');
     finite(state.longitudeDeg, 'longitudeDeg'); finite(state.latitudeDeg, 'latitudeDeg');
