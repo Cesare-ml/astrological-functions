@@ -299,3 +299,17 @@ is implied. This is not yet part of the natal assembler. The future provider mus
 add validated observer/time/frame/provenance metadata before scientific use.
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris)
 remains the sole intended astronomical engine.
+
+## Cusp context validation — 2026-11-11
+
+`validateHouseCuspContext` requires externally supplied cusps to match a natal
+chart's exact UTC timestamp, geographic coordinates, and three nonempty
+ephemeris provenance identifiers (`engineVersion`, `kernelSetId`, `timeModel`).
+It reuses `validateHouseCuspSet` for forward cusp geometry, declared system
+and explicit `CUSP_INTERVAL` method. Mismatches fail closed with
+`INCOMPATIBLE_HOUSE_CONTEXT`; missing provenance yields
+`INVALID_HOUSE_METADATA`. Outputs are frozen snapshots. Synthetic tests are
+in `test/house-cusp-context.test.mjs`. This is **not** an astronomical
+calculation, proof of source authenticity, natal house assembly, or real
+Rust/WASM integration. [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris)
+remains the only planned astronomical engine.
