@@ -101,6 +101,20 @@ export function resolveHousePlacementPolicy(input) {
   return Object.freeze({ ...resolved, placementMethod });
 }
 
+/**
+ * Assign a longitude to a house only after explicitly resolving its method.
+ * Caller supplies already-computed, validated cusps: no astronomy is performed.
+ * Historical houses_pos remains unsupported and cannot fall back silently.
+ */
+export function locateLongitudeWithHousePolicy(input) {
+  if (input === null || typeof input !== 'object' || Array.isArray(input))
+    throw new AstrologyError('INVALID_ARGUMENT', 'House placement input must be an object');
+  const { longitudeDeg, cusps, houseSystem, calculationProfile, placementMethod } = input;
+  const policy = resolveHousePlacementPolicy({ houseSystem, calculationProfile, placementMethod });
+  const placement = locateLongitudeInHouses(longitudeDeg, cusps);
+  return Object.freeze({ ...policy, ...placement });
+}
+
 function point(p) {
   if (!p || typeof p.name!=='string' || !p.name.trim())
     throw new AstrologyError('INVALID_POINT', 'Every point requires a nonempty name');
