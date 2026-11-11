@@ -283,3 +283,19 @@ the future Rust-backed provider integration. Synthetic tests cover exact cusp,
 wrap-around, invalid cusp order and fail-closed legacy behavior.
 The sole planned astronomical backend remains
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+
+## Explicit external house cusp set boundary — 2026-11-11
+
+`validateHouseCuspSet` is an isolated synchronous guard for a future Rust/WASM
+house-cusp payload. It requires the requested house system and calculation profile,
+a twelve-cusp forward-order array, and metadata that **explicitly** identifies the
+same canonical system and `CUSP_INTERVAL` method. The returned array and metadata
+are immutable snapshots. A legacy `egizia` request resolves to `VEHLOW` only
+under `VIRGOSTARS_LEGACY_V1`; mismatched metadata raises
+`INCOMPATIBLE_HOUSE_SYSTEM`, and `LEGACY_HOUSES_POS` remains unsupported.
+No astronomy, cusp computation, house-algorithm parity, or Rust/WASM integration
+is implied. This is not yet part of the natal assembler. The future provider must
+add validated observer/time/frame/provenance metadata before scientific use.
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris)
+remains the sole intended astronomical engine.
