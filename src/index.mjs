@@ -55,7 +55,10 @@ export function locateLongitudeInHouses(longitude, cusps) {
  * 'egizia' means Vehlow in the historical VirgoStars adapter, not a
  * universally defined Egyptian house system.
  */
-export function resolveHouseSystem({ houseSystem, calculationProfile }) {
+export function resolveHouseSystem(input) {
+  if (input === null || typeof input !== 'object' || Array.isArray(input))
+    throw new AstrologyError('INVALID_ARGUMENT', 'House system options must be an object');
+  const { houseSystem, calculationProfile } = input;
   if (!['CANONICAL_V1', 'VIRGOSTARS_LEGACY_V1'].includes(calculationProfile))
     throw new AstrologyError('INVALID_PROFILE', 'Explicit supported calculation profile required');
   const canonical = ['VEHLOW', 'PLACIDUS', 'KOCH', 'REGIOMONTANUS', 'PORPHYRY'];
