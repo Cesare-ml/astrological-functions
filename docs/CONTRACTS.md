@@ -340,3 +340,8 @@ Astronomy remains exclusively with
 ### Natal house placement input guard — 2026-11-11
 
 `placeNatalBodiesInHouses` rejects null, arrays and primitive top-level options with typed `AstrologyError('INVALID_ARGUMENT')`, instead of exposing a JavaScript destructuring `TypeError`. A separate regression covers six malformed shapes. This does not alter valid placement semantics, invent cusp values, or implement `LEGACY_HOUSES_POS`. The astronomy source remains [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) (Rust). Native Node and full TypeScript checks are still required.
+
+
+## Natal house placement chart-container validation — 2026-11-11
+
+`placeNatalBodiesInHouses` rejects array-shaped chart containers with typed `INVALID_ARGUMENT`, even when a JavaScript array has a custom `bodies` property. Only object-shaped chart records are accepted. Regression: `test/natal-house-placement.test.mjs`. This is a structural validation change, not scientific verification; the native Node suite and Rust/WASM integration still require execution. Astronomy remains exclusively the responsibility of [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
