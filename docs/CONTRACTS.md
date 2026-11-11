@@ -416,3 +416,16 @@ with that method remain accepted. Regression:
 hardening, **not** Rust/WASM integration or scientific validation.
 Astronomy remains exclusively the responsibility of
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+## Provider coordinate error classification — 2026-11-11
+
+The experimental `calculateNatalWithProvider` boundary reports nonnumeric or
+nonfinite provider `longitudeDeg` / `latitudeDeg` as
+`AstrologyError('INVALID_EPHEMERIS_RESULT')`, rather than the generic
+`INVALID_ANGLE` used by public angle-math primitives. Finite longitudes are
+normalized modulo 360; finite latitudes outside -90..90 continue to fail as
+`INVALID_EPHEMERIS_RESULT`. Regression:
+`test/provider-coordinate-errors.test.mjs` (six malformed states, one
+valid synthetic control). This does not implement astronomy, prove scientific
+parity or authorize integration with a real kernel. The only intended
+astronomical engine remains [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
