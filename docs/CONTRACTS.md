@@ -369,3 +369,14 @@ remains the sole planned astronomy engine through
 ## Cross-aspect options input gate — 2026-11-11
 
 `calculateCrossAspects` now rejects missing, null, primitive, and array-shaped option containers with typed `AstrologyError('INVALID_ARGUMENT')`, rather than allowing an uncontrolled JavaScript destructuring error. Valid object inputs retain existing direction and array validation, including the valid empty-set result. Synthetic regressions are in `test/cross-aspect-options.test.mjs`. Native Node `npm test` and TypeScript verification remain pending; no scientific astronomy validation is claimed. Rust via [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the sole intended astronomy engine.
+
+## Provider response container validation — 2026-11-11
+
+The experimental natal assembler rejects array-shaped provider state objects and
+array-shaped `metadata` even when named properties imitate a valid apparent
+Earth-centered ecliptic-of-date response. Both cases raise the typed
+`INCOMPATIBLE_EPHEMERIS` error. Plain object responses retain existing behavior.
+Regression coverage: `test/provider-state-shapes.test.mjs` (synthetic provider).
+This is structural contract validation only, **not** native test execution,
+scientific ephemeris parity or Rust/WASM integration. Rust remains the only
+planned astronomy engine; [VirgoStars credits](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
