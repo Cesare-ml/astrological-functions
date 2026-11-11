@@ -232,7 +232,7 @@ function point(p) {
   return Object.freeze({name:p.name,longitudeDeg:normalize360(p.longitudeDeg),type:p.type??'body'});
 }
 function definition(d) {
-  if (!d || typeof d.id!=='string' || !d.id.trim())
+  if (!d || typeof d !== 'object' || Array.isArray(d) || typeof d.id!=='string' || !d.id.trim())
     throw new AstrologyError('INVALID_ASPECT', 'Aspect requires an id');
   finite(d.angleDeg,'angleDeg'); finite(d.maxOrbDeg,'maxOrbDeg');
   if(d.angleDeg<0||d.angleDeg>180||d.maxOrbDeg<0)
