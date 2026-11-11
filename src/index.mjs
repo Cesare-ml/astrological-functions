@@ -309,7 +309,9 @@ export async function calculateNatalWithProvider(input) {
         state.metadata.center !== 'EARTH' || state.metadata.frame !== 'ECLIPTIC_OF_DATE' ||
         state.metadata?.corrections !== 'APPARENT')
       throw new AstrologyError('INCOMPATIBLE_EPHEMERIS', 'Provider must return apparent Earth-centered ecliptic-of-date coordinates');
-    finite(state.longitudeDeg, 'longitudeDeg'); finite(state.latitudeDeg, 'latitudeDeg');
+    if (typeof state.longitudeDeg !== 'number' || !Number.isFinite(state.longitudeDeg) ||
+        typeof state.latitudeDeg !== 'number' || !Number.isFinite(state.latitudeDeg))
+      throw new AstrologyError('INVALID_EPHEMERIS_RESULT', 'Provider longitude and latitude must be finite numbers');
     if (state.latitudeDeg < -90 || state.latitudeDeg > 90)
       throw new AstrologyError('INVALID_EPHEMERIS_RESULT', 'Ecliptic latitude must be within -90..90 degrees');
     if (state.longitudeSpeedDegPerDay !== undefined && state.longitudeSpeedDegPerDay !== null)
