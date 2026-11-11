@@ -284,7 +284,7 @@ export async function calculateNatalWithProvider(input) {
   if (latitudeDeg < -90 || latitudeDeg > 90 || longitudeDegEast < -180 || longitudeDegEast > 180)
     throw new AstrologyError('INVALID_COORDINATES', 'Geographic coordinates outside valid bounds');
   if (!Array.isArray(bodyNames) || bodyNames.length === 0 || bodyNames.length > 32 ||
-      bodyNames.some(n => typeof n !== 'string' || !n.trim()) || new Set(bodyNames).size !== bodyNames.length)
+      Array.from(bodyNames).some(n => typeof n !== 'string' || !n.trim()) || new Set(bodyNames).size !== bodyNames.length)
     throw new AstrologyError('INVALID_BODIES', '1..32 unique named bodies required');
   if (!provider || (typeof provider !== 'object' && typeof provider !== 'function') ||
       Array.isArray(provider) || typeof provider.getGeocentricEcliptic !== 'function')
