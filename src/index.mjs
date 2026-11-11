@@ -145,7 +145,10 @@ export function validateHouseCuspSet(input) {
 
 
 /** Verify that externally calculated house cusps match a chart context. No astronomy. */
-export function validateHouseCuspContext({ chart, cuspSet } = {}) {
+export function validateHouseCuspContext(input = {}) {
+  if (!input || typeof input !== 'object' || Array.isArray(input))
+    throw new AstrologyError('INVALID_ARGUMENT', 'House context options must be an object');
+  const { chart, cuspSet } = input;
   if (!chart || !cuspSet || typeof chart !== 'object' || typeof cuspSet !== 'object')
     throw new AstrologyError('INVALID_ARGUMENT', 'Chart and cusp set are required');
   const { datetimeUtc, latitudeDeg, longitudeDegEast, ephemerisProvenance } = chart;
