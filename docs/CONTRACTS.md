@@ -240,3 +240,14 @@ The result is immutable. This does **not** implement the historical
 any house-cusp algorithms. Those remain separate validation gates.
 The astronomical backend remains Rust via
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+## House-system option validation — 2026-11-11
+
+`resolveHouseSystem` now rejects null, undefined, primitive and array inputs
+with the stable `AstrologyError` code `INVALID_ARGUMENT`, rather than
+leaking a JavaScript destructuring `TypeError`. Existing explicit canonical
+and VirgoStars legacy mappings remain unchanged; the helper still does **not**
+calculate house cusps, reproduce legacy `houses_pos`, or introduce astronomy.
+Synthetic regression: `test/house-system-compatibility.test.mjs`.
+Astronomical computation remains exclusively with
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) (Rust).
