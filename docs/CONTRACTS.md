@@ -251,3 +251,19 @@ calculate house cusps, reproduce legacy `houses_pos`, or introduce astronomy.
 Synthetic regression: `test/house-system-compatibility.test.mjs`.
 Astronomical computation remains exclusively with
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) (Rust).
+
+## Explicit house-placement method gate — 2026-11-11
+
+`resolveHousePlacementPolicy` accepts an explicit `CUSP_INTERVAL` method
+and returns a frozen normalized identifier/profile/method tuple. It delegates
+identifier validation to `resolveHouseSystem`. The historical
+`LEGACY_HOUSES_POS` method is **not** treated as equivalent to cusp
+intervals: in the legacy profile it fails closed with
+`UNSUPPORTED_HOUSE_PLACEMENT`, while canonical-profile requests fail with
+`INVALID_HOUSE_PLACEMENT`. Missing/unknown methods also fail explicitly.
+This is a compatibility guard, not a house algorithm, Swiss code port,
+or numerical equivalence claim. Synthetic regression coverage:
+`test/house-placement-policy.test.mjs`. Future `houses_pos` support
+requires independently licensed implementation and verified fixtures.
+Astronomy remains solely with Rust via
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
