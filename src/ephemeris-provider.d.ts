@@ -145,3 +145,18 @@ export declare function validateHouseCuspContext(input: Readonly<HouseCuspContex
     }>;
   }>;
 }>;
+
+/** Optional, separate geometric house placements for an experimental natal chart.
+ * Requires explicit birth time and a context-matched external cusp set.
+ */
+export declare function placeNatalBodiesInHouses(input: Readonly<{
+  chart: ExperimentalNatalResult;
+  cuspSet: HouseCuspContextInput['cuspSet'];
+  birthTimeKnown: true;
+}>): Readonly<{
+  houseSystem: CanonicalHouseSystem;
+  calculationProfile: CalculationProfile;
+  placementMethod: 'CUSP_INTERVAL';
+  metadata: ReturnType<typeof validateHouseCuspContext>['metadata'];
+  placements: Readonly<Record<string, ReturnType<typeof locateLongitudeWithHousePolicy>>>;
+}>;
