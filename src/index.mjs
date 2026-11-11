@@ -253,7 +253,8 @@ export function calculateCrossAspects(input) {
     throw new AstrologyError('INVALID_DIRECTION','Explicit A_TO_B/B_TO_A/SKY_TO_NATAL direction is required');
   if(!Array.isArray(sourcePoints)||!Array.isArray(targetPoints)||!Array.isArray(aspectDefinitions))
     throw new AstrologyError('INVALID_ARGUMENT','All points and aspectDefinitions must be arrays');
-  const src=sourcePoints.map(point),dst=targetPoints.map(point),defs=aspectDefinitions.map(definition);
+  // Array.from visits sparse array holes; Array#map would silently skip them.
+  const src=Array.from(sourcePoints, point),dst=Array.from(targetPoints, point),defs=Array.from(aspectDefinitions, definition);
   const matches=[];
   for(const source of src) for(const target of dst) for(const aspect of defs) {
     const actualAngleDeg=angularSeparation(source.longitudeDeg,target.longitudeDeg);
