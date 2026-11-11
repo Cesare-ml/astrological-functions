@@ -38,3 +38,12 @@ test('unknown, inherited and malformed names are rejected', () => {
     houseSystem:'VEHLOW', calculationProfile:'UNKNOWN'
   }), error => error.code === 'INVALID_PROFILE');
 });
+
+test('malformed house-system options produce typed errors, not JavaScript TypeError', () => {
+  for (const input of [undefined, null, 42, 'VEHLOW', [], true]) {
+    assert.throws(() => resolveHouseSystem(input),
+      error => error.name === 'AstrologyError' && error.code === 'INVALID_ARGUMENT');
+  }
+  assert.throws(() => resolveHouseSystem({houseSystem:'VEHLOW', calculationProfile:null}),
+    error => error.code === 'INVALID_PROFILE');
+});
