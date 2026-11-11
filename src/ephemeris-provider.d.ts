@@ -79,3 +79,20 @@ export declare function resolveHousePlacementPolicy(input: Readonly<{
   calculationProfile: CalculationProfile;
   placementMethod: 'CUSP_INTERVAL';
 }>;
+
+/** Geometric cusp placement only. Cusps must already be supplied by a validated source. */
+export declare function locateLongitudeWithHousePolicy(input: Readonly<{
+  longitudeDeg: number;
+  cusps: readonly number[];
+  houseSystem: CanonicalHouseSystem | LegacyHouseSystemLabel;
+  calculationProfile: CalculationProfile;
+  placementMethod: HousePlacementMethod;
+}>): Readonly<{
+  houseSystem: CanonicalHouseSystem;
+  calculationProfile: CalculationProfile;
+  placementMethod: 'CUSP_INTERVAL';
+  house: number;
+  startDeg: number;
+  endDeg: number;
+  distanceFromCuspDeg: number;
+}>;
