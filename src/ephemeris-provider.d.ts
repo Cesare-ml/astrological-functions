@@ -115,3 +115,33 @@ export declare function validateHouseCuspSet(input: Readonly<HouseCuspSetInput>)
   cusps: readonly number[];
   metadata: Readonly<{houseSystem: CanonicalHouseSystem; placementMethod: 'CUSP_INTERVAL'}>;
 }>;
+
+/** Context match for externally computed cusp data; no astronomical computation. */
+export interface HouseCuspContextInput {
+  readonly chart: Readonly<Pick<ExperimentalNatalResult,
+    'datetimeUtc' | 'latitudeDeg' | 'longitudeDegEast' | 'ephemerisProvenance'>>;
+  readonly cuspSet: Readonly<Omit<HouseCuspSetInput, 'metadata'> & {
+    metadata: Readonly<HouseCuspSetInput['metadata'] & {
+      datetimeUtc: string;
+      latitudeDeg: number;
+      longitudeDegEast: number;
+      ephemerisProvenance: Readonly<{
+        engineVersion: string; kernelSetId: string; timeModel: string;
+      }>;
+    }>;
+  }>;
+}
+export declare function validateHouseCuspContext(input: Readonly<HouseCuspContextInput>): Readonly<{
+  houseSystem: CanonicalHouseSystem;
+  calculationProfile: CalculationProfile;
+  placementMethod: 'CUSP_INTERVAL';
+  cusps: readonly number[];
+  metadata: Readonly<{
+    houseSystem: CanonicalHouseSystem;
+    placementMethod: 'CUSP_INTERVAL';
+    datetimeUtc: string; latitudeDeg: number; longitudeDegEast: number;
+    ephemerisProvenance: Readonly<{
+      engineVersion: string; kernelSetId: string; timeModel: string;
+    }>;
+  }>;
+}>;
