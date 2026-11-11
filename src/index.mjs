@@ -208,8 +208,8 @@ export function placeNatalBodiesInHouses(input = {}) {
   const validated = validateHouseCuspContext({ chart, cuspSet });
   const placements = Object.create(null);
   for (const [name, body] of Object.entries(chart.bodies)) {
-    if (!body || body.name !== name)
-      throw new AstrologyError('INVALID_POINT', 'Body identifier must match its chart key');
+    if (!body || typeof body !== 'object' || Array.isArray(body) || body.name !== name)
+      throw new AstrologyError('INVALID_POINT', 'Body must be a non-array object whose identifier matches its chart key');
     placements[name] = locateLongitudeWithHousePolicy({
       longitudeDeg: body.longitudeDeg, cusps: validated.cusps,
       houseSystem: validated.houseSystem,
