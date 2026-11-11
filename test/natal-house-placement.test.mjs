@@ -51,3 +51,26 @@ test('malformed body identifiers are rejected',()=>{
     chart:{...chart,bodies:{Sun:{name:'Moon',longitudeDeg:345}}}}),
     e=>e.code==='INVALID_POINT');
 });
+
+test('reserved JavaScript body identifiers remain own placement keys',()=>{
+  const bodies=Object.create(null);
+  for (const [name, longitudeDeg] of [['__proto__',345],['constructor',15],['toString',344.9]])
+    bodies[name]={name,longitudeDeg};
+  const result=placeNatalBodiesInHouses({
+    chart:{...chart,bodies},cuspSet,birthTimeKnown:true
+  });
+  assert.deepEqual(Object.keys(result.placements),['__proto__','constructor','toString']);
+  assert.equal(Object.getPrototypeOf(result.placements),null);
+  assert.equal(result.placements.__proto__.house,1);
+  assert.equal(result.placements.constructor.house,2);
+  assert.equal(result.placements.toString.house,12);
+  assert.equal(Object.isFrozen(result.placements),true);
+});
+test('nonfinite body longitude fails without producing partial placements',()=>{
+  for (const longitudeDeg of [NaN,Infinity,-Infinity,'15']) {
+    assert.throws(()=>placeNatalBodiesInHouses({
+      chart:{...chart,bodies:{Sun:{name:'Sun',longitudeDeg}}},
+      cuspSet,birthTimeKnown:true
+    }),e=>e.code==='INVALID_ANGLE');
+  }
+});
