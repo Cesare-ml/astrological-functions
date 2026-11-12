@@ -8,6 +8,10 @@
     "./dodecatemoria": {
       "types": "./src/dodecatemoria-methods.d.mts",
       "import": "./src/dodecatemoria-methods.mjs"
+    },
+    "./dodecatemoria-batch": {
+      "types": "./src/dodecatemoria-batch.d.mts",
+      "import": "./src/dodecatemoria-batch.mjs"
     }
   },
   "engines": {
