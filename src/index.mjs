@@ -246,8 +246,8 @@ function definition(d) {
   if (!d || typeof d !== 'object' || Array.isArray(d) || typeof d.id!=='string' || !d.id.trim())
     throw new AstrologyError('INVALID_ASPECT', 'Aspect requires an id');
   finite(d.angleDeg,'angleDeg'); finite(d.maxOrbDeg,'maxOrbDeg');
-  if(d.angleDeg<0||d.angleDeg>180||d.maxOrbDeg<0)
-    throw new AstrologyError('INVALID_ASPECT','Aspect angle must be 0..180 and orb >= 0');
+  if(d.angleDeg<0||d.angleDeg>180||d.maxOrbDeg<0||d.maxOrbDeg>180)
+    throw new AstrologyError('INVALID_ASPECT','Aspect angle and maximum orb must each be within 0..180 degrees');
   return Object.freeze({id:d.id,angleDeg:d.angleDeg,maxOrbDeg:d.maxOrbDeg});
 }
 /**
