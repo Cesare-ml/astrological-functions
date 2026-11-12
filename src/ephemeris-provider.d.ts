@@ -33,29 +33,29 @@ export interface NatalInput {
   readonly provider: EphemerisProvider;
 }
 export interface NatalBody {
-  name: string;
-  longitudeDeg: number;
-  latitudeDeg: number;
-  zodiacSignIndex: number;
-  longitudeSpeedDegPerDay: number | null;
+  readonly name: string;
+  readonly longitudeDeg: number;
+  readonly latitudeDeg: number;
+  readonly zodiacSignIndex: number;
+  readonly longitudeSpeedDegPerDay: number | null;
   readonly ephemerisMetadata: ApparentGeocentricState['metadata'];
 }
 export interface ExperimentalNatalResult {
-  contract: 'NatalChartResult';
-  contractVersion: '0.1.0-experimental';
-  datetimeUtc: string;
-  latitudeDeg: number;
-  longitudeDegEast: number;
-  bodies: Readonly<Record<string, Readonly<NatalBody>>>;
+  readonly contract: 'NatalChartResult';
+  readonly contractVersion: '0.1.0-experimental';
+  readonly datetimeUtc: string;
+  readonly latitudeDeg: number;
+  readonly longitudeDegEast: number;
+  readonly bodies: Readonly<Record<string, Readonly<NatalBody>>>;
   /** Snapshot of the consistent provider provenance; null means unavailable. */
-  ephemerisProvenance: Readonly<{
+  readonly ephemerisProvenance: Readonly<{
     engineVersion: string | null;
     kernelSetId: string | null;
     timeModel: string | null;
   }>;
-  houses: null;
-  angles: null;
-  warnings: ReadonlyArray<Readonly<{code: string; message: string}>>;
+  readonly houses: null;
+  readonly angles: null;
+  readonly warnings: ReadonlyArray<Readonly<{code: string; message: string}>>;
 }
 export declare function calculateNatalWithProvider(input: NatalInput): Promise<ExperimentalNatalResult>;
 
