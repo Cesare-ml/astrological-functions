@@ -116,7 +116,7 @@ test('Sun/Moon may not come from different kernels in one result', async () => {
 
 test('finite geocentric longitude and latitude required; no numeric strings', async () => {
   for (const longitudeDeg of [NaN, Infinity, '2', undefined]) {
-    const p = provider({ sun: longitudeDeg });
+    const p = provider({ mutate: state => ({ ...state, longitudeDeg }) });
     await assert.rejects(() => run(p), e => e.code === 'INVALID_PROVIDER_POSITION');
   }
   for (const latitudeDeg of [-91, 91, NaN, '0', Infinity, undefined]) {
