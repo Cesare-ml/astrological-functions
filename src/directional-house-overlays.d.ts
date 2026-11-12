@@ -55,3 +55,24 @@ export interface DirectionalHouseOverlayResult {
 export declare function calculateDirectionalHouseOverlays(
   input: Readonly<DirectionalHouseOverlayInput>
 ): Readonly<DirectionalHouseOverlayResult>;
+
+/** Caller must supply both independently computed house contexts. */
+export type BidirectionalHouseOverlayInput = SharedOverlayInput & Readonly<{
+  cuspSetA: HouseCuspContextInput['cuspSet'];
+  cuspSetB: HouseCuspContextInput['cuspSet'];
+}>;
+
+export interface BidirectionalHouseOverlayResult {
+  readonly contract: 'BidirectionalHouseOverlayResult';
+  readonly contractVersion: '0.1.0-experimental';
+  readonly aToB: Readonly<DirectionalHouseOverlayResult & {
+    direction: 'A_TO_B'; sourceChart: 'A'; targetChart: 'B';
+  }>;
+  readonly bToA: Readonly<DirectionalHouseOverlayResult & {
+    direction: 'B_TO_A'; sourceChart: 'B'; targetChart: 'A';
+  }>;
+}
+
+export declare function calculateBidirectionalHouseOverlays(
+  input: Readonly<BidirectionalHouseOverlayInput>
+): Readonly<BidirectionalHouseOverlayResult>;
