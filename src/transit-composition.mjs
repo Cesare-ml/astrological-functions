@@ -58,6 +58,22 @@ function cloneNatal(value) {
   }));
   return Object.freeze({datetimeUtc:value.datetimeUtc, zodiac, ephemeris, points});
 }
+function selectNatalPoints(natal, names) {
+  if (names === undefined) return natal;
+  if (!Array.isArray(names) || names.length < 1 || names.length > 32)
+    fail('INVALID_BODIES', 'Explicit natal selection requires 1..32 unique named bodies');
+  const seen = new Set();
+  const pointsByName = new Map(natal.points.map(point => [point.name, point]));
+  const selected = Object.freeze(Array.from(names, name => {
+    if (!nonempty(name) || seen.has(name))
+      fail('INVALID_BODIES', 'Selected natal body IDs must be unique and nonempty');
+    seen.add(name);
+    const point = pointsByName.get(name);
+    if (!point) fail('INVALID_BODIES', 'Selected natal body is absent from validated natal snapshot');
+    return point;
+  }));
+  return Object.freeze({...natal, points:selected});
+}
 function cloneRules(value) {
   if (!Array.isArray(value)) fail('INVALID_ASPECT', 'Explicit aspectDefinitions array required');
   const seen = new Set();
@@ -83,7 +99,7 @@ export async function calculateTransitFactsWithProvider(input) {
   if (!record(input)) fail('INVALID_ARGUMENT', 'Explicit composition input required');
   if (input.birthTimeKnown !== true)
     fail('BIRTH_TIME_REQUIRED', 'Exact natal transit facts require an explicitly known birth time');
-  const natal = cloneNatal(input.natal);
+  const natal = selectNatalPoints(cloneNatal(input.natal), input.natalBodyNames);
   const aspectDefinitions = cloneRules(input.aspectDefinitions);
   const skyZodiac = checkedZodiac(input.zodiac);
   const expectedEphemeris = checkedEphemeris(input.expectedEphemeris);

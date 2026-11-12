@@ -5,6 +5,8 @@ import type { TransitPositionProvider, TransitSkyProviderInput } from './transit
 export interface TransitCompositionInput extends Omit<TransitSkyProviderInput,'provider'> {
   readonly birthTimeKnown: true;
   readonly natal: TransitSnapshotInput;
+  /** Optional explicit natal body subset; omission preserves all valid natal bodies. */
+  readonly natalBodyNames?: readonly string[];
   readonly aspectDefinitions: readonly TransitAspectDefinition[];
   readonly provider: TransitPositionProvider;
 }

@@ -138,3 +138,39 @@ test('invalid sky zodiac and expected ephemeris abort before provider I/O',async
   await rejects(x=>x.zodiac={type:'SIDEREAL'},'INVALID_ZODIAC',0);
   await rejects(x=>x.expectedEphemeris.kernelSetId='','INCOMPATIBLE_EPHEMERIS',0);
 });
+
+test('optional natal selection includes only explicitly chosen targets',async()=>{
+  const {input,calls}=fixture(); input.natalBodyNames=['Moon'];
+  const result=await calculateTransitFactsWithProvider(input);
+  assert.equal(calls.length,1);
+  assert.deepEqual(result.facts.natal.points.map(p=>p.name),['Moon']);
+  assert.deepEqual(result.facts.aspects.map(a=>a.target.name),['Moon']);
+  assert.deepEqual(result.facts.aspects.map(a=>a.aspectId),['opposition']);
+  assert.equal(result.status,'PROVIDER_ASSERTED_NOT_INDEPENDENTLY_VERIFIED');
+});
+test('natal body selection rejects unknown, repeated, sparse and blank IDs before provider I/O',async()=>{
+  await rejects(x=>x.natalBodyNames=['Jupiter'],'INVALID_BODIES',0);
+  await rejects(x=>x.natalBodyNames=['Sun','Sun'],'INVALID_BODIES',0);
+  await rejects(x=>x.natalBodyNames=Array(2),'INVALID_BODIES',0);
+  await rejects(x=>x.natalBodyNames=[''],'INVALID_BODIES',0);
+  await rejects(x=>x.natalBodyNames=[],'INVALID_BODIES',0);
+  await rejects(x=>x.natalBodyNames=['__proto__'],'INVALID_BODIES',0);
+});
+test('selected natal body order is stable and input arrays remain unchanged',async()=>{
+  const {input}=fixture();input.natalBodyNames=['Moon','Sun']; const selected=input.natalBodyNames;
+  const result=await calculateTransitFactsWithProvider(input);
+  assert.deepEqual(result.facts.natal.points.map(x=>x.name),['Moon','Sun']);
+  assert.deepEqual(selected,['Moon','Sun']);
+  assert.ok(Object.isFrozen(result.facts.natal.points));
+});
+test('asynchronous provider mutations cannot rewrite an explicit natal selection',async()=>{
+  const {input}=fixture(); input.natalBodyNames=['Sun'];
+  const original=input.provider.getGeocentricEcliptic;
+  input.provider.getGeocentricEcliptic=async request=>{
+    input.natalBodyNames[0]='Moon';
+    return original(request);
+  };
+  const output=await calculateTransitFactsWithProvider(input);
+  assert.deepEqual(output.facts.natal.points.map(p=>p.name),['Sun']);
+  assert.deepEqual(output.facts.aspects.map(a=>a.target.name),['Sun']);
+});

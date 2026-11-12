@@ -26,3 +26,8 @@ calculateTransitFactsWithProvider({...input,zodiac:{type:'SIDEREAL'}});
 // @ts-expect-error the aspect rules must be explicit
 calculateTransitFactsWithProvider({birthTimeKnown:true,natal:input.natal,datetimeUtc:input.datetimeUtc,
   zodiac:input.zodiac,bodyNames:input.bodyNames,expectedEphemeris:metadata,provider});
+
+const selected:TransitCompositionInput={...input,natalBodyNames:['Sun']};
+void calculateTransitFactsWithProvider(selected);
+// @ts-expect-error natal selections must be arrays, not strings
+calculateTransitFactsWithProvider({...input,natalBodyNames:'Sun'});

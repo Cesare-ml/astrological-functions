@@ -21,13 +21,16 @@ const result = await calculateTransitFactsWithProvider({
     timeModel:'PINNED_TIME_MODEL'
   },
   provider: rustWasmProvider,
+  natalBodyNames: ['Sun','Moon'], // optional; omitted means all validated natal bodies
   aspectDefinitions:[{id:'conjunction',angleDeg:0,maxOrbDeg:3}]
 });
 ```
 
 The returned, frozen **`TransitFactsWithProviderResult v0.1.0-experimental`** keeps both `facts` (direction `SKY_TO_NATAL`, no houses or angles) and **provider warning/status**. Critically, `status:'PROVIDER_ASSERTED_NOT_INDEPENDENTLY_VERIFIED'` and `warnings:[{code:'EPHEMERIS_ACCURACY_NOT_VERIFIED',...}]` remain visible. These are never silently promoted to certified astronomical positions just because the angle geometry was evaluated. Callers must preserve them in any downstream API/UI. No fallback to Swiss Ephemeris is present.
 
-Known birth time is mandatory. Unknown-time natal snapshots need a separate explicitly uncertainty-aware workflow. The natal chart is validated for UTC calendar, zodiac, apparent-of-date provenance, unique finite body positions and optional speeds, and all aspect rules are validated for finite angles/orbs and duplicate IDs **before** any provider I/O. Natal/sky zodiac and engine/kernel/time-model parity are likewise checked before the provider call. Natal data and aspect rules are snapshotted before the first provider await; subsequent caller mutations cannot rewrite the calculation. `getTransitSkySnapshotWithProvider` additionally validates sky UTC, body IDs, provider capabilities and responses. No partial result is returned. This is structural/semantic validation, not astronomical correctness certification.
+Known birth time is mandatory. Unknown-time natal snapshots need a separate explicitly uncertainty-aware workflow. An optional `natalBodyNames` list selects a unique subset of 1..32 existing natal bodies in caller-specified order; unknown, duplicate, sparse or invalid IDs fail before any ephemeris provider I/O. When the list is omitted, all validated natal bodies are used. This provides explicit natal-body targeting without exposing a second competing transit API. Sky body selection already uses the required `bodyNames` parameter.
+
+The natal chart is validated for UTC calendar, zodiac, apparent-of-date provenance, unique finite body positions and optional speeds, and all aspect rules are validated for finite angles/orbs and duplicate IDs **before** any provider I/O. Natal/sky zodiac and engine/kernel/time-model parity are likewise checked before the provider call. Natal data and aspect rules are snapshotted before the first provider await; subsequent caller mutations cannot rewrite the calculation. `getTransitSkySnapshotWithProvider` additionally validates sky UTC, body IDs, provider capabilities and responses. No partial result is returned. This is structural/semantic validation, not astronomical correctness certification.
 
 This PR is **stacked on PR #15 → #13**, and intentionally does not modify the independent transit implementation proposed in PR #12 (stacked on #3). Before merging or promoting any one API, review #12 and #13 together, select the canonical package contract and remove duplicative APIs/exports. Keep the draft stack separate until that decision is made.
 
