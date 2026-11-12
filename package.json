@@ -4,7 +4,11 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.mjs"
+    ".": "./src/index.mjs",
+    "./lunar-elongation": {
+      "types": "./src/lunar-elongation.d.mts",
+      "default": "./src/lunar-elongation.mjs"
+    }
   },
   "engines": {
     "node": ">=20"
