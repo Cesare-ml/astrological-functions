@@ -1,0 +1,124 @@
+/**
+ * Experimental Sun/Moon provider gate for the F5 longitude-sector method.
+ * This module performs NO astronomical calculations and accepts no Swiss fallback.
+ * Provider metadata is checked, not proof of real-kernel scientific accuracy.
+ */
+import { AstrologyError, normalize360 } from './index.mjs';
+import { calculateLunarElongationSectors } from './lunar-elongation.mjs';
+
+const CONTEXT = Object.freeze({
+  center: 'EARTH',
+  frame: 'ECLIPTIC_OF_DATE',
+  corrections: 'APPARENT',
+  zodiac: 'TROPICAL',
+});
+
+function requiredString(value, field) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new AstrologyError('INVALID_EPHEMERIS_PIN', `${field} must be a nonempty string`);
+  }
+  return value;
+}
+
+function validateUtc(datetimeUtc) {
+  // Explicit second-or-millisecond precision prevents coercion of local dates.
+  if (typeof datetimeUtc !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(datetimeUtc)) {
+    throw new AstrologyError('INVALID_UTC', 'Explicit ISO UTC instant with Z is required');
+  }
+  const timestamp = Date.parse(datetimeUtc);
+  if (!Number.isFinite(timestamp) ||
+      new Date(timestamp).toISOString().slice(0, 19) !== datetimeUtc.slice(0, 19)) {
+    throw new AstrologyError('INVALID_UTC', 'Invalid UTC calendar instant');
+  }
+}
+
+function validatedExpectedPin(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new AstrologyError('INVALID_EPHEMERIS_PIN', 'An explicit ephemeris pin is required');
+  }
+  return Object.freeze({
+    engineVersion: requiredString(value.engineVersion, 'engineVersion'),
+    kernelSetId: requiredString(value.kernelSetId, 'kernelSetId'),
+    timeModelId: requiredString(value.timeModelId, 'timeModelId'),
+  });
+}
+
+function validatePosition(state, bodyName, datetimeUtc, pin) {
+  const metadata = state?.metadata;
+  if (!state || !metadata || typeof metadata !== 'object' || Array.isArray(metadata) ||
+      metadata.bodyName !== bodyName ||
+      metadata.datetimeUtc !== datetimeUtc ||
+      metadata.center !== CONTEXT.center ||
+      metadata.frame !== CONTEXT.frame ||
+      metadata.corrections !== CONTEXT.corrections ||
+      metadata.engineVersion !== pin.engineVersion ||
+      metadata.kernelSetId !== pin.kernelSetId ||
+      metadata.timeModelId !== pin.timeModelId) {
+    throw new AstrologyError('INCOMPATIBLE_EPHEMERIS',
+      `Provider returned incompatible ${bodyName} position/metadata`);
+  }
+  if (typeof state.latitudeDeg !== 'number' ||
+      !Number.isFinite(state.latitudeDeg) ||
+      Math.abs(state.latitudeDeg) > 90) {
+    throw new AstrologyError('INVALID_PROVIDER_POSITION', `Invalid ${bodyName} ecliptic latitude`);
+  }
+  // Canonical normalizer rejects missing, NaN, infinite or string longitudes.
+  let longitudeDeg;
+  try {
+    longitudeDeg = normalize360(state.longitudeDeg);
+  } catch {
+    throw new AstrologyError('INVALID_PROVIDER_POSITION', `Invalid ${bodyName} ecliptic longitude`);
+  }
+  return Object.freeze({ bodyName, longitudeDeg, latitudeDeg: state.latitudeDeg });
+}
+
+/**
+ * Obtain two matching apparent geocentric ecliptic-of-date tropical positions.
+ * The injected provider must implement the same name-based request boundary as
+ * calculateNatalWithProvider; callers must pin provenance and the UTC instant.
+ */
+export async function calculateLunarElongationWithProvider(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new AstrologyError('INVALID_ARGUMENT', 'Provider calculation input is required');
+  }
+  validateUtc(input.datetimeUtc);
+  if (input.zodiac !== 'TROPICAL') {
+    throw new AstrologyError('UNSUPPORTED_LUNAR_ZODIAC',
+      'Provider gate is tropical-only until sidereal projection is validated');
+  }
+  const pin = validatedExpectedPin(input.expectedEphemeris);
+  if (!input.provider || typeof input.provider.getGeocentricEcliptic !== 'function') {
+    throw new AstrologyError('MISSING_PROVIDER', 'Explicit EphemerisProvider required');
+  }
+  const positions = {};
+  for (const bodyName of ['Sun', 'Moon']) {
+    const request = Object.freeze({
+      datetimeUtc: input.datetimeUtc,
+      bodyName,
+      frame: CONTEXT.frame,
+      corrections: CONTEXT.corrections,
+    });
+    let state;
+    try {
+      state = await input.provider.getGeocentricEcliptic(request);
+    } catch {
+      throw new AstrologyError('EPHEMERIS_PROVIDER_FAILED',
+        `Provider failed to obtain ${bodyName} position`);
+    }
+    positions[bodyName] = validatePosition(state, bodyName, input.datetimeUtc, pin);
+  }
+  const sectors = calculateLunarElongationSectors({
+    sunLongitudeDeg: positions.Sun.longitudeDeg,
+    moonLongitudeDeg: positions.Moon.longitudeDeg,
+    context: CONTEXT,
+  });
+  return Object.freeze({
+    contract: 'LunarElongationWithProvider',
+    contractVersion: '0.1.0-experimental',
+    datetimeUtc: input.datetimeUtc,
+    ephemeris: pin,
+    positions: Object.freeze(positions),
+    sectors,
+  });
+}
