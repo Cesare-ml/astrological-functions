@@ -541,3 +541,17 @@ The experimental TypeScript declarations now reuse the discriminated `HouseSyste
 ### Type-level birth-time gate (experimental)
 
 `placeNatalBodiesInHouses` requires `birthTimeKnown: true` explicitly. The TypeScript fixture `test/types/house-context-profile.test.ts` includes negative checks for `false` and an omitted flag. This is a **compile-time** guard only: JavaScript callers still require runtime validation, and the synthetic chart/cusp fixture does not establish astronomical correctness. Run `tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext test/types/house-context-profile.test.ts` after the runtime adapter import gap tracked in issue #5 is resolved; do not treat the new `@ts-expect-error` checks as passed until then.
+
+
+## Birth-time narrowing regression — 2026-11-12
+
+The TypeScript fixture `test/types/house-context-profile.test.ts` now checks that
+`placeNatalBodiesInHouses` rejects an unresolved application-state `boolean`
+for `birthTimeKnown`, while accepting the same value after explicit narrowing
+with `birthTimeKnownFromForm === true`. This is a **compile-time contract**:
+callers must still validate user-supplied birth-time information at runtime.
+The check does not compute cusps or establish scientific ephemeris accuracy.
+Run `tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext test/types/house-context-profile.test.ts`
+and `npm test` locally before declaring this change validated. The separate
+runtime import pilot is tracked in issue #5; do not conflate its results with
+these type-level checks.
