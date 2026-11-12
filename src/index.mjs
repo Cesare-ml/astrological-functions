@@ -219,6 +219,8 @@ export function placeNatalBodiesInHouses(input = {}) {
   for (const [name, body] of Object.entries(chart.bodies)) {
     if (!body || typeof body !== 'object' || Array.isArray(body) || body.name !== name)
       throw new AstrologyError('INVALID_POINT', 'Body must be a non-array object whose identifier matches its chart key');
+    if (typeof body.longitudeDeg !== 'number' || !Number.isFinite(body.longitudeDeg))
+      throw new AstrologyError('INVALID_POINT', 'Body longitude must be a finite number');
     placements[name] = locateLongitudeWithHousePolicy({
       longitudeDeg: body.longitudeDeg, cusps: validated.cusps,
       houseSystem: validated.houseSystem,
