@@ -20,3 +20,22 @@ house astronomy, polar behavior, Swiss compatibility, or Rust/WASM
 integration. No astronomical calculation is added to TypeScript.
 
 VirgoStars project: https://github.com/Cesare-ml/VirgoStars-Ephemeris
+
+## Additional boundary coverage (2026-11-12)
+
+`test/house-unequal-wrap-regression.test.mjs` adds three isolated Node tests:
+unequal cusp intervals crossing 0°, exact ownership at multiple boundaries,
+longitude equivalence under whole-turn shifts, and fail-closed rejection of
+sparse/nonfinite cusp arrays through both the direct locator and validated
+cusp-set entry point. No house astronomy is computed.
+
+Run:
+```sh
+node --test test/house-unequal-wrap-regression.test.mjs
+node --test test/house-wrap-boundary.test.mjs
+npm test
+```
+
+Execution status: **not run** in the GitHub connector; these assertions
+require a native checkout and Node.js >=20. An implementation/code review
+does not establish passing tests or scientific accuracy.
