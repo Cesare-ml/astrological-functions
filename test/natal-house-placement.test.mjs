@@ -66,12 +66,12 @@ test('reserved JavaScript body identifiers remain own placement keys',()=>{
   assert.equal(result.placements.toString.house,12);
   assert.equal(Object.isFrozen(result.placements),true);
 });
-test('nonfinite body longitude fails without producing partial placements',()=>{
+test('nonfinite or nonnumeric body longitude fails with INVALID_POINT',()=>{
   for (const longitudeDeg of [NaN,Infinity,-Infinity,'15']) {
     assert.throws(()=>placeNatalBodiesInHouses({
       chart:{...chart,bodies:{Sun:{name:'Sun',longitudeDeg}}},
       cuspSet,birthTimeKnown:true
-    }),e=>e.code==='INVALID_ANGLE');
+    }),e=>e.code==='INVALID_POINT');
   }
 });
 
