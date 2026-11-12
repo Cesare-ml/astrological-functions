@@ -64,6 +64,10 @@ export function classifyOrientedAspectTrend(input) {
   const relativeSpeedDegPerDay = a.longitudeSpeedDegPerDay === null || b.longitudeSpeedDegPerDay === null
     ? null : b.longitudeSpeedDegPerDay - a.longitudeSpeedDegPerDay;
 
+  if (relativeSpeedDegPerDay !== null && !Number.isFinite(relativeSpeedDegPerDay)) {
+    error('INVALID_RELATIVE_SPEED', 'Relative longitude speed overflowed its finite numeric range');
+  }
+
   const withinOrb = absoluteResidualDeg <= maxOrbDeg;
   let trend;
   if (!withinOrb) trend = 'OUTSIDE_ORB';
