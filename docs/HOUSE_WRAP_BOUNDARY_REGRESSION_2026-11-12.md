@@ -54,3 +54,16 @@ Verification command: `node --test test/house-unequal-wrap-regression.test.mjs`.
 inspect source, but the execution container cannot reach this private
 repository. Assertions are implementation-only until run in a checkout.
 No Rust/WASM or astronomical accuracy is asserted.
+
+## Invalid longitude and immutable result regression (2026-11-13)
+
+The unequal-wrap fixture now also rejects missing, nonnumeric, NaN and infinite
+**body longitudes** with `INVALID_ANGLE`, distinct from malformed cusp sets
+(`INVALID_CUSPS`). A placement snapshot must be frozen, retain its starting
+and ending cusp values, and remain unchanged when the caller subsequently
+mutates the original cusp array. This exercises only existing geometry; no
+house algorithm or astronomical ephemeris was introduced.
+
+Run: `node --test test/house-unequal-wrap-regression.test.mjs` followed by
+`npm test` in a complete checkout. **Neither command was executed here**;
+these new assertions are unvalidated pending native execution.
