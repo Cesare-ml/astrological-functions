@@ -9,11 +9,11 @@ export interface ApparentGeocentricState {
     center: 'EARTH';
     frame: 'ECLIPTIC_OF_DATE';
     corrections: 'APPARENT';
-    engineVersion?: string;
-    kernelSetId?: string;
-    timeModel?: string;
     [key: string]: unknown;
-  }>;
+  } & (
+    | { engineVersion: string; kernelSetId: string; timeModel: string }
+    | { engineVersion?: never; kernelSetId?: never; timeModel?: never }
+  )>;
 }
 /** Runtime passes frozen requests to the future Rust/WASM adapter. */
 export interface EphemerisRequest {
