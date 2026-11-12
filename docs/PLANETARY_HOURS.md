@@ -46,3 +46,39 @@ tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution noden
 The test fixtures are **synthetic**; passing tests validates only this arithmetic implementation and edge handling. Full checkout testing, downstream rendering/consumer import, validated solar rise/set comparison, provenance/licensing/privacy audit, and a reviewed package export remain gates before merging or releasing. Do not run GitHub Actions, publish, deploy or change production under this PR.
 
 Project credit: [VirgoStars](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+## Exact-instant lookup (F5 extension)
+
+`lookupPlanetaryHour({ schedule, instantUtc })` resolves a **caller-selected** instant against the complete sunrise-to-next-sunrise `buildPlanetaryHours` schedule. It never reads the device clock, guesses a timezone, computes solar positions, or extrapolates the next day's hours.
+
+```js
+import { buildPlanetaryHours, lookupPlanetaryHour } from '../src/planetary-hours.mjs';
+
+const schedule = buildPlanetaryHours({
+  availability: 'AVAILABLE', weekday: 'SUNDAY',
+  sunriseUtc: '2026-11-15T06:00:00Z',
+  sunsetUtc: '2026-11-15T18:00:00Z',
+  nextSunriseUtc: '2026-11-16T06:00:00Z',
+});
+const lookup = lookupPlanetaryHour({
+  schedule, instantUtc: '2026-11-15T18:00:00Z',
+});
+// FOUND: hour 13 (NIGHT), JUPITER, elapsedMs = 0
+```
+
+The result is a frozen, discriminated `PlanetaryHourLookup / 0.1.0-experimental` fact:
+
+- `FOUND`: a frozen canonical `hour`, plus non-negative integer `elapsedMs` and strictly positive integer `remainingMs`.
+- `OUTSIDE_SCHEDULE`: `hour: null` for times before sunrise or at/after next sunrise. No rollover or implicit regeneration.
+- `UNAVAILABLE`: `hour: null` and the original polar/solar unavailability `reason`.
+
+All branches include normalized `instantUtc` and the **caller-supplied, not astronomically verified** evidence label. Sunrise and every planetary-hour start are inclusive; each end is exclusive. Sunset enters hour 13. A JSON-deserialized schedule is accepted if it exactly matches fresh canonical facts, regardless of object-key order. Inconsistent or altered schedule facts are rejected as `INVALID_SCHEDULE`. The check is **structural only**: it does not establish the authenticity of the original sunrise/sunset input or its weekday. Users of untrusted inputs must independently validate event provenance and observer data.
+
+Additional isolated tests:
+
+```sh
+node --test test/planetary-hour-lookup.test.mjs
+tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext test/types/planetary-hour-lookup.test.ts
+```
+
+No root package export has been added. The extension remains part of draft PR #38 and requires the same scientific, licensing, consumer and full-repository validation gates.
