@@ -119,3 +119,30 @@ test('uneven day/night schedule keeps millisecond exactness', () => {
   assert.equal(sunset.elapsedMs, 0);
   assert.equal(sunset.hour.durationMs + sunset.remainingMs > 0, true);
 });
+
+test('rejects sparse hole in an otherwise complete 24-hour schedule', () => {
+  const corrupt = JSON.parse(JSON.stringify(schedule));
+  delete corrupt.hours[6];
+  assert.equal(corrupt.hours.length, 24);
+  assert.throws(() => at('2026-11-15T12:00:00Z', corrupt), expectCode('INVALID_SCHEDULE'));
+});
+
+test('rejects inherited hours rather than an owned schedule list', () => {
+  const inherited = JSON.parse(JSON.stringify(schedule));
+  const inheritedHours = inherited.hours;
+  delete inherited.hours;
+  Object.setPrototypeOf(inherited, { hours: inheritedHours });
+  assert.throws(() => at('2026-11-15T12:00:00Z', inherited), expectCode('INVALID_SCHEDULE'));
+});
+
+test('rejects extra enumerable hour-array properties', () => {
+  const corrupt = JSON.parse(JSON.stringify(schedule));
+  corrupt.hours.custom = 'not a canonical array';
+  assert.throws(() => at('2026-11-15T12:00:00Z', corrupt), expectCode('INVALID_SCHEDULE'));
+});
+
+test('rejects adversarial calendar entries even when the lookup instant precedes them', () => {
+  const corrupt = JSON.parse(JSON.stringify(schedule));
+  corrupt.hours[23].remainingMs = 1000;
+  assert.throws(() => at('2026-11-15T06:00:00Z', corrupt), expectCode('INVALID_SCHEDULE'));
+});
