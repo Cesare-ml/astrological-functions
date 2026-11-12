@@ -112,3 +112,23 @@ test('house placement rejects mismatched ephemeris engine and time model', () =>
     );
   }
 });
+
+test('house placement fails closed on missing or incomplete provenance', () => {
+  for (const ephemerisProvenance of [
+    undefined, null, {}, { ...provenance, timeModel: '' },
+  ]) {
+    const malformedChart = { ...chart, ephemerisProvenance };
+    assert.throws(
+      () => placeNatalBodiesInHouses({ chart: malformedChart, cuspSet, birthTimeKnown: true }),
+      error => error.code === 'INVALID_HOUSE_METADATA',
+    );
+    const malformedCusps = {
+      ...cuspSet,
+      metadata: { ...cuspSet.metadata, ephemerisProvenance },
+    };
+    assert.throws(
+      () => placeNatalBodiesInHouses({ chart, cuspSet: malformedCusps, birthTimeKnown: true }),
+      error => error.code === 'INVALID_HOUSE_METADATA',
+    );
+  }
+});
