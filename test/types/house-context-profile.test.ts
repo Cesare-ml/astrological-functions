@@ -38,3 +38,13 @@ placeNatalBodiesInHouses({ chart, cuspSet: canonical.cuspSet, birthTimeKnown: fa
 // @ts-expect-error An omitted birth-time flag must not imply true.
 placeNatalBodiesInHouses({ chart, cuspSet: legacy.cuspSet });
 void invalid;
+
+// A boolean derived from application state is not proof of a known birth time.
+declare const birthTimeKnownFromForm: boolean;
+// @ts-expect-error A runtime boolean must be narrowed to literal true first.
+placeNatalBodiesInHouses({ chart, cuspSet: canonical.cuspSet, birthTimeKnown: birthTimeKnownFromForm });
+
+// A narrowed true value is accepted without coercion or an unsafe cast.
+if (birthTimeKnownFromForm === true) {
+  placeNatalBodiesInHouses({ chart, cuspSet: canonical.cuspSet, birthTimeKnown: birthTimeKnownFromForm });
+}
