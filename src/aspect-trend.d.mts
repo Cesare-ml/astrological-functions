@@ -41,7 +41,7 @@ export interface OrientedAspectTrendFact {
 }
 export declare class AspectTrendError extends Error {
   readonly code: 'INVALID_INPUT' | 'INVALID_POINT' | 'INVALID_ASPECT' | 'INVALID_ORB_POLICY' |
-    'INVALID_SPEED_POLICY' | 'INVALID_MOTION_FRAME' | 'INVALID_FIXED_TARGET';
+    'INVALID_SPEED_POLICY' | 'INVALID_MOTION_FRAME' | 'INVALID_FIXED_TARGET' | 'INVALID_RELATIVE_SPEED';
   constructor(code: AspectTrendError['code'], message: string);
 }
 export declare function classifyOrientedAspectTrend(input: AspectTrendInput): Readonly<OrientedAspectTrendFact>;
