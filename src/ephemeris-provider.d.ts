@@ -63,10 +63,10 @@ export declare function calculateNatalWithProvider(input: NatalInput): Promise<E
 export type CalculationProfile = 'CANONICAL_V1' | 'VIRGOSTARS_LEGACY_V1';
 export type CanonicalHouseSystem = 'VEHLOW' | 'PLACIDUS' | 'KOCH' | 'REGIOMONTANUS' | 'PORPHYRY';
 export type LegacyHouseSystemLabel = 'egizia' | 'placido' | 'koch' | 'regio-montano' | 'porfirio';
-export declare function resolveHouseSystem(input: Readonly<{
-  houseSystem: CanonicalHouseSystem | LegacyHouseSystemLabel;
-  calculationProfile: CalculationProfile;
-}>): Readonly<{ houseSystem: CanonicalHouseSystem; calculationProfile: CalculationProfile }>;
+export type HouseSystemSelection =
+  | Readonly<{ houseSystem: CanonicalHouseSystem; calculationProfile: 'CANONICAL_V1' }>
+  | Readonly<{ houseSystem: CanonicalHouseSystem | LegacyHouseSystemLabel; calculationProfile: 'VIRGOSTARS_LEGACY_V1' }>;
+export declare function resolveHouseSystem(input: HouseSystemSelection): Readonly<{ houseSystem: CanonicalHouseSystem; calculationProfile: CalculationProfile }>;
 
 /** House placement policy only: no cusp computation or Swiss houses_pos port. */
 export type HousePlacementMethod = 'CUSP_INTERVAL' | 'LEGACY_HOUSES_POS';
