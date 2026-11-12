@@ -38,7 +38,12 @@ export function locateLongitudeInHouses(longitude, cusps) {
   const lon=normalize360(longitude);
   if (!Array.isArray(cusps)||cusps.length!==12)
     throw new AstrologyError('INVALID_CUSPS', 'Exactly twelve house cusp longitudes are required');
-  const points=cusps.map(normalize360);
+  // Array.from visits holes: Array#map would skip them and leak malformed cusp sets.
+  const points=Array.from(cusps, (cusp) => {
+    if (typeof cusp !== 'number' || !Number.isFinite(cusp))
+      throw new AstrologyError('INVALID_CUSPS', 'Every house cusp must be a finite longitude');
+    return normalize360(cusp);
+  });
   const spans=points.map((v,i)=>normalize360(points[(i+1)%12]-v));
   if (spans.some(x=>x<=1e-10) || Math.abs(spans.reduce((a,b)=>a+b,0)-360)>1e-7)
     throw new AstrologyError('INVALID_CUSPS', 'House cusps must define one forward zodiac revolution');
