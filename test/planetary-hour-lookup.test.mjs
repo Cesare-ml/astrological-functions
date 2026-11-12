@@ -100,7 +100,7 @@ test('rejects mismatched sunrise/sunset, wrong availability and missing schedule
 test('rejects malformed UTC and additional or missing lookup arguments', () => {
   assert.throws(() => at('2026-11-15T12:00:00+01:00'), expectCode('INVALID_UTC'));
   assert.throws(() => at('2026-02-30T12:00:00Z'), expectCode('INVALID_UTC'));
-  assert.throws(() => lookupPlanetaryHour({ schedule }), expectCode('INVALID_UTC'));
+  assert.throws(() => lookupPlanetaryHour({ schedule }), expectCode('INVALID_INPUT'));
   assert.throws(() => lookupPlanetaryHour({ schedule, instantUtc: '2026-11-15T12:00:00Z', timezone: 'UTC' }), expectCode('INVALID_INPUT'));
   assert.throws(() => lookupPlanetaryHour([]), expectCode('INVALID_INPUT'));
 });
