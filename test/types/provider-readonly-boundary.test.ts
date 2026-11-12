@@ -12,6 +12,8 @@ state.longitudeDeg = 10;
 state.latitudeDeg = 2;
 // @ts-expect-error Provider speed is readonly.
 state.longitudeSpeedDegPerDay = 1;
+// @ts-expect-error Provider metadata reference cannot be replaced.
+state.metadata = { center: 'EARTH', frame: 'ECLIPTIC_OF_DATE', corrections: 'APPARENT' };
 // @ts-expect-error Natal instant cannot be reassigned.
 input.datetimeUtc = '2026-11-12T00:00:00Z';
 // @ts-expect-error Natal body list cannot be mutated.
@@ -26,5 +28,7 @@ async function verifyProviderResult() {
   });
   // @ts-expect-error Awaited provider result is readonly.
   result.longitudeDeg = 0;
+  // @ts-expect-error Awaited metadata reference cannot be replaced.
+  result.metadata = { center: 'EARTH', frame: 'ECLIPTIC_OF_DATE', corrections: 'APPARENT' };
 }
 void verifyProviderResult;
