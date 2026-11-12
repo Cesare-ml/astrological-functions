@@ -473,3 +473,7 @@ engine remains [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ep
 ## Cross-aspect point longitude errors — 2026-11-12
 
 `calculateCrossAspects` requires finite numeric `longitudeDeg` on every source and target point. Missing, null, string, `NaN` and infinite point longitudes fail with `AstrologyError('INVALID_POINT')` rather than the generic angle-utility error `INVALID_ANGLE`. Finite values continue to normalize modulo 360 degrees; the directional aspect geometry is unchanged. Synthetic regressions: `test/cross-aspect-point-longitude.test.mjs`. Native Node.js suite and TypeScript checks remain outstanding. This does not add astronomical calculations; [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the sole intended Rust astronomy engine.
+
+## Cross-aspect numeric rule error classification — 2026-11-12
+
+Both `aspectDefinitions[].angleDeg` and `maxOrbDeg` must be finite JavaScript numbers. Missing, null, string, NaN and infinite values now fail with `AstrologyError('INVALID_ASPECT')`, rather than leaking the generic `INVALID_ANGLE` error from angle utilities. The existing 0..180 degree bounds and geometric matching behavior remain unchanged. Synthetic regression coverage: `test/cross-aspect-rule-numeric-errors.test.mjs`. Native Node test execution is still required; no astronomical parity is implied. Rust-based [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the only intended astronomical engine.
