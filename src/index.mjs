@@ -264,6 +264,9 @@ export function calculateCrossAspects(input) {
     throw new AstrologyError('INVALID_ARGUMENT','All points and aspectDefinitions must be arrays');
   // Array.from visits sparse array holes; Array#map would silently skip them.
   const src=Array.from(sourcePoints, point),dst=Array.from(targetPoints, point),defs=Array.from(aspectDefinitions, definition);
+  // Aspect IDs identify configured rules in downstream charts; duplicates are ambiguous.
+  if (new Set(defs.map(aspect => aspect.id)).size !== defs.length)
+    throw new AstrologyError('INVALID_ASPECT', 'Aspect definition IDs must be unique');
   const matches=[];
   for(const source of src) for(const target of dst) for(const aspect of defs) {
     const actualAngleDeg=angularSeparation(source.longitudeDeg,target.longitudeDeg);
