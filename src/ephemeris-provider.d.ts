@@ -70,9 +70,7 @@ export declare function resolveHouseSystem(input: HouseSystemSelection): Readonl
 
 /** House placement policy only: no cusp computation or Swiss houses_pos port. */
 export type HousePlacementMethod = 'CUSP_INTERVAL' | 'LEGACY_HOUSES_POS';
-export declare function resolveHousePlacementPolicy(input: Readonly<{
-  houseSystem: CanonicalHouseSystem | LegacyHouseSystemLabel;
-  calculationProfile: CalculationProfile;
+export declare function resolveHousePlacementPolicy(input: HouseSystemSelection & Readonly<{
   placementMethod: HousePlacementMethod;
 }>): Readonly<{
   houseSystem: CanonicalHouseSystem;
@@ -81,11 +79,9 @@ export declare function resolveHousePlacementPolicy(input: Readonly<{
 }>;
 
 /** Geometric cusp placement only. Cusps must already be supplied by a validated source. */
-export declare function locateLongitudeWithHousePolicy(input: Readonly<{
+export declare function locateLongitudeWithHousePolicy(input: HouseSystemSelection & Readonly<{
   longitudeDeg: number;
   cusps: readonly number[];
-  houseSystem: CanonicalHouseSystem | LegacyHouseSystemLabel;
-  calculationProfile: CalculationProfile;
   placementMethod: HousePlacementMethod;
 }>): Readonly<{
   houseSystem: CanonicalHouseSystem;
@@ -99,15 +95,13 @@ export declare function locateLongitudeWithHousePolicy(input: Readonly<{
 
 
 /** Validates an externally calculated cusp payload; no astronomical calculation. */
-export interface HouseCuspSetInput {
-  readonly houseSystem: CanonicalHouseSystem | LegacyHouseSystemLabel;
-  readonly calculationProfile: CalculationProfile;
+export type HouseCuspSetInput = HouseSystemSelection & Readonly<{
   readonly cusps: readonly number[];
   readonly metadata: Readonly<{
     houseSystem: CanonicalHouseSystem;
     placementMethod: HousePlacementMethod;
   }>;
-}
+}>;
 export declare function validateHouseCuspSet(input: Readonly<HouseCuspSetInput>): Readonly<{
   houseSystem: CanonicalHouseSystem;
   calculationProfile: CalculationProfile;
