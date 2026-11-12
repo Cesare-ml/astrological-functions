@@ -139,3 +139,81 @@ export function buildPlanetaryHours(input) {
     hours: Object.freeze(hours),
   });
 }
+
+
+function samePlainRecord(actual, expected) {
+  if (actual === null || typeof actual !== 'object' || Array.isArray(actual)) return false;
+  const actualKeys = Object.keys(actual);
+  const expectedKeys = Object.keys(expected);
+  return actualKeys.length === expectedKeys.length &&
+    expectedKeys.every(key => Object.hasOwn(actual, key) && actual[key] === expected[key]);
+}
+
+function matchesCanonicalSchedule(candidate, canonical) {
+  if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) return false;
+  const { hours: candidateHours, ...candidateFields } = candidate;
+  const { hours: canonicalHours, ...canonicalFields } = canonical;
+  return samePlainRecord(candidateFields, canonicalFields) &&
+    Array.isArray(candidateHours) && candidateHours.length === canonicalHours.length &&
+    candidateHours.every((hour, index) => samePlainRecord(hour, canonicalHours[index]));
+}
+
+/**
+ * Look up an exact UTC instant in a schedule from buildPlanetaryHours.
+ * The schedule must match that builder's canonical facts, including when
+ * serialized and restored. Revalidation is structural, not astronomical.
+ * Intervals are half-open: [startUtc, endUtc).
+ */
+export function lookupPlanetaryHour(input) {
+  assertShape(input, ['schedule', 'instantUtc']);
+  const instantMs = parseUtc(input.instantUtc, 'instantUtc');
+  const { schedule } = input;
+
+  if (schedule === null || typeof schedule !== 'object' || Array.isArray(schedule)) {
+    fail('INVALID_SCHEDULE', 'An existing PlanetaryHoursSchedule result is required');
+  }
+  let canonical;
+  try {
+    if (schedule.availability === 'AVAILABLE') {
+      canonical = buildPlanetaryHours({
+        availability: 'AVAILABLE', weekday: schedule.weekday,
+        sunriseUtc: schedule.sunriseUtc, sunsetUtc: schedule.sunsetUtc,
+        nextSunriseUtc: schedule.nextSunriseUtc,
+      });
+    } else if (schedule.availability === 'UNAVAILABLE') {
+      canonical = buildPlanetaryHours({
+        availability: 'UNAVAILABLE', weekday: schedule.weekday, reason: schedule.reason,
+      });
+    }
+  } catch {
+    fail('INVALID_SCHEDULE', 'Schedule has invalid or inconsistent values');
+  }
+  if (!canonical || !matchesCanonicalSchedule(schedule, canonical)) {
+    fail('INVALID_SCHEDULE', 'Schedule does not match canonical planetary-hour facts');
+  }
+
+  const metadata = {
+    contract: 'PlanetaryHourLookup',
+    contractVersion: '0.1.0-experimental',
+    instantUtc: new Date(instantMs).toISOString(),
+    sunEventsEvidence: 'CALLER_SUPPLIED_NOT_ASTRONOMICALLY_VERIFIED',
+  };
+  if (canonical.availability === 'UNAVAILABLE') {
+    return Object.freeze({
+      ...metadata, status: 'UNAVAILABLE', reason: canonical.reason, hour: null,
+    });
+  }
+  if (instantMs < Date.parse(canonical.sunriseUtc) ||
+      instantMs >= Date.parse(canonical.nextSunriseUtc)) {
+    return Object.freeze({ ...metadata, status: 'OUTSIDE_SCHEDULE', hour: null });
+  }
+  const hour = canonical.hours.find(item =>
+    instantMs >= Date.parse(item.startUtc) && instantMs < Date.parse(item.endUtc));
+  if (!hour) fail('INVALID_SCHEDULE', 'Scheduled instant does not match any hour');
+  const elapsedMs = instantMs - Date.parse(hour.startUtc);
+  const remainingMs = Date.parse(hour.endUtc) - instantMs;
+  return Object.freeze({
+    ...metadata, status: 'FOUND', hour,
+    elapsedMs, remainingMs,
+  });
+}
