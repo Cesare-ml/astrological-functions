@@ -16,6 +16,10 @@
     "./transits/compose": {
       "types": "./src/transit-composition.d.mts",
       "import": "./src/transit-composition.mjs"
+    },
+    "./transits/legacy-normalize": {
+      "types": "./src/transit-legacy-normalizer.d.mts",
+      "import": "./src/transit-legacy-normalizer.mjs"
     }
   },
   "engines": {
