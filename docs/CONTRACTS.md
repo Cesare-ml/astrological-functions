@@ -448,3 +448,7 @@ The isolated `calculateNatalWithProvider` adapter rejects a supplied longitude s
 ## House cusp input validation checkpoint — 2026-11-12
 
 `locateLongitudeInHouses` and `validateHouseCuspSet` require exactly twelve **present, finite numeric** cusp longitudes. Sparse arrays, `undefined`, strings, `NaN`, and infinities now fail with `AstrologyError('INVALID_CUSPS')` rather than being skipped or producing a generic angle error. Existing forward-order and exact-cusp boundary policies remain unchanged. This is a synthetic input-contract guard, **not** a house-system calculation or a scientifically validated Rust/WASM integration. See `test/house-cusp-sparse-validation.test.mjs`.
+
+## Cross-aspect rule identity — 2026-11-12
+
+`calculateCrossAspects` requires unique `aspectDefinitions[].id` values within each call. Duplicate IDs are rejected with `AstrologyError('INVALID_ASPECT')`, even when their configured angles differ, because the result exposes only `aspectId` to consumers. This prevents ambiguous downstream matching of configured rules; no astronomy or default orb policy is introduced. Synthetic regression coverage: `test/cross-aspect-duplicate-definition-ids.test.mjs`. Native Node execution remains required before this draft can be validated. The astronomical dependency remains [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
