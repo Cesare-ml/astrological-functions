@@ -249,7 +249,9 @@ function point(p) {
 function definition(d) {
   if (!d || typeof d !== 'object' || Array.isArray(d) || typeof d.id!=='string' || !d.id.trim())
     throw new AstrologyError('INVALID_ASPECT', 'Aspect requires an id');
-  finite(d.angleDeg,'angleDeg'); finite(d.maxOrbDeg,'maxOrbDeg');
+  if (typeof d.angleDeg !== 'number' || !Number.isFinite(d.angleDeg) ||
+      typeof d.maxOrbDeg !== 'number' || !Number.isFinite(d.maxOrbDeg))
+    throw new AstrologyError('INVALID_ASPECT', 'Aspect angle and maximum orb must be finite numbers');
   if(d.angleDeg<0||d.angleDeg>180||d.maxOrbDeg<0||d.maxOrbDeg>180)
     throw new AstrologyError('INVALID_ASPECT','Aspect angle and maximum orb must each be within 0..180 degrees');
   return Object.freeze({id:d.id,angleDeg:d.angleDeg,maxOrbDeg:d.maxOrbDeg});
