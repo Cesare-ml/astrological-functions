@@ -32,12 +32,6 @@ void directionA;void directionB;void status;void min;
 const missingB: SynastryAspectUncertaintyInput = {
   aspectsOnlyResult:aspects,enclosureA:chartEnclosure,
 };
-// @ts-expect-error no sample-only pseudo-continuous coverage mode is permitted.
-const sampleOnly: ChartLongitudeEnclosure = {
-  coverage:'SAMPLES_ONLY',intervalStartUtc:'2026-01-01T00:00:00Z',
-  intervalEndUtc:'2026-01-01T23:59:59Z',ephemerisProvenance:provenance,
-  bodies:{Sun:{startDeg:0,spanDeg:1}},
-};
 const badCoverage: ChartLongitudeEnclosure = {
   // @ts-expect-error exact assertion literal is mandatory.
   coverage:'SAMPLES_ONLY',
@@ -47,4 +41,4 @@ const badCoverage: ChartLongitudeEnclosure = {
 };
 // @ts-expect-error unsupported unconditional status.
 const fabricated: ConditionalAspectStatus = 'ASTRONOMICALLY_CERTAIN';
-void missingB;void sampleOnly;void badCoverage;void fabricated;
+void missingB;void badCoverage;void fabricated;
