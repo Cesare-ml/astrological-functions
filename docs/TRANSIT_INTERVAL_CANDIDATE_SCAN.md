@@ -23,6 +23,28 @@ A provider's `CALLER_ASSERTED_INTERVAL_BOUNDS_ALL_TIMES` declaration, `stationCo
 - A missing/mismatched capability, response error, unsafe limit, or provider-call budget exhaustion causes typed error, **never a partial or apparently complete result**. Inputs are snapshotted before awaiting provider calls; requests and results are immutable.
 - Metadata always states `PROVIDER_ASSERTED_NOT_INDEPENDENTLY_VERIFIED`, and `CONDITIONAL_ON_CALLER_ENCLOSURES_NOT_SCIENTIFICALLY_VALIDATED`. There is no exact-event time calculation here.
 
+## Cross-interval enclosure consistency guard
+
+All-time enclosures must satisfy **set containment across subdivisions**:
+the declared child `[lowerDeg, upperDeg]` must lie within its direct
+parent's declared interval range. The scanner rejects a child whose lower
+bound falls below the parent lower bound or whose upper bound exceeds
+the parent upper bound with typed `INVALID_ENCLOSURE`.
+
+Before pruning any interval, the scanner also checks already cached
+point residuals at the interval's endpoints against the newly declared
+enclosure. In depth-first traversal, adjacent leaf intervals can reuse
+a shared boundary sample. An enclosure that excludes that known sample
+is contradictory even if it is numerically contained in the parent
+interval.
+
+These are **consistency checks on provider assertions**, not a proof
+that the numerical bounds are scientifically accurate or that every
+station and tangent root is accounted for. An internally consistent,
+yet physically incorrect, provider can still miss real events.
+The Rust producer must independently demonstrate interval validity
+including floating-point error margins.
+
 ## Example (synthetic provider only)
 
 ```js
