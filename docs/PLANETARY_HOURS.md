@@ -82,3 +82,21 @@ tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution noden
 ```
 
 No root package export has been added. The extension remains part of draft PR #38 and requires the same scientific, licensing, consumer and full-repository validation gates.
+
+## Hardened schedule validation — 12 November 2026
+
+The exact-instant lookup verifies the **whole** schedule, not just the queried hour. In addition to rejecting changed rulership, times and metadata, it rejects a sparse `hours` array (JavaScript `Array.prototype.every` otherwise skips holes), an inherited rather than owned `hours` property, and extra enumerable properties on the array. A plain JSON serialization round-trip remains supported. This is a structural integrity check, **not** a signature or a verification of the provider's astronomical accuracy.
+
+### Executed tests and scope
+
+On **Node.js 22.16.0** and **TypeScript 5.8.3** in a local reconstruction:
+
+```sh
+npm test
+# 28 tests passed: 4 baseline, 10 schedule-builder, 14 lookup
+tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext \
+  test/types/planetary-hours.test.ts test/types/planetary-hour-lookup.test.ts
+# exit 0
+```
+
+The reconstructed `main` `package.json`, `src/index.mjs` and `test/math.test.mjs` and all six branch code/test/type files were validated against their authoritative GitHub blob SHA hashes; the source and tests run are byte-identical to those checked on GitHub at this snapshot. This was **not an authenticated full Git clone**. The unpublished package has no stable public export for this experimental module. Independent review, pinned real solar-event data, source/legal/credit audit and downstream integration remain outstanding. No GitHub Actions or production code were changed.
