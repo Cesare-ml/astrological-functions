@@ -28,7 +28,7 @@ const result = await calculateLunarElongationWithProvider({
 
 This is **example contract syntax**, not evidence that a live Rust adapter exists. The mock provider in the test suite must not be used for production.
 
-The provider is called with `{datetimeUtc, bodyName: 'Sun' | 'Moon', frame:'ECLIPTIC_OF_DATE', corrections:'APPARENT'}`. It must return `longitudeDeg`, `latitudeDeg`, and metadata with **matching** `bodyName`, `datetimeUtc`, `center:'EARTH'`, `frame`, `corrections`, `engineVersion`, `kernelSetId`, and `timeModelId`. The caller supplies all three expected provenance identifiers; missing or mismatched values fail closed. No fallback to geometric J2000/mean-of-date or Swiss.
+The provider is called with `{datetimeUtc, bodyName: 'Sun' | 'Moon', kernelSetId, timeModelId, frame:'ECLIPTIC_OF_DATE', corrections:'APPARENT'}`. Both kernel and time-model pins are **forwarded as required request arguments** and checked again against each response. It must return `longitudeDeg`, `latitudeDeg`, and metadata with **matching** `bodyName`, `datetimeUtc`, `center:'EARTH'`, `frame`, `corrections`, `engineVersion`, `kernelSetId`, and `timeModelId`. The caller supplies all three expected provenance identifiers; missing or mismatched values fail closed. No fallback to geometric J2000/mean-of-date or Swiss.
 
 Only `zodiac: 'TROPICAL'` is permitted; sidereal requires a separately validated ayanamsa and coordinate projection adapter. Missing zodiac is rejected rather than assumed.
 
@@ -55,3 +55,11 @@ No production integrations, releases, visibility changes or merge to `main`.
 - **10/10 synthetic cases passed** after correcting the undefined-longitude test fixture to bypass the mock default.
 - This V8 check is **not** native Node `node --test`, `npm test`, TypeScript consumer compilation or real Rust/WASM/provider integration. Those remain open validation requirements.
 - The provider's reported version/kernel/time model are checked for coherence only: real-kernel provenance and astronomical precision cannot be established from asserted metadata.
+
+## Kernel/time-model forwarding regression — 2026-11-12
+
+The provider request now carries both `kernelSetId` and `timeModelId`, in addition to the frame and correction model. This removes an implicit-default ambiguity at the future Rust adapter boundary; the returned response is still verified against the expected pinned values.
+
+Two synthetic regression cases were added: explicit alternate pin forwarding (rejecting a mock that ignores the alternate pin), and Moon-provider failure after a valid Sun response without partial output or leaking provider error text. The updated GitHub source and all committed provider test bodies were checked in an isolated V8 harness with adapted assertions: **12/12 PASS**.
+
+This is **not** a native Node.js or TypeScript compilation check and provides no real-kernel accuracy claim. In particular, no real Rust adapter has yet been certified to accept these request fields. Validate that adapter contract independently before integration, and do not silently drop or infer the pins.
