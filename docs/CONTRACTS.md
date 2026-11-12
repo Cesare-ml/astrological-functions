@@ -444,3 +444,7 @@ The isolated `calculateNatalWithProvider` adapter rejects a supplied longitude s
 ## Sparse cross-aspect arrays — 2026-11-12
 
 `calculateCrossAspects` rejects holes in `sourcePoints` and `targetPoints` with `INVALID_POINT`, and holes in `aspectDefinitions` with `INVALID_ASPECT`. Sparse arrays must not silently omit requested work. `Array.from` validates every slot; valid dense arrays retain their prior directional aspect behavior. Regression coverage: `test/cross-aspect-sparse-arrays.test.mjs`. This is pure TypeScript/JavaScript input validation, not astronomical computation; native Node tests remain required before promotion.
+
+## House cusp input validation checkpoint — 2026-11-12
+
+`locateLongitudeInHouses` and `validateHouseCuspSet` require exactly twelve **present, finite numeric** cusp longitudes. Sparse arrays, `undefined`, strings, `NaN`, and infinities now fail with `AstrologyError('INVALID_CUSPS')` rather than being skipped or producing a generic angle error. Existing forward-order and exact-cusp boundary policies remain unchanged. This is a synthetic input-contract guard, **not** a house-system calculation or a scientifically validated Rust/WASM integration. See `test/house-cusp-sparse-validation.test.mjs`.
