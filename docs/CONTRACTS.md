@@ -468,3 +468,8 @@ were updated accordingly; native Node.js tests and TypeScript checks have not
 been run in this GitHub-only editing session. This does not add astronomical
 calculation or claim parity with the Rust/WASM provider. The future astronomy
 engine remains [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+
+## Cross-aspect point longitude errors — 2026-11-12
+
+`calculateCrossAspects` requires finite numeric `longitudeDeg` on every source and target point. Missing, null, string, `NaN` and infinite point longitudes fail with `AstrologyError('INVALID_POINT')` rather than the generic angle-utility error `INVALID_ANGLE`. Finite values continue to normalize modulo 360 degrees; the directional aspect geometry is unchanged. Synthetic regressions: `test/cross-aspect-point-longitude.test.mjs`. Native Node.js suite and TypeScript checks remain outstanding. This does not add astronomical calculations; [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the sole intended Rust astronomy engine.
