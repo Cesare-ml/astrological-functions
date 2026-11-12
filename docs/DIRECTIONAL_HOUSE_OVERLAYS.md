@@ -26,3 +26,16 @@ const result = calculateDirectionalHouseOverlays({
 ## Verification and gates
 
 Run `node --test test/directional-house-overlays.test.mjs` and `npm test` in a checked-out copy of the stacked branch. Synthetic tests prove directionality, boundary behavior, metadata checks, immutable results, and intentional errors, **not** Ephemeris scientific accuracy. Before release: execute TypeScript and native Node tests, ensure the Rust/WASM Ephemeris adapter and target cusp source pass scientific validation, then decide packaging and license/attribution through the existing approval gates.
+
+## Combined two-way overlay helper
+
+The `calculateBidirectionalHouseOverlays` helper requires both `cuspSetA` and `cuspSetB` and returns a frozen `BidirectionalHouseOverlayResult` containing `aToB` and `bToA`. It calls the validated one-direction function twice, with independent target contexts. Failure of either direction throws a typed error; callers never receive a partial combined result. Source/target roles remain explicit and no new astronomical algorithm is implemented.
+
+```js
+import { calculateBidirectionalHouseOverlays } from './src/directional-house-overlays.mjs';
+const both = calculateBidirectionalHouseOverlays({
+  chartA, chartB, cuspSetA, cuspSetB, birthTimeKnownA: true, birthTimeKnownB: true,
+});
+// both.aToB = A's bodies in B's houses
+// both.bToA = B's bodies in A's houses
+```
