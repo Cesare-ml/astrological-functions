@@ -452,3 +452,7 @@ The isolated `calculateNatalWithProvider` adapter rejects a supplied longitude s
 ## Cross-aspect rule identity — 2026-11-12
 
 `calculateCrossAspects` requires unique `aspectDefinitions[].id` values within each call. Duplicate IDs are rejected with `AstrologyError('INVALID_ASPECT')`, even when their configured angles differ, because the result exposes only `aspectId` to consumers. This prevents ambiguous downstream matching of configured rules; no astronomy or default orb policy is introduced. Synthetic regression coverage: `test/cross-aspect-duplicate-definition-ids.test.mjs`. Native Node execution remains required before this draft can be validated. The astronomical dependency remains [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+## Cross-aspect orb domain — 2026-11-12
+
+`calculateCrossAspects` accepts configured aspect angles and maximum orbs only within the closed interval 0..180 degrees. Angular separation is always in 0..180; larger orbs have no meaningful geometric domain and now fail with `AstrologyError('INVALID_ASPECT')`. The endpoint values 0 and 180 remain supported. This is an isolated configuration validation change, not an astronomical computation or scientific parity claim. Synthetic regressions: `test/cross-aspect-orb-bounds.test.mjs`. Native `npm test` remains to be run.
