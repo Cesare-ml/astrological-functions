@@ -2,9 +2,9 @@
  * This package does not implement astronomical calculations.
  */
 export interface ApparentGeocentricState {
-  longitudeDeg: number;
-  latitudeDeg: number;
-  longitudeSpeedDegPerDay?: number | null;
+  readonly longitudeDeg: number;
+  readonly latitudeDeg: number;
+  readonly longitudeSpeedDegPerDay?: number | null;
   metadata: Readonly<{
     center: 'EARTH';
     frame: 'ECLIPTIC_OF_DATE';
@@ -23,14 +23,14 @@ export interface EphemerisRequest {
   readonly frame: 'ECLIPTIC_OF_DATE';
 }
 export interface EphemerisProvider {
-  getGeocentricEcliptic(input: Readonly<EphemerisRequest>): Promise<ApparentGeocentricState>;
+  getGeocentricEcliptic(input: Readonly<EphemerisRequest>): Promise<Readonly<ApparentGeocentricState>>;
 }
 export interface NatalInput {
-  datetimeUtc: string;
-  latitudeDeg: number;
-  longitudeDegEast: number;
-  bodyNames: readonly string[];
-  provider: EphemerisProvider;
+  readonly datetimeUtc: string;
+  readonly latitudeDeg: number;
+  readonly longitudeDegEast: number;
+  readonly bodyNames: readonly string[];
+  readonly provider: EphemerisProvider;
 }
 export interface NatalBody {
   name: string;
