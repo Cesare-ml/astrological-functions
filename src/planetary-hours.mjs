@@ -153,9 +153,18 @@ function matchesCanonicalSchedule(candidate, canonical) {
   if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) return false;
   const { hours: candidateHours, ...candidateFields } = candidate;
   const { hours: canonicalHours, ...canonicalFields } = canonical;
-  return samePlainRecord(candidateFields, canonicalFields) &&
-    Array.isArray(candidateHours) && candidateHours.length === canonicalHours.length &&
-    candidateHours.every((hour, index) => samePlainRecord(hour, canonicalHours[index]));
+  // Array.prototype.every silently SKIPS holes. A forged sparse schedule
+  // must not pass validation just because all remaining hours match.
+  // Require an own "hours" field, all 24 own numerical indexes, and no
+  // extra enumerable array properties (JSON round-trips remain supported).
+  return Object.hasOwn(candidate, 'hours') &&
+    samePlainRecord(candidateFields, canonicalFields) &&
+    Array.isArray(candidateHours) &&
+    candidateHours.length === canonicalHours.length &&
+    Object.keys(candidateHours).length === canonicalHours.length &&
+    canonicalHours.every((hour, index) =>
+      Object.hasOwn(candidateHours, index) &&
+      samePlainRecord(candidateHours[index], hour));
 }
 
 /**
