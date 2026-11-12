@@ -60,8 +60,18 @@ test('full-circle enclosure has exact 0..180 angular separation bounds',()=>{
   assert.equal(facts.aToB.facts[0].status,'MAYBE_WITHIN_BOUNDS');
 });
 
-test('two arcs with combined span 360 cover every separation',()=>{
-  const facts=analyze([350,180],[180,180]);
+test('two independent unknown-time arcs with combined span 360 cover every separation',()=>{
+  const twoUnknown={...result,timeBasis:{...result.timeBasis,B:{
+    birthTimeKnown:false,positionBasis:'REPRESENTATIVE_INSTANT',
+    datetimeUtc:'2026-02-01T12:00:00Z',
+  }}};
+  const widerB={...enclosureB(180,180),
+    intervalStartUtc:'2026-02-01T00:00:00Z',
+    intervalEndUtc:'2026-02-01T23:59:59Z'};
+  const facts=analyzeSynastryAspectUncertainty({
+    ...input,aspectsOnlyResult:twoUnknown,
+    enclosureA:enclosureA(350,180),enclosureB:widerB,
+  });
   assert.deepEqual(facts.aToB.facts[0].separationBoundsDeg,{minDeg:0,maxDeg:180});
 });
 
