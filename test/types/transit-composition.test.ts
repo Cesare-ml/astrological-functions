@@ -31,3 +31,6 @@ const selected:TransitCompositionInput={...input,natalBodyNames:['Sun']};
 void calculateTransitFactsWithProvider(selected);
 // @ts-expect-error natal selections must be arrays, not strings
 calculateTransitFactsWithProvider({...input,natalBodyNames:'Sun'});
+
+// @ts-expect-error a named ayanamsa does not authorize conversion of raw provider longitude
+calculateTransitFactsWithProvider({...input,zodiac:{type:'SIDEREAL',ayanamsaId:'LAHIRI-v1'}});

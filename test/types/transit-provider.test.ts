@@ -18,6 +18,9 @@ void wrongFrame;
 // @ts-expect-error unversioned sidereal ayanamsa must not type-check
 const wrongZodiac: TransitSkyProviderInput = {...params, zodiac:{type:'SIDEREAL'}};
 void wrongZodiac;
+// @ts-expect-error even a versioned sidereal ayanamsa is unsupported by raw-of-date provider
+const unsupportedSidereal: TransitSkyProviderInput = {...params, zodiac:{type:'SIDEREAL',ayanamsaId:'LAHIRI-v1'}};
+void unsupportedSidereal;
 // @ts-expect-error only the experimental version is valid
 const wrongProvider: TransitPositionProvider = {...provider, capabilities:{...provider.capabilities,contractVersion:'1.0'}};
 void wrongProvider;

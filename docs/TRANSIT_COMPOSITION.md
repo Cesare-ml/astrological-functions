@@ -45,3 +45,7 @@ npm test
 ```
 
 Synthetic providers check consumer behavior only. No actual Rust/WASM adapter, real DE441 NASA/JPL kernel, numerical reference comparison, scientific correctness, production integration or Astrolabio compatibility is established here. The repository is private, with a pending outbound licensing review; future distributions must comply with VirgoStars credit requirements and upstream CPAL-1.0 notices. No release, GitHub Actions, automatic merge or production changes.
+
+## Sidereal safety gate
+
+This provider composition accepts only `TROPICAL` sky requests. Although the pure `calculateTransitFacts` API can compare **already transformed**, matching sidereal snapshots, the injected position provider returns raw apparent ecliptic-of-date longitude and does not carry or apply a verified ayanamsa conversion. Therefore even a fully named `SIDEREAL/LAHIRI-v1` request must fail with `UNSUPPORTED_ZODIAC_CONVERSION` before contacting the provider, rather than producing mislabeled longitude. A future sidereal path requires an explicit versioned transform and numerical validation; do not add an implicit fallback or silently convert in this adapter.

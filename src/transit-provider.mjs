@@ -19,7 +19,8 @@ function zodiac(v) {
   if (!record(v)) fail('INVALID_ZODIAC', 'An explicit zodiac contract is required');
   if (v.type === 'TROPICAL' && !Object.hasOwn(v, 'ayanamsaId')) return Object.freeze({ type: 'TROPICAL' });
   if (v.type === 'SIDEREAL' && nonempty(v.ayanamsaId))
-    return Object.freeze({ type: 'SIDEREAL', ayanamsaId: v.ayanamsaId });
+    fail('UNSUPPORTED_ZODIAC_CONVERSION',
+      'Provider emits raw ecliptic-of-date longitude: no versioned sidereal ayanamsa conversion exists');
   fail('INVALID_ZODIAC', 'Use TROPICAL without ayanamsa or SIDEREAL with a versioned ayanamsaId');
 }
 function provenance(v, code = 'INCOMPATIBLE_EPHEMERIS') {

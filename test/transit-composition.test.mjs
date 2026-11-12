@@ -174,3 +174,10 @@ test('asynchronous provider mutations cannot rewrite an explicit natal selection
   assert.deepEqual(output.facts.natal.points.map(p=>p.name),['Sun']);
   assert.deepEqual(output.facts.aspects.map(a=>a.target.name),['Sun']);
 });
+
+test('sidereal sky requests cannot silently relabel unconverted tropical longitude',async()=>{
+  await rejects(x=>{
+    x.zodiac={type:'SIDEREAL',ayanamsaId:'LAHIRI-v1'};
+    x.natal.zodiac={type:'SIDEREAL',ayanamsaId:'LAHIRI-v1'};
+  },'UNSUPPORTED_ZODIAC_CONVERSION',0);
+});
