@@ -94,3 +94,23 @@ export function calculateDirectionalHouseOverlays(input) {
     placements,
   });
 }
+
+/**
+ * All-or-nothing two-way synastry house overlays. Each direction validates its
+ * own target cusps; neither chart's cusps are reused for the other direction.
+ */
+export function calculateBidirectionalHouseOverlays(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input))
+    throw new AstrologyError('INVALID_ARGUMENT', 'Bidirectional overlay options must be an object');
+  const { chartA, chartB, birthTimeKnownA, birthTimeKnownB, cuspSetA, cuspSetB } = input;
+  if (birthTimeKnownA !== true || birthTimeKnownB !== true)
+    throw new AstrologyError('BIRTH_TIME_REQUIRED', 'Both birth times must be explicitly known');
+  const shared = { chartA, chartB, birthTimeKnownA, birthTimeKnownB, cuspSetA, cuspSetB };
+  const aToB = calculateDirectionalHouseOverlays({ ...shared, direction: 'A_TO_B' });
+  const bToA = calculateDirectionalHouseOverlays({ ...shared, direction: 'B_TO_A' });
+  return Object.freeze({
+    contract: 'BidirectionalHouseOverlayResult',
+    contractVersion: '0.1.0-experimental',
+    aToB, bToA,
+  });
+}
