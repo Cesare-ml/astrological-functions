@@ -8,12 +8,12 @@
     "./transits": {
       "types": "./src/transit-facts.d.mts",
       "import": "./src/transit-facts.mjs"
+    },
+    "./transits/provider": {
+      "types": "./src/transit-provider.d.mts",
+      "import": "./src/transit-provider.mjs"
     }
   },
-  "engines": {
-    "node": ">=20"
-  },
-  "scripts": {
-    "test": "node --test"
-  }
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test" }
 }
