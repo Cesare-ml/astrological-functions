@@ -8,6 +8,10 @@
     "./lunar-elongation": {
       "types": "./src/lunar-elongation.d.mts",
       "default": "./src/lunar-elongation.mjs"
+    },
+    "./lunar-provider": {
+      "types": "./src/lunar-elongation-provider.d.mts",
+      "default": "./src/lunar-elongation-provider.mjs"
     }
   },
   "engines": {
