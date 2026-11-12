@@ -481,3 +481,18 @@ Both `aspectDefinitions[].angleDeg` and `maxOrbDeg` must be finite JavaScript nu
 ## Provider provenance completeness — 2026-11-12
 
 The experimental natal assembler accepts either **all three** nonempty provenance identifiers (`engineVersion`, `kernelSetId`, `timeModel`) or **none** (legacy synthetic mocks only). Partial provenance is rejected with `INVALID_EPHEMERIS_RESULT`; mismatched complete provenance across bodies is rejected with `INCONSISTENT_EPHEMERIS`. This is a fail-closed input contract, **not** evidence of a real or scientifically validated Rust/WASM adapter. `test/provider-provenance-completeness.test.mjs` covers both failures and the two accepted cases. The baseline `test/math.test.mjs` fixture and its expected invalid-speed error were updated to match current runtime behavior. Native test execution remains required. [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the sole planned astronomy engine.
+
+
+## Type-level provenance completeness — 2026-11-12
+
+The experimental `ApparentGeocentricState.metadata` TypeScript declaration now
+accepts either all three nonempty-at-runtime identity fields
+(`engineVersion`, `kernelSetId`, `timeModel`) or none of them.
+Partial metadata is rejected at compile time for typed provider implementations;
+runtime `calculateNatalWithProvider` continues to reject partial, blank or
+inconsistent identities from untyped JavaScript/WASM boundaries. The all-absent
+case exists for synthetic mock tests, **not** for a validated production adapter.
+The type fixture is `test/types/provider-provenance-shape.test.ts`; run with
+`tsc --strict --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext test/types/provider-provenance-shape.test.ts`.
+This change does not add astronomy or validate real kernels. The sole intended
+astronomical engine remains [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
