@@ -8,6 +8,8 @@ The synthetic regression in `test/house-birth-time-runtime.test.mjs` exercises t
 - Missing, false, null, numeric and string birth-time flags fail closed with `BIRTH_TIME_REQUIRED`.
 - Explicit `birthTimeKnown: true` permits an already supplied, context-matched cusp set.
 - An otherwise matching cusp set with a different ephemeris kernel fails with `INCOMPATIBLE_HOUSE_CONTEXT`.
+- Even with known birth time and matching cusps, nonfinite, missing or nonnumeric natal body longitudes fail with `INVALID_POINT`.
+- Body identifiers inconsistent with their chart lookup keys also fail with `INVALID_POINT`.
 
 Run locally from the repository root:
 
