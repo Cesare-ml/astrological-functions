@@ -343,6 +343,11 @@ export async function calculateNatalWithProvider(input) {
         throw new AstrologyError('INVALID_EPHEMERIS_RESULT', `${key} must be a nonempty string when provided`);
       return value;
     });
+    // A partly identified ephemeris cannot be pinned or audited reliably.
+    // Preserve all-absent provenance for legacy synthetic mocks only.
+    if (provenance.some(value => value !== null) && provenance.some(value => value === null))
+      throw new AstrologyError('INVALID_EPHEMERIS_RESULT',
+        'Provider provenance must be complete when any provenance field is supplied');
     if (expectedProvenance !== null &&
         provenance.some((value, index) => value !== expectedProvenance[index]))
       throw new AstrologyError('INCONSISTENT_EPHEMERIS',
