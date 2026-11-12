@@ -74,10 +74,10 @@ test('provider failure prevents partial result and never runs aspect calculation
   await rejects(x=>x.provider.getGeocentricEcliptic=async()=>{throw Error('failure')},'PROVIDER_FAILURE');
 });
 test('incompatible natal kernel fails instead of silently accepting a mixed chart',async()=>{
-  await rejects(x=>x.natal.ephemeris.kernelSetId='other-kernel','INCONSISTENT_EPHEMERIS',1);
+  await rejects(x=>x.natal.ephemeris.kernelSetId='other-kernel','INCONSISTENT_EPHEMERIS',0);
 });
 test('incompatible zodiac fails rather than applying hidden tropical/sidereal conversion',async()=>{
-  await rejects(x=>x.natal.zodiac={type:'SIDEREAL',ayanamsaId:'LAHIRI-v1'},'INCOMPATIBLE_ZODIAC',1);
+  await rejects(x=>x.natal.zodiac={type:'SIDEREAL',ayanamsaId:'LAHIRI-v1'},'INCOMPATIBLE_ZODIAC',0);
 });
 test('provider responses must preserve exact requested UTC instant',async()=>{
   await rejects(x=>{const old=x.provider.getGeocentricEcliptic;
@@ -108,4 +108,33 @@ test('snapshots natal arrays with holes and leaves final validity to fact valida
 });
 test('cannot misrepresent geometric J2000 as apparent of-date',async()=>{
   await rejects(x=>x.expectedEphemeris.frame='J2000','INCOMPATIBLE_EPHEMERIS',0);
+});
+
+test('bad natal UTC, longitude, speed and duplicate IDs fail before provider I/O',async()=>{
+  await rejects(x=>x.natal.datetimeUtc='2000-02-30T12:00:00Z','INVALID_UTC',0);
+  await rejects(x=>x.natal.datetimeUtc='2000-01-01T12:00:00+01:00','INVALID_UTC',0);
+  await rejects(x=>x.natal.points[0].longitudeDeg=Infinity,'INVALID_POINTS',0);
+  await rejects(x=>x.natal.points[0].longitudeSpeedDegPerDay='retrograde','INVALID_POINTS',0);
+  await rejects(x=>x.natal.points[0].type='angle','INVALID_POINTS',0);
+  await rejects(x=>x.natal.points[0].name=' ','INVALID_POINTS',0);
+  await rejects(x=>x.natal.points.push({...x.natal.points[0]}),'INVALID_POINTS',0);
+  await rejects(x=>x.natal.points=[],'INVALID_POINTS',0);
+});
+test('bad natal zodiac and ephemeris metadata fail before provider I/O',async()=>{
+  await rejects(x=>x.natal.zodiac={type:'SIDEREAL'},'INVALID_ZODIAC',0);
+  await rejects(x=>x.natal.zodiac={type:'TROPICAL',ayanamsaId:'x'},'INVALID_ZODIAC',0);
+  await rejects(x=>x.natal.ephemeris.frame='J2000','INCOMPATIBLE_EPHEMERIS',0);
+  await rejects(x=>delete x.natal.ephemeris.timeModel,'INCOMPATIBLE_EPHEMERIS',0);
+});
+test('invalid aspect definitions and repeated IDs fail before provider I/O',async()=>{
+  await rejects(x=>x.aspectDefinitions[0].angleDeg=Infinity,'INVALID_ASPECT',0);
+  await rejects(x=>x.aspectDefinitions[0].maxOrbDeg=-1,'INVALID_ASPECT',0);
+  await rejects(x=>x.aspectDefinitions[0].maxOrbDeg=181,'INVALID_ASPECT',0);
+  await rejects(x=>x.aspectDefinitions[0].id='','INVALID_ASPECT',0);
+  await rejects(x=>x.aspectDefinitions.push({...x.aspectDefinitions[0]}),'INVALID_ASPECT',0);
+  await rejects(x=>x.aspectDefinitions=Array(2),'INVALID_ASPECT',0);
+});
+test('invalid sky zodiac and expected ephemeris abort before provider I/O',async()=>{
+  await rejects(x=>x.zodiac={type:'SIDEREAL'},'INVALID_ZODIAC',0);
+  await rejects(x=>x.expectedEphemeris.kernelSetId='','INCOMPATIBLE_EPHEMERIS',0);
 });
