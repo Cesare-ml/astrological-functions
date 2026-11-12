@@ -33,6 +33,12 @@ test('isolated mock provider yields a directed, typed immutable sector snapshot'
   const facts = await run(p);
   assert.deepEqual(p.requests.map(request => request.bodyName), ['Sun', 'Moon']);
   assert.deepEqual(p.requests.map(request => request.datetimeUtc), [INSTANT, INSTANT]);
+  assert.deepEqual(p.requests.map(request => request.kernelSetId), [
+    PIN.kernelSetId, PIN.kernelSetId,
+  ]);
+  assert.deepEqual(p.requests.map(request => request.timeModelId), [
+    PIN.timeModelId, PIN.timeModelId,
+  ]);
   assert.ok(p.requests.every(request => Object.isFrozen(request)));
   assert.equal(facts.sectors.directedElongationDeg, 2);
   assert.equal(facts.sectors.sectorId, 'NEW');
@@ -141,4 +147,41 @@ test('results are fully detached from mutable input provenance', async () => {
   assert.equal(facts.ephemeris.kernelSetId, PIN.kernelSetId);
   assert.equal(facts.positions.Sun.bodyName, 'Sun');
   assert.equal(facts.positions.Moon.bodyName, 'Moon');
+});
+
+test('caller-specific pin is actually forwarded, not replaced by a provider default', async () => {
+  const alternate = {
+    engineVersion: PIN.engineVersion,
+    kernelSetId: 'another-pinned-kernel',
+    timeModelId: 'another-time-model',
+  };
+  const p = provider();
+  await assert.rejects(() => run(p, { expectedEphemeris: alternate }),
+    e => e.code === 'INCOMPATIBLE_EPHEMERIS');
+  assert.equal(p.requests.length, 1);
+  assert.equal(p.requests[0].kernelSetId, alternate.kernelSetId);
+  assert.equal(p.requests[0].timeModelId, alternate.timeModelId);
+});
+
+test('Moon provider exceptions are typed and never return a partial lunar result', async () => {
+  const requests = [];
+  const p = {
+    async getGeocentricEcliptic(request) {
+      requests.push(request.bodyName);
+      if (request.bodyName === 'Moon') throw new Error('internal provider details');
+      return {
+        longitudeDeg: 35, latitudeDeg: 0,
+        metadata: {
+          bodyName: request.bodyName,
+          datetimeUtc: request.datetimeUtc,
+          center: 'EARTH', frame: 'ECLIPTIC_OF_DATE', corrections: 'APPARENT',
+          ...PIN,
+        },
+      };
+    },
+  };
+  await assert.rejects(() => run(p), e =>
+    e.code === 'EPHEMERIS_PROVIDER_FAILED' &&
+    !e.message.includes('internal provider details'));
+  assert.deepEqual(requests, ['Sun', 'Moon']);
 });
