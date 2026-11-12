@@ -115,3 +115,19 @@ test('freeze requests, snapshot mutable input, and validate point provenance',as
   bad.getUnwrappedAspectResidual=async req=>({datetimeUtc:req.datetimeUtc,residualDeg:0,metadata:{...meta,engineVersion:'wrong'}});
   await throws({provider:bad},'INCOMPATIBLE_EPHEMERIS');
 });
+
+test('fails closed when child enclosures contradict an otherwise plausible parent',async()=>{
+  const p=makeProvider(linear,(a,b)=>{
+    if(a===startMs && b===startMs+3600000) return [-1,1];
+    return [2,3]; // A child cannot exceed the claimed parent upper bound.
+  });
+  await throws({provider:p,maxDepth:1,targetIntervalMs:60000},'INVALID_ENCLOSURE');
+});
+test('refuses to exclude an adjacent interval that contradicts a cached shared endpoint',async()=>{
+  const p=makeProvider(linear,(a,b)=>{
+    if(a===startMs && b===startMs+3600000) return [-10,10];
+    if(a===startMs) return [-1,1]; // Valid first leaf; caches its right endpoint.
+    return [.5,1]; // Nested inside the parent but excludes the cached mid residual.
+  });
+  await throws({provider:p,maxDepth:1,targetIntervalMs:60000},'INVALID_ENCLOSURE');
+});
