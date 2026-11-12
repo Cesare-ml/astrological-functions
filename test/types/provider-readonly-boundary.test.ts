@@ -1,4 +1,4 @@
-import type { ApparentGeocentricState, EphemerisProvider, NatalInput } from '../../src/ephemeris-provider.js';
+import type { ApparentGeocentricState, EphemerisProvider, NatalInput, ExperimentalNatalResult } from '../../src/ephemeris-provider.js';
 
 // Compile with strict TypeScript: these are compile-time immutability contracts,
 // not a claim that external JS/WASM implementations cannot mutate their objects.
@@ -32,3 +32,20 @@ async function verifyProviderResult() {
   result.metadata = { center: 'EARTH', frame: 'ECLIPTIC_OF_DATE', corrections: 'APPARENT' };
 }
 void verifyProviderResult;
+
+// Runtime freezes the natal result, each body record and its metadata.
+declare const chart: ExperimentalNatalResult;
+// @ts-expect-error Result instant is readonly.
+chart.datetimeUtc = '2026-11-13T00:00:00Z';
+// @ts-expect-error The result body map cannot be replaced.
+chart.bodies = {};
+// @ts-expect-error A body longitude cannot be rewritten by consumers.
+chart.bodies.Sun.longitudeDeg = 90;
+// @ts-expect-error A body speed cannot be rewritten by consumers.
+chart.bodies.Sun.longitudeSpeedDegPerDay = 0;
+// @ts-expect-error A body identifier cannot be rewritten by consumers.
+chart.bodies.Sun.name = 'Moon';
+// @ts-expect-error Provenance object cannot be replaced.
+chart.ephemerisProvenance = { engineVersion: null, kernelSetId: null, timeModel: null };
+// @ts-expect-error Warning array cannot be replaced.
+chart.warnings = [];
