@@ -39,3 +39,30 @@ test('nonfinite and sparse cusp arrays fail closed', () => {
     }), e => e.code === 'INVALID_CUSPS');
   }
 });
+
+test('cusp aliases outside one revolution normalize without mutating caller input', () => {
+  const aliases = cusps.map((value, index) => value + (index % 2 === 0 ? 720 : -360));
+  const before = [...aliases];
+  const validated = validateHouseCuspSet({
+    houseSystem: 'VEHLOW', calculationProfile: 'CANONICAL_V1',
+    cusps: aliases,
+    metadata: { houseSystem: 'VEHLOW', placementMethod: 'CUSP_INTERVAL' },
+  });
+  assert.deepEqual(aliases, before);
+  assert.deepEqual(validated.cusps, cusps);
+  assert.ok(Object.isFrozen(validated.cusps));
+  for (const longitude of [0, 19.999, 20, 349.999, 350, 359.999]) {
+    assert.deepEqual(locateLongitudeInHouses(longitude, validated.cusps),
+      locateLongitudeInHouses(longitude, cusps));
+  }
+});
+
+test('a cusp sequence completing two turns is rejected, not silently reinterpreted', () => {
+  const twoTurns = Array.from({ length: 12 }, (_, index) => index * 60);
+  assert.throws(() => locateLongitudeInHouses(0, twoTurns), error => error.code === 'INVALID_CUSPS');
+  assert.throws(() => validateHouseCuspSet({
+    houseSystem: 'VEHLOW', calculationProfile: 'CANONICAL_V1',
+    cusps: twoTurns,
+    metadata: { houseSystem: 'VEHLOW', placementMethod: 'CUSP_INTERVAL' },
+  }), error => error.code === 'INVALID_CUSPS');
+});
