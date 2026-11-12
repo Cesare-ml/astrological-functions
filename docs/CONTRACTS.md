@@ -506,3 +506,19 @@ astronomical engine remains [VirgoStars Ephemeris](https://github.com/Cesare-ml/
 ## Provider metadata reference immutability — 2026-11-12
 
 The experimental TypeScript `ApparentGeocentricState.metadata` and `NatalBody.ephemerisMetadata` references are now `readonly`, in addition to the existing readonly metadata fields. A Rust/WASM adapter consumer cannot reassign either reference through these declarations. The compile-only regression in `test/types/provider-readonly-boundary.test.ts` checks both direct and awaited provider states with `@ts-expect-error`. This is **not** deep runtime freezing of externally supplied provider objects and does not change astronomical calculations. Validate with `tsc --strict --noEmit --module nodenext --moduleResolution nodenext --target es2022 test/types/provider-readonly-boundary.test.ts` and `npm test` before considering merge. [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the sole planned astronomical engine.
+
+
+## Frozen natal output typing — 2026-11-12
+
+The experimental `calculateNatalWithProvider` runtime already freezes the top-level
+result, individual body records, the body lookup, provenance, and warning records.
+`src/ephemeris-provider.d.ts` now marks the top-level `ExperimentalNatalResult`
+properties and `NatalBody` scalar fields as `readonly` to match that existing
+runtime behavior. Compile-time negative assignments in
+`test/types/provider-readonly-boundary.test.ts` guard the consumer contract.
+TypeScript `readonly` does not freeze arbitrary JavaScript objects and does not
+validate a real Rust/WASM ephemeris. Verify with
+`tsc --strict --noEmit --module nodenext --moduleResolution nodenext --target es2022 test/types/provider-readonly-boundary.test.ts`
+and `npm test` before considering the draft PR validated. Astronomical positions
+remain sourced exclusively from the planned
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
