@@ -49,3 +49,17 @@ Synthetic providers check consumer behavior only. No actual Rust/WASM adapter, r
 ## Sidereal safety gate
 
 This provider composition accepts only `TROPICAL` sky requests. Although the pure `calculateTransitFacts` API can compare **already transformed**, matching sidereal snapshots, the injected position provider returns raw apparent ecliptic-of-date longitude and does not carry or apply a verified ayanamsa conversion. Therefore even a fully named `SIDEREAL/LAHIRI-v1` request must fail with `UNSUPPORTED_ZODIAC_CONVERSION` before contacting the provider, rather than producing mislabeled longitude. A future sidereal path requires an explicit versioned transform and numerical validation; do not add an implicit fallback or silently convert in this adapter.
+
+## Native local validation gate and cross-module integration tests
+
+From a **complete checkout** of the stacked PR #16 branch, run:
+
+```sh
+node scripts/validate-local.mjs
+```
+
+The portable local script discovers every `test/*.test.mjs` and `test/types/*.test.ts` file and executes them using native Node.js `node --test` and strict TypeScript NodeNext `tsc --noEmit`. A missing test family, missing compiler or any failing child process produces a nonzero exit status; the script does **not** use GitHub Actions, publish packages, deploy, make network calls or alter production. It uses locally installed TypeScript when available, otherwise a compiler on `PATH` (on Windows, a `tsc.cmd` wrapper via the command shell). If needed, install TypeScript locally first, for example `npm install --no-save typescript@5.8.3`.
+
+`test/transit-stack.integration.test.mjs` checks the **whole experimental consumer path**: manual provider + pure facts versus composed facts must be identical, the provider's scientific-validation warning must survive, unconverted sidereal requests and unknown natal-body selections must stop before provider I/O, and mismatched per-body kernel assertions must abort atomically. These tests use mock positions and do **not** prove astrophysical accuracy or a real Rust/WASM implementation.
+
+Validation evidence at introduction: the script was executed natively with one temporary Node test and one TypeScript type fixture in an **isolated smoke workspace** (both PASS). The four new integration tests were replayed with exact GitHub source module bodies in an isolated JavaScript runner (**4/4 PASS**), **not native Node `node:test`**. The full private-repository checkout suite has not been run in this environment; the command above is the explicit remaining gate before review/merge.
