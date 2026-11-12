@@ -124,3 +124,8 @@ test('an exact angle tolerance is inclusive and does not imply a station instant
     exactToleranceDeg:0.02,maxOrbDeg:6});
   assert.equal(g.trend,'EXACT');
 });
+
+test('relative speed overflow fails closed even for individually finite rates',()=>{
+  rejects({source:{longitudeDeg:10,longitudeSpeedDegPerDay:-1e308},
+    target:{longitudeDeg:95,longitudeSpeedDegPerDay:1e308}}, 'INVALID_RELATIVE_SPEED');
+});
