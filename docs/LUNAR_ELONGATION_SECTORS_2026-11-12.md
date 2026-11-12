@@ -39,3 +39,10 @@ These are **conventional geometric angular sectors**, not scientifically derived
 Run `node --test test/lunar-elongation.test.mjs` and `npm test` on Node.js 20+ after checkout. Synthetic cases cover eight centers, Aries wrap and signed direction, boundary ties, sidereal metadata, immutability, numeric errors and context rejection. This does not establish JPL/Horizons parity or production readiness.
 
 Do not release, deploy, merge to main or switch an existing chart calculation automatically.
+
+## Execution record — 2026-11-12
+
+- GitHub branch: `feat/lunar-elongation-sectors-f5-20261112-2320`
+- Executed **6/6 synthetic tests, PASS** against the exact fetched GitHub source blobs (`src/index.mjs` and `src/lunar-elongation.mjs`) and committed test bodies, using an isolated V8 JavaScript runtime and a small test/assert adapter.
+- This is **not** a native Node.js `node --test` or `npm test` run; those commands and TypeScript consumer compilation remain to be executed after checkout.
+- No scientific JPL ephemeris data, real chart fixtures, UTC source-coherency verification or deployed consumers were used. Status remains `IMPLEMENTED_ISOLATED`.
