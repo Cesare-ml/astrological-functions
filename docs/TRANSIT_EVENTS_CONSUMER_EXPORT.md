@@ -6,7 +6,17 @@ The package now proposes a **typed ESM-only** subpath:
 import { prepareTransitAspectEventCandidates } from 'astrological-functions/transit-events';
 ```
 
-TypeScript resolves the declaration from `src/transit-event-pipeline.d.mts` using `moduleResolution: nodenext`. The contract remains experimental and **not scientifically validated**. There is no CJS `require` export, no implicit ephemeris initialization, no additional runtime dependency and no new astronomical code. The repository is still private and not released.
+TypeScript resolves the declaration from `src/transit-event-pipeline.d.mts` using `moduleResolution: nodenext`. **Consumer-facing types are re-exported from the same public subpath**, including `TransitIntervalProvider`, `TransitHitProvenance`, `TransitAspectOrientation`, `TransitRangeRequest`, `TransitRangeResponse`, and `BracketedTransitAspectHit`. Consumer code should not import `src/**` paths, which are not part of the package exports map.
+
+```ts
+import {
+  prepareTransitAspectEventCandidates,
+  type TransitIntervalProvider,
+  type TransitHitProvenance
+} from 'astrological-functions/transit-events';
+// The provider must be supplied explicitly by a caller that can fulfill
+// the complete continuous-residual and interval-enclosure contract.
+``` The contract remains experimental and **not scientifically validated**. There is no CJS `require` export, no implicit ephemeris initialization, no additional runtime dependency and no new astronomical code. The repository is still private and not released.
 
 This subpath requires the **stacked** experimental implementations in PR #13 (base transit facts), PR #14 (single bracket refinement), PR #17 (interval candidate scan), and PR #21 (pipeline). It intentionally exposes only the final orchestrator instead of a second copy of its internals. No other package exports are altered.
 
