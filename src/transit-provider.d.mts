@@ -27,7 +27,8 @@ export interface TransitPositionProvider {
 }
 export interface TransitSkyProviderInput {
   readonly datetimeUtc: string;
-  readonly zodiac: TransitZodiac;
+  /** The provider reports ecliptic-of-date longitude; sidereal conversion is not implemented. */
+  readonly zodiac: Extract<TransitZodiac, {type:'TROPICAL'}>;
   readonly bodyNames: readonly string[];
   readonly expectedEphemeris: TransitEphemerisProvenance;
   readonly provider: TransitPositionProvider;

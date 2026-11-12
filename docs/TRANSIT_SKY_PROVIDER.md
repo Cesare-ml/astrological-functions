@@ -37,7 +37,7 @@ This is an **illustrative integration example**, not working production initiali
 
 ## Mandatory contracts
 
-- A genuine ISO UTC instant ending `Z`; explicit `TROPICAL` (without ayanamsa) or `SIDEREAL` with a named/versioned `ayanamsaId`.
+- A genuine ISO UTC instant ending `Z`; **only `TROPICAL`** (without ayanamsa) is supported by this raw apparent ecliptic-of-date provider adapter. A properly named/versioned `SIDEREAL` request fails with `UNSUPPORTED_ZODIAC_CONVERSION` **before provider I/O**. Such positions require an independently versioned and validated ayanamsa transformation that is not implemented by this adapter.
 - 1–32 unique, nonempty, trimmed body IDs, in requested output order. A sparse array, duplicate or invalid ID aborts **before** any provider call.
 - A caller-pinned complete `expectedEphemeris`: Earth center, apparent ecliptic-of-date frame/correction, engine version, kernel ID and time model.
 - The injected provider must declare `TransitPositionProviderCapabilities` with `contractVersion:'0.1.0-experimental'` and precisely matching coordinates and provenance. This is an **assertion**, never proof of physical accuracy.

@@ -49,8 +49,7 @@ test('rejects invalid UTC/calendar and timezone before any provider I/O',async()
 test('requires explicitly versioned matching zodiac, no silent ayanamsa',async()=>{
   await rejects(i=>{i.zodiac={type:'SIDEREAL'}},'INVALID_ZODIAC',0);
   await rejects(i=>{i.zodiac={type:'TROPICAL',ayanamsaId:'anything'}},'INVALID_ZODIAC',0);
-  const {input}=fixture(); input.zodiac={type:'SIDEREAL',ayanamsaId:'LAHIRI-v1'};
-  assert.equal((await getTransitSkySnapshotWithProvider(input)).sky.zodiac.ayanamsaId,'LAHIRI-v1');
+  await rejects(i=>{i.zodiac={type:'SIDEREAL',ayanamsaId:'LAHIRI-v1'}},'UNSUPPORTED_ZODIAC_CONVERSION',0);
 });
 test('fails closed for sparse/duplicate/invalid identifier lists before provider calls',async()=>{
   await rejects(i=>{i.bodyNames=[]},'INVALID_BODIES',0);
