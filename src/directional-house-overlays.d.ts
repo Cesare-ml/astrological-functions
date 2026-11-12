@@ -6,17 +6,27 @@ import type {
 
 export type SynastryHouseDirection = 'A_TO_B' | 'B_TO_A';
 
-export interface DirectionalHouseOverlayInput {
-  readonly direction: SynastryHouseDirection;
-  readonly chartA: ExperimentalNatalResult;
-  readonly chartB: ExperimentalNatalResult;
+type SharedOverlayInput = Readonly<{
+  chartA: ExperimentalNatalResult;
+  chartB: ExperimentalNatalResult;
   /** Both must be narrowed to literal true by the caller. */
-  readonly birthTimeKnownA: true;
-  readonly birthTimeKnownB: true;
-  /** Only the target chart's cusp set is read (B for A_TO_B, A for B_TO_A). */
-  readonly cuspSetA?: HouseCuspContextInput['cuspSet'];
-  readonly cuspSetB?: HouseCuspContextInput['cuspSet'];
-}
+  birthTimeKnownA: true;
+  birthTimeKnownB: true;
+}>;
+
+/** The source/target direction determines which target cusp set is mandatory. */
+export type DirectionalHouseOverlayInput = SharedOverlayInput & (
+  | Readonly<{
+      direction: 'A_TO_B';
+      cuspSetB: HouseCuspContextInput['cuspSet'];
+      cuspSetA?: HouseCuspContextInput['cuspSet'];
+    }>
+  | Readonly<{
+      direction: 'B_TO_A';
+      cuspSetA: HouseCuspContextInput['cuspSet'];
+      cuspSetB?: HouseCuspContextInput['cuspSet'];
+    }>
+);
 
 export interface DirectionalHouseOverlayResult {
   readonly contract: 'DirectionalHouseOverlayResult';
