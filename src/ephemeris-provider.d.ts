@@ -5,7 +5,7 @@ export interface ApparentGeocentricState {
   readonly longitudeDeg: number;
   readonly latitudeDeg: number;
   readonly longitudeSpeedDegPerDay?: number | null;
-  metadata: Readonly<{
+  readonly metadata: Readonly<{
     center: 'EARTH';
     frame: 'ECLIPTIC_OF_DATE';
     corrections: 'APPARENT';
@@ -38,7 +38,7 @@ export interface NatalBody {
   latitudeDeg: number;
   zodiacSignIndex: number;
   longitudeSpeedDegPerDay: number | null;
-  ephemerisMetadata: ApparentGeocentricState['metadata'];
+  readonly ephemerisMetadata: ApparentGeocentricState['metadata'];
 }
 export interface ExperimentalNatalResult {
   contract: 'NatalChartResult';
