@@ -48,3 +48,10 @@ Only `zodiac: 'TROPICAL'` is permitted; sidereal requires a separately validated
 Run `node --test test/lunar-elongation-provider.test.mjs`, `npm test`, and a TypeScript NodeNext consumer test after checkout. Current synthetic tests cover fail-closed provenance mismatches, date validation, swapped body metadata, provider rejection, nonfinite positions and immutability.
 
 No production integrations, releases, visibility changes or merge to `main`.
+
+## Execution record (2026-11-12)
+
+- The actual committed GitHub source blobs were fetched, imports were adapted to standalone V8, and the committed test bodies were executed against those source functions with a minimal `node:test` / `node:assert/strict` adapter.
+- **10/10 synthetic cases passed** after correcting the undefined-longitude test fixture to bypass the mock default.
+- This V8 check is **not** native Node `node --test`, `npm test`, TypeScript consumer compilation or real Rust/WASM/provider integration. Those remain open validation requirements.
+- The provider's reported version/kernel/time model are checked for coherence only: real-kernel provenance and astronomical precision cannot be established from asserted metadata.
