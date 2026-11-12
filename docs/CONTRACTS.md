@@ -456,3 +456,15 @@ The isolated `calculateNatalWithProvider` adapter rejects a supplied longitude s
 ## Cross-aspect orb domain — 2026-11-12
 
 `calculateCrossAspects` accepts configured aspect angles and maximum orbs only within the closed interval 0..180 degrees. Angular separation is always in 0..180; larger orbs have no meaningful geometric domain and now fail with `AstrologyError('INVALID_ASPECT')`. The endpoint values 0 and 180 remain supported. This is an isolated configuration validation change, not an astronomical computation or scientific parity claim. Synthetic regressions: `test/cross-aspect-orb-bounds.test.mjs`. Native `npm test` remains to be run.
+
+
+## Natal house-placement error consistency — 2026-11-12
+
+`placeNatalBodiesInHouses` now reports `AstrologyError('INVALID_POINT')` for
+nonnumeric or nonfinite `body.longitudeDeg`, matching its existing malformed
+body-record validation. This is a narrow error-classification change: direct
+angle utilities still use `INVALID_ANGLE`. Existing synthetic regression tests
+were updated accordingly; native Node.js tests and TypeScript checks have not
+been run in this GitHub-only editing session. This does not add astronomical
+calculation or claim parity with the Rust/WASM provider. The future astronomy
+engine remains [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
