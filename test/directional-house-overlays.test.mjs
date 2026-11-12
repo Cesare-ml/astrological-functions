@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateDirectionalHouseOverlays } from '../src/directional-house-overlays.mjs';
+import { calculateDirectionalHouseOverlays, calculateBidirectionalHouseOverlays } from '../src/directional-house-overlays.mjs';
 
 const provenance = Object.freeze({engineVersion:'synthetic',kernelSetId:'synthetic-v1',timeModel:'synthetic-UTC'});
 const cuspListA = Object.freeze([0,30,60,90,120,150,180,210,240,270,300,330]);
@@ -90,4 +90,46 @@ test('source/target kernels may differ when each provenance and target cusp matc
   const result=calculateDirectionalHouseOverlays({...input,direction:'A_TO_B',chartA:alteredChartA});
   assert.equal(result.sourceEphemerisProvenance.kernelSetId,'independent-A');
   assert.equal(result.targetCuspMetadata.ephemerisProvenance.kernelSetId,'synthetic-v1');
+});
+
+test('bidirectional helper provides both independent target-cusp placements', () => {
+  const result = calculateBidirectionalHouseOverlays(input);
+  const forward = calculateDirectionalHouseOverlays({...input, direction:'A_TO_B'});
+  const reverse = calculateDirectionalHouseOverlays({...input, direction:'B_TO_A'});
+  assert.deepEqual(result.aToB, forward);
+  assert.deepEqual(result.bToA, reverse);
+  assert.equal(result.contract, 'BidirectionalHouseOverlayResult');
+  assert.equal(result.aToB.placements[0].house, 2);
+  assert.equal(result.bToA.placements[0].house, 12);
+  assert.ok(Object.isFrozen(result));
+  assert.ok(Object.isFrozen(result.aToB));
+  assert.ok(Object.isFrozen(result.bToA));
+});
+
+test('bidirectional helper requires BOTH target cusp sets and birth times', () => {
+  assert.throws(() => calculateBidirectionalHouseOverlays({...input, cuspSetA:undefined}),
+    error => error.code === 'INVALID_ARGUMENT');
+  assert.throws(() => calculateBidirectionalHouseOverlays({...input, cuspSetB:undefined}),
+    error => error.code === 'INVALID_ARGUMENT');
+  assert.throws(() => calculateBidirectionalHouseOverlays({...input, birthTimeKnownA:false}),
+    error => error.code === 'BIRTH_TIME_REQUIRED');
+  assert.throws(() => calculateBidirectionalHouseOverlays(null),
+    error => error.code === 'INVALID_ARGUMENT');
+});
+
+test('bidirectional result is not returned when either target context mismatches', () => {
+  assert.throws(() => calculateBidirectionalHouseOverlays({...input, cuspSetA:{
+    ...cuspSetA, metadata:{...cuspSetA.metadata,datetimeUtc:'2025-12-31T12:00:00Z'}
+  }}), error => error.code === 'INCOMPATIBLE_HOUSE_CONTEXT');
+  assert.throws(() => calculateBidirectionalHouseOverlays({...input, cuspSetB:{
+    ...cuspSetB, metadata:{...cuspSetB.metadata,ephemerisProvenance:{...provenance,timeModel:'incorrect'}}
+  }}), error => error.code === 'INCOMPATIBLE_HOUSE_CONTEXT');
+});
+
+test('bidirectional placement keeps multiple source bodies in chart insertion order', () => {
+  const manyA = {...chartA, bodies:{ Mars:{name:'Mars',longitudeDeg:15}, Venus:{name:'Venus',longitudeDeg:0}, Saturn:{name:'Saturn',longitudeDeg:344.9} }};
+  const result = calculateBidirectionalHouseOverlays({...input,chartA:manyA});
+  assert.deepEqual(result.aToB.placements.map(p=>p.bodyName), ['Mars','Venus','Saturn']);
+  assert.deepEqual(result.aToB.placements.map(p=>p.house), [2,1,12]);
+  assert.equal(result.bToA.placements[0].bodyName,'Sun');
 });
