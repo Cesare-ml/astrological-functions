@@ -139,7 +139,11 @@ export function validateHouseCuspSet(input) {
     throw new AstrologyError('UNSUPPORTED_HOUSE_PLACEMENT', 'Only validated cusp intervals are supported');
   if (!Array.isArray(cusps) || cusps.length !== 12)
     throw new AstrologyError('INVALID_CUSPS', 'Exactly twelve cusp longitudes required');
-  const snapshot = Object.freeze(cusps.map((cusp) => normalize360(cusp)));
+  const snapshot = Object.freeze(Array.from(cusps, (cusp) => {
+    if (typeof cusp !== 'number' || !Number.isFinite(cusp))
+      throw new AstrologyError('INVALID_CUSPS', 'Every house cusp must be a finite longitude');
+    return normalize360(cusp);
+  }));
   // Reuse the existing forward-order gate, including wrap-around and zero spans.
   locateLongitudeInHouses(snapshot[0], snapshot);
   return Object.freeze({
