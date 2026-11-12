@@ -242,6 +242,8 @@ function point(p) {
     throw new AstrologyError('INVALID_POINT', 'Every point requires a nonempty name');
   if (p.type != null && (typeof p.type !== 'string' || !p.type.trim()))
     throw new AstrologyError('INVALID_POINT', 'Point type must be a nonempty string when supplied');
+  if (typeof p.longitudeDeg !== 'number' || !Number.isFinite(p.longitudeDeg))
+    throw new AstrologyError('INVALID_POINT', 'Point longitude must be a finite number');
   return Object.freeze({name:p.name,longitudeDeg:normalize360(p.longitudeDeg),type:p.type??'body'});
 }
 function definition(d) {
