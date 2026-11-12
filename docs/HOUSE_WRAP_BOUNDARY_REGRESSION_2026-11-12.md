@@ -39,3 +39,18 @@ npm test
 Execution status: **not run** in the GitHub connector; these assertions
 require a native checkout and Node.js >=20. An implementation/code review
 does not establish passing tests or scientific accuracy.
+
+## Cusp alias and multiple-turn regression
+
+The same synthetic fixture now checks that cusp longitude aliases shifted by
+whole turns (alternating +720° and -360°) normalize to an immutable copy
+without modifying the caller's array. Placements at six wrap/boundary
+positions must match the original one-turn cusp set. A 12-cusp sequence
+spanning two complete turns must instead fail with `INVALID_CUSPS`
+through both entry points; it cannot be treated as a valid house wheel.
+
+Verification command: `node --test test/house-unequal-wrap-regression.test.mjs`.
+**Not executed natively in this run**: the GitHub connector can edit and
+inspect source, but the execution container cannot reach this private
+repository. Assertions are implementation-only until run in a checkout.
+No Rust/WASM or astronomical accuracy is asserted.
