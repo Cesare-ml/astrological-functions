@@ -76,3 +76,39 @@ test('known birth time rejects body identifiers inconsistent with chart keys', (
     error => error.code === 'INVALID_POINT',
   );
 });
+
+test('house placement rejects mismatched cusp UTC and observer coordinates', () => {
+  for (const metadataPatch of [
+    { datetimeUtc: '2026-01-02T00:00:00Z' },
+    { latitudeDeg: 1 },
+    { longitudeDegEast: 1 },
+  ]) {
+    const mismatched = {
+      ...cuspSet,
+      metadata: { ...cuspSet.metadata, ...metadataPatch },
+    };
+    assert.throws(
+      () => placeNatalBodiesInHouses({ chart, cuspSet: mismatched, birthTimeKnown: true }),
+      error => error.code === 'INCOMPATIBLE_HOUSE_CONTEXT',
+    );
+  }
+});
+
+test('house placement rejects mismatched ephemeris engine and time model', () => {
+  for (const provenancePatch of [
+    { engineVersion: 'other-engine' },
+    { timeModel: 'other-time-model' },
+  ]) {
+    const mismatched = {
+      ...cuspSet,
+      metadata: {
+        ...cuspSet.metadata,
+        ephemerisProvenance: { ...provenance, ...provenancePatch },
+      },
+    };
+    assert.throws(
+      () => placeNatalBodiesInHouses({ chart, cuspSet: mismatched, birthTimeKnown: true }),
+      error => error.code === 'INCOMPATIBLE_HOUSE_CONTEXT',
+    );
+  }
+});
