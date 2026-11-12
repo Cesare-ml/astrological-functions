@@ -76,7 +76,7 @@ test('absent provider, unavailable method and inadequate capabilities fail close
     getContinuousLongitudeEnclosure:async()=>null,
   },{capabilities:{...capabilities,coordinates:{...coordinates,frame:'J2000'}},
     getContinuousLongitudeEnclosure:async()=>null}]) {
-    await assert.rejects(analyzeSynastryUncertaintyWithProvider(inputFor(provider)),
+    await assert.rejects(analyzeSynastryUncertaintyWithProvider({...inputFor(),provider}),
       e=>['MISSING_ENCLOSURE_PROVIDER','INCOMPATIBLE_ENCLOSURE_PROVIDER'].includes(e.code));
   }
 });
@@ -97,7 +97,7 @@ test('response mismatched chart/time/frame and sample-only coverage are rejected
 
 test('provenance mismatch rejects a provider that switched kernels silently',async()=>{
   await assert.rejects(analyzeSynastryUncertaintyWithProvider(inputFor(providerFor(
-    r=>({...r,ephemerisProvenance:{...provenance,kernelSetId:'different'}}))),
+    r=>({...r,ephemerisProvenance:{...provenance,kernelSetId:'different'}})))),
     e=>e.code==='INCOMPATIBLE_ENCLOSURE_PROVENANCE');
 });
 
