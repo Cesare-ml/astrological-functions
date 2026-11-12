@@ -73,7 +73,29 @@ function resultSnapshot(source) {
   }
   if (!Array.isArray(result.aspectDefinitions) || result.aspectDefinitions.length > 64)
     throw new AstrologyError('INVALID_ASPECT', 'Explicit configured aspect definitions required');
-  return Object.freeze(charts);
+  const seen = new Set();
+  const aspectDefinitions = Object.freeze(Array.from(result.aspectDefinitions, rule => {
+    if (!rule || typeof rule !== 'object' || Array.isArray(rule) ||
+        typeof rule.id !== 'string' || !rule.id.trim() || seen.has(rule.id) ||
+        typeof rule.angleDeg !== 'number' || !Number.isFinite(rule.angleDeg) ||
+        typeof rule.maxOrbDeg !== 'number' || !Number.isFinite(rule.maxOrbDeg) ||
+        rule.angleDeg < 0 || rule.angleDeg > 180 ||
+        rule.maxOrbDeg < 0 || rule.maxOrbDeg > 180)
+      throw new AstrologyError('INVALID_ASPECT', 'Invalid or duplicate configured aspect rule');
+    seen.add(rule.id);
+    return Object.freeze({id:rule.id,angleDeg:rule.angleDeg,maxOrbDeg:rule.maxOrbDeg});
+  }));
+  const original = Object.freeze({
+    contract:'SynastryAspectsOnlyResult', contractVersion:VERSION,
+    houseMode:'UNAVAILABLE', angles:null,
+    timeBasis:Object.freeze({A:charts.A.timeBasis,B:charts.B.timeBasis}),
+    provenance:Object.freeze({A:charts.A.ephemerisProvenance,B:charts.B.ephemerisProvenance}),
+    selectedBodyNames:Object.freeze({A:charts.A.bodyNames,B:charts.B.bodyNames}),
+    aspectDefinitions,
+    aToB:Object.freeze({houseOverlays:null}),
+    bToA:Object.freeze({houseOverlays:null}),
+  });
+  return Object.freeze({charts:Object.freeze(charts),aspectsOnlyResult:original});
 }
 function interval(source, chart) {
   const input = record(source, 'INVALID_INTERVAL', 'Requested time interval');
@@ -183,18 +205,20 @@ function readResponse(response, request) {
  */
 export async function analyzeSynastryUncertaintyWithProvider(input) {
   const options=record(input,'INVALID_ARGUMENT','Provider uncertainty options');
-  const chart=resultSnapshot(options.aspectsOnlyResult);
+  const snapshot=resultSnapshot(options.aspectsOnlyResult);
+  const chart=snapshot.charts;
   const aRange=interval(options.intervalA,chart.A);
   const bRange=interval(options.intervalB,chart.B);
   const provider=validatedProvider(options.provider);
+  const readEnclosure = provider.getContinuousLongitudeEnclosure.bind(provider);
   const reqA=requestFor('A',chart.A,aRange);
   const reqB=requestFor('B',chart.B,bRange);
   // Freeze input request snapshots before any await: callers/providers cannot
   // change selected identifiers, metadata or interval boundaries mid-flight.
-  const a=readResponse(await provider.getContinuousLongitudeEnclosure(reqA),reqA);
-  const b=readResponse(await provider.getContinuousLongitudeEnclosure(reqB),reqB);
+  const a=readResponse(await readEnclosure(reqA),reqA);
+  const b=readResponse(await readEnclosure(reqB),reqB);
   const analysis=analyzeSynastryAspectUncertainty({
-    aspectsOnlyResult:options.aspectsOnlyResult,
+    aspectsOnlyResult:snapshot.aspectsOnlyResult,
     enclosureA:a.enclosure,enclosureB:b.enclosure,
   });
   return Object.freeze({
