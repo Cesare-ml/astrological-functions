@@ -496,3 +496,8 @@ The type fixture is `test/types/provider-provenance-shape.test.ts`; run with
 `tsc --strict --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext test/types/provider-provenance-shape.test.ts`.
 This change does not add astronomy or validate real kernels. The sole intended
 astronomical engine remains [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+
+## Readonly TypeScript provider boundary — 2026-11-12
+
+`NatalInput` fields and apparent geocentric state numeric fields are now readonly in the experimental TypeScript declaration. The provider method returns `Promise<Readonly<ApparentGeocentricState>>`. This discourages accidental consumer-side mutation of inputs and returned astronomical facts; the runtime still snapshots body names and freezes its provider requests independently. TypeScript `readonly` is compile-time only and does **not** freeze third-party Rust/WASM or JavaScript state objects. Negative compile-time cases are in `test/types/provider-readonly-boundary.test.ts`; verify with `tsc --strict --noEmit --module nodenext --moduleResolution nodenext --target es2022 test/types/provider-readonly-boundary.test.ts`. No native TypeScript verification or scientific ephemeris integration is claimed by this change. VirgoStars credit: https://github.com/Cesare-ml/VirgoStars-Ephemeris.
