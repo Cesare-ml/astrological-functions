@@ -69,6 +69,23 @@ export async function prepareTransitAspectEventCandidates(input) {
   if (scanned.signChangeCandidates.length > maxCandidateRefinements)
     invalid('REFINEMENT_BUDGET_EXCEEDED', 'Too many candidates for the explicit refinement budget');
 
+  // The scanner already sampled every candidate endpoint. A pinned provider
+  // must return the same finite residual when refinement repeats that UTC.
+  // Without this check a stateful/mutating provider can silently move a hit.
+  const previouslySampledResiduals = new Map();
+  function remember(datetimeUtc, residualDeg) {
+    if (previouslySampledResiduals.has(datetimeUtc) &&
+        previouslySampledResiduals.get(datetimeUtc) !== residualDeg)
+      invalid('INCONSISTENT_RESIDUAL', 'Pinned provider changed the residual for a previously sampled UTC instant');
+    previouslySampledResiduals.set(datetimeUtc, residualDeg);
+  }
+  for (const segment of [...scanned.signChangeCandidates, ...scanned.unresolvedIntervals]) {
+    remember(segment.startUtc, segment.startResidualDeg);
+    remember(segment.endUtc, segment.endResidualDeg);
+  }
+  for (const zero of scanned.sampledZeros)
+    remember(zero.datetimeUtc, zero.residualDeg);
+
   let refinementCalls = 0;
   const refiningProvider = Object.freeze({
     capabilities: providerSnapshot.capabilities,
@@ -76,7 +93,14 @@ export async function prepareTransitAspectEventCandidates(input) {
       if (refinementCalls >= maxRefinementCalls)
         invalid('REFINEMENT_BUDGET_EXCEEDED', 'Refinement point-evaluation budget exhausted');
       refinementCalls++;
-      return point(request);
+      const response = await point(request);
+      // Invalid/non-finite results are rejected by the refiner as before.
+      // Match only valid echoes, then guard both scan->refine and repeated
+      // refine->refine evaluations of the exact same UTC.
+      if (response && response.datetimeUtc === request.datetimeUtc &&
+          typeof response.residualDeg === 'number' && Number.isFinite(response.residualDeg))
+        remember(request.datetimeUtc, response.residualDeg);
+      return response;
     }
   });
   const refinedCandidates = [];
