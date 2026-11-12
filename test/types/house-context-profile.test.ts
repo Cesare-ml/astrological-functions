@@ -27,9 +27,9 @@ const legacy: HouseCuspContextInput = {
 validateHouseCuspContext(legacy);
 placeNatalBodiesInHouses({ chart, cuspSet: legacy.cuspSet, birthTimeKnown: true });
 
-// @ts-expect-error Canonical profile must reject the historical egizia alias.
 const invalid: HouseCuspContextInput = {
   chart,
+  // @ts-expect-error Canonical profile must reject the historical egizia alias.
   cuspSet: { houseSystem: 'egizia', calculationProfile: 'CANONICAL_V1', cusps, metadata },
 };
 void invalid;
