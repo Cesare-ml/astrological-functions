@@ -23,8 +23,5 @@ const legacy: HouseCuspSetInput = {
 };
 validateHouseCuspSet(legacy);
 // @ts-expect-error Canonical profile cannot carry a legacy label in cusp input.
-const invalid: HouseCuspSetInput = {
-  houseSystem: 'placido', calculationProfile: 'CANONICAL_V1', cusps,
-  metadata: { houseSystem: 'PLACIDUS', placementMethod: 'CUSP_INTERVAL' },
-};
+const invalid: HouseCuspSetInput = { houseSystem: 'placido', calculationProfile: 'CANONICAL_V1', cusps, metadata: { houseSystem: 'PLACIDUS', placementMethod: 'CUSP_INTERVAL' } };
 void invalid;
