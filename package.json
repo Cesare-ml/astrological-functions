@@ -12,8 +12,16 @@
     "./transits/provider": {
       "types": "./src/transit-provider.d.mts",
       "import": "./src/transit-provider.mjs"
+    },
+    "./transits/compose": {
+      "types": "./src/transit-composition.d.mts",
+      "import": "./src/transit-composition.mjs"
     }
   },
-  "engines": { "node": ">=20" },
-  "scripts": { "test": "node --test" }
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
 }
