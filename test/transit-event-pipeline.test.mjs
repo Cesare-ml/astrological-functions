@@ -151,3 +151,35 @@ test('refinement time tolerance tightens for a narrower scanner leaf interval',a
     assert.equal(v.refinement.timeToleranceMs,span);
   }
 });
+
+test('rejects a changing residual when refinement resamples a scan endpoint',async()=>{
+  const p=makeProvider();
+  const seen=new Map();
+  const original=p.getUnwrappedAspectResidual.bind(p);
+  p.getUnwrappedAspectResidual=async req=>{
+    const result=await original(req);
+    const count=seen.get(req.datetimeUtc) ?? 0;
+    seen.set(req.datetimeUtc,count+1);
+    return count===0 ? result : {...result,residualDeg:result.residualDeg+0.00001};
+  };
+  // All declared provenance remains pinned. Numeric changes must still fail closed.
+  await assert.rejects(
+    ()=>prepareTransitAspectEventCandidates(options(p)),
+    e=>e.code==='INCONSISTENT_RESIDUAL'
+  );
+  assert.ok([...seen.values()].some(count=>count>1));
+});
+
+test('accepts deterministic zero endpoints regardless of signed-zero representation',async()=>{
+  const f=ms=>(ms-t0)/3600000-.5;
+  const p=makeProvider(f,(a,b)=>[f(a),f(b)]);
+  const original=p.getUnwrappedAspectResidual.bind(p);
+  p.getUnwrappedAspectResidual=async req=>{
+    const r=await original(req);
+    if (r.residualDeg===0) return {...r,residualDeg:-0};
+    return r;
+  };
+  const result=await prepareTransitAspectEventCandidates({...options(p),maxDepth:1});
+  assert.equal(result.sampledZeros.length,1);
+  assert.equal(result.sampledZeros[0].datetimeUtc,'2026-11-12T00:30:00.000Z');
+});
