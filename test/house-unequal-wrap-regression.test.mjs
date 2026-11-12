@@ -66,3 +66,23 @@ test('a cusp sequence completing two turns is rejected, not silently reinterpret
     metadata: { houseSystem: 'VEHLOW', placementMethod: 'CUSP_INTERVAL' },
   }), error => error.code === 'INVALID_CUSPS');
 });
+
+
+test('invalid body longitude fails closed before assigning a house', () => {
+  for (const longitude of [NaN, Infinity, -Infinity, null, undefined, '350']) {
+    assert.throws(() => locateLongitudeInHouses(longitude, cusps),
+      error => error.code === 'INVALID_ANGLE');
+  }
+});
+
+test('returned placement is frozen and does not expose mutable cusp input', () => {
+  const mutable = [...cusps];
+  const placement = locateLongitudeInHouses(0, mutable);
+  assert.ok(Object.isFrozen(placement));
+  assert.deepEqual(placement, {
+    house: 1, startDeg: 350, endDeg: 20, distanceFromCuspDeg: 10,
+  });
+  mutable[0] = 10;
+  assert.equal(placement.startDeg, 350);
+  assert.equal(placement.endDeg, 20);
+});
