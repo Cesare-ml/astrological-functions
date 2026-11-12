@@ -8,6 +8,10 @@
     "./transits": {
       "types": "./src/transit-facts.d.mts",
       "import": "./src/transit-facts.mjs"
+    },
+    "./transit-events": {
+      "types": "./src/transit-event-pipeline.d.mts",
+      "import": "./src/transit-event-pipeline.mjs"
     }
   },
   "engines": {
