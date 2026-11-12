@@ -52,3 +52,27 @@ test('matching coordinates cannot override a mismatched ephemeris kernel', () =>
     error => error.code === 'INCOMPATIBLE_HOUSE_CONTEXT',
   );
 });
+
+test('known birth time still rejects malformed natal body positions', () => {
+  for (const longitudeDeg of [NaN, Infinity, -Infinity, '15', undefined]) {
+    const malformed = {
+      ...chart,
+      bodies: { Sun: { name: 'Sun', longitudeDeg } },
+    };
+    assert.throws(
+      () => placeNatalBodiesInHouses({ chart: malformed, cuspSet, birthTimeKnown: true }),
+      error => error.code === 'INVALID_POINT',
+    );
+  }
+});
+
+test('known birth time rejects body identifiers inconsistent with chart keys', () => {
+  const malformed = {
+    ...chart,
+    bodies: { Sun: { name: 'Moon', longitudeDeg: 15 } },
+  };
+  assert.throws(
+    () => placeNatalBodiesInHouses({ chart: malformed, cuspSet, birthTimeKnown: true }),
+    error => error.code === 'INVALID_POINT',
+  );
+});
