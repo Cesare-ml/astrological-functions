@@ -536,3 +536,8 @@ The experimental TypeScript declarations now reuse the discriminated `HouseSyste
 ## House context TypeScript regression — 2026-11-12
 
 `test/types/house-context-profile.test.ts` extends compile-time profile coverage to `HouseCuspContextInput`, `validateHouseCuspContext`, and `placeNatalBodiesInHouses`. Canonical `VEHLOW` and explicitly legacy `egizia` are accepted in their respective profiles; canonical `egizia` is an expected compile-time error. The fixture is synthetic, and must be checked with `tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext test/types/house-context-profile.test.ts` alongside `npm test`. No astronomical capability, cusp computation, or runtime validation is claimed. [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the sole planned Rust astronomical engine.
+
+
+### Type-level birth-time gate (experimental)
+
+`placeNatalBodiesInHouses` requires `birthTimeKnown: true` explicitly. The TypeScript fixture `test/types/house-context-profile.test.ts` includes negative checks for `false` and an omitted flag. This is a **compile-time** guard only: JavaScript callers still require runtime validation, and the synthetic chart/cusp fixture does not establish astronomical correctness. Run `tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext test/types/house-context-profile.test.ts` after the runtime adapter import gap tracked in issue #5 is resolved; do not treat the new `@ts-expect-error` checks as passed until then.
