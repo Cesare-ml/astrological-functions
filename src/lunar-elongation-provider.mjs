@@ -96,6 +96,8 @@ export async function calculateLunarElongationWithProvider(input) {
     const request = Object.freeze({
       datetimeUtc: input.datetimeUtc,
       bodyName,
+      kernelSetId: pin.kernelSetId,
+      timeModelId: pin.timeModelId,
       frame: CONTEXT.frame,
       corrections: CONTEXT.corrections,
     });
