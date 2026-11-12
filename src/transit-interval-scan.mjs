@@ -116,17 +116,30 @@ export async function scanTransitAspectCandidateIntervals(input) {
     metadata(result.metadata, true);
     return Object.freeze({lowerDeg: result.lowerDeg, upperDeg: result.upperDeg});
   }
-  const pending = [{left:startMs, right:endMs, depth:0}];
+  const pending = [{left:startMs, right:endMs, depth:0, parentBounds:null}];
   while (pending.length) {
-    const {left, right, depth} = pending.pop();
+    const {left, right, depth, parentBounds} = pending.pop();
     const bounds = await range(left, right);
     inspectedIntervals++;
+    // A true all-time enclosure for a child must be contained in the parent's
+    // all-time enclosure. Reject contradictory range claims before pruning.
+    if (parentBounds &&
+        (bounds.lowerDeg < parentBounds.lowerDeg || bounds.upperDeg > parentBounds.upperDeg))
+      error('INVALID_ENCLOSURE', 'Child residual bounds contradict the parent all-time enclosure');
+    // Even otherwise nested bounds may contradict a previously sampled shared
+    // endpoint. Do not discard a branch whose endpoint is known to lie outside
+    // its claimed range.
+    for (const endpoint of [left, right]) {
+      if (cache.has(endpoint) &&
+          (cache.get(endpoint) < bounds.lowerDeg || cache.get(endpoint) > bounds.upperDeg))
+        error('INVALID_ENCLOSURE', 'Cached endpoint residual contradicts the interval enclosure');
+    }
     if (bounds.lowerDeg > 0 || bounds.upperDeg < 0) { excludedIntervals++; continue; }
     const mid = left + Math.floor((right-left)/2);
     if (right - left > widthMs && depth < maxDepth && mid > left && mid < right) {
       // Stack is LIFO; push the right interval first for chronological results.
-      pending.push({left:mid, right, depth:depth+1});
-      pending.push({left, right:mid, depth:depth+1});
+      pending.push({left:mid, right, depth:depth+1, parentBounds:bounds});
+      pending.push({left, right:mid, depth:depth+1, parentBounds:bounds});
       continue;
     }
     const startResidualDeg = await point(left);
