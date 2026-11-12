@@ -12,6 +12,7 @@ The synthetic regression in `test/house-birth-time-runtime.test.mjs` exercises t
 - Body identifiers inconsistent with their chart lookup keys also fail with `INVALID_POINT`.
 - Cusp UTC or observer latitude/longitude differing from the chart fails with `INCOMPATIBLE_HOUSE_CONTEXT`.
 - A different ephemeris engine version or time model fails with `INCOMPATIBLE_HOUSE_CONTEXT`, even if the kernel ID matches.
+- Missing, null, empty, or incomplete provenance on either the natal chart or the cusp metadata fails with `INVALID_HOUSE_METADATA` before placement.
 
 Run locally from the repository root:
 
