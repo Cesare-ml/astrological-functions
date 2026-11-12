@@ -32,4 +32,9 @@ const invalid: HouseCuspContextInput = {
   // @ts-expect-error Canonical profile must reject the historical egizia alias.
   cuspSet: { houseSystem: 'egizia', calculationProfile: 'CANONICAL_V1', cusps, metadata },
 };
+// A missing or uncertain birth time must never permit house placements.
+// @ts-expect-error House placement requires an explicitly known birth time.
+placeNatalBodiesInHouses({ chart, cuspSet: canonical.cuspSet, birthTimeKnown: false });
+// @ts-expect-error An omitted birth-time flag must not imply true.
+placeNatalBodiesInHouses({ chart, cuspSet: legacy.cuspSet });
 void invalid;
