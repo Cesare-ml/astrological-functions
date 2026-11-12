@@ -522,3 +522,7 @@ validate a real Rust/WASM ephemeris. Verify with
 and `npm test` before considering the draft PR validated. Astronomical positions
 remain sourced exclusively from the planned
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+## Type-level canonical/legacy house selection — 2026-11-12
+
+The experimental `HouseSystemSelection` union now prevents a TypeScript caller from pairing historical labels (such as `egizia` or `placido`) with `CANONICAL_V1`. Canonical names remain valid under either profile; historical aliases require explicit `VIRGOSTARS_LEGACY_V1`. Runtime validation still handles JavaScript and untrusted inputs. The type-only fixture is `test/types/house-system-profile.test.ts`; check it with `tsc --strict --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext test/types/house-system-profile.test.ts`. This does not calculate cusps, implement `houses_pos`, or validate astronomy. The sole planned astronomical engine is [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) (Rust).
