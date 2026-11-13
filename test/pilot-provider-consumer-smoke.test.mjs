@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as adapter from '../src/ephemeris-provider.js';
@@ -42,4 +43,12 @@ test('provider subpath self-import resolves the same guarded runtime exports', (
   for (const name of declaredAdapterExports) {
     assert.strictEqual(packageProvider[name], adapter[name], name);
   }
+});
+
+test('provider subpath advertises its TypeScript declarations before runtime default', () => {
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.deepEqual(pkg.exports['./ephemeris-provider'], {
+    types: './src/ephemeris-provider.d.ts',
+    default: './src/ephemeris-provider.js'
+  });
 });
