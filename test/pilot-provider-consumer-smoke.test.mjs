@@ -4,21 +4,25 @@ import * as adapter from '../src/ephemeris-provider.js';
 import * as runtime from '../src/index.mjs';
 import * as packageRoot from 'astrological-functions';
 
-test('typed provider adapter has real ESM exports identical to the guarded runtime', () => {
-  for (const name of [
+const declaredAdapterExports = [
     'calculateNatalWithProvider', 'resolveHouseSystem',
     'resolveHousePlacementPolicy', 'locateLongitudeWithHousePolicy',
     'validateHouseCuspSet', 'validateHouseCuspContext',
     'placeNatalBodiesInHouses'
-  ]) {
+];
+
+test('typed provider adapter exposes exactly the declared ESM runtime surface', () => {
+  assert.deepEqual(Object.keys(adapter).sort(), [...declaredAdapterExports].sort());
+  for (const name of declaredAdapterExports) {
     assert.equal(typeof adapter[name], 'function', name);
     assert.strictEqual(adapter[name], runtime[name], name);
   }
 });
 
 test('package root self-import remains the existing runtime, not an astronomy fallback', () => {
-  assert.strictEqual(packageRoot.calculateNatalWithProvider, adapter.calculateNatalWithProvider);
-  assert.strictEqual(packageRoot.resolveHouseSystem, adapter.resolveHouseSystem);
+  for (const name of declaredAdapterExports) {
+    assert.strictEqual(packageRoot[name], adapter[name], name);
+  }
 });
 
 test('unsupported house placement still fails closed through adapter', () => {
