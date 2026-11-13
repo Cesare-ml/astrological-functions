@@ -231,3 +231,75 @@ test('129 points are rejected rather than silently truncated for desktop display
   const points=Array.from({length:129},(_,i)=>({id:`BODY_${i}`,longitudeDeg:i}));
   assert.throws(()=>build({positions:{...positions,points}}),err('INVALID_POINTS'));
 });
+
+test('occupancy gives twelve numbered houses for every method, including empty houses',()=>{
+  const r=build();
+  assert.deepEqual(r.occupancyByMethod.map(m=>m.houseSystem),labels);
+  for(const method of r.occupancyByMethod){
+    assert.deepEqual(method.houses.map(h=>h.house),Array.from({length:12},(_,i)=>i+1));
+    assert.equal(method.houses.reduce((sum,h)=>sum+h.count,0),r.pointCount);
+    for(const house of method.houses) assert.equal(house.count,house.pointIds.length);
+  }
+  assert.deepEqual(r.occupancyByMethod[0].houses[0],{house:1,count:1,pointIds:['MOON']});
+  assert.deepEqual(r.occupancyByMethod[0].houses[1],{house:2,count:1,pointIds:['SUN']});
+  assert.deepEqual(r.occupancyByMethod[0].houses[2],{house:3,count:1,pointIds:['VENUS']});
+  assert.deepEqual(r.occupancyByMethod[1].houses[0],{house:1,count:2,pointIds:['SUN','MOON']});
+  assert.deepEqual(r.occupancyByMethod[2].houses[11],{house:12,count:2,pointIds:['SUN','MOON']});
+  assert.deepEqual(r.occupancyByMethod[2].houses[6],{house:7,count:1,pointIds:['MARS']});
+  assert.deepEqual(r.occupancyByMethod[2].houses[5],{house:6,count:0,pointIds:[]});
+});
+
+test('occupancy follows explicit two-method column order and caller point order',()=>{
+  const r=build({methods:[porphyry,whole],positions:{...positions,points:[
+    {id:'LAST',longitudeDeg:345},{id:'FIRST',longitudeDeg:0},
+    {id:'ALSO_LAST',longitudeDeg:345},
+  ]}});
+  assert.deepEqual(r.occupancyByMethod.map(m=>m.houseSystem),['PORPHYRY','WHOLE_SIGN']);
+  assert.deepEqual(r.occupancyByMethod[0].houses[11].pointIds,
+    ['LAST','FIRST','ALSO_LAST']);
+  assert.deepEqual(r.occupancyByMethod[1].houses[0].pointIds,
+    ['LAST','ALSO_LAST']);
+  assert.deepEqual(r.occupancyByMethod[1].houses[1].pointIds,['FIRST']);
+});
+
+test('empty and 128-point input occupancy agrees with row assignments without re-placement',()=>{
+  const empty=build({positions:{...positions,points:[]}});
+  assert.equal(empty.occupancyByMethod.length,3);
+  for(const method of empty.occupancyByMethod){
+    assert.equal(method.houses.length,12);
+    assert.ok(method.houses.every(h=>h.count===0&&h.pointIds.length===0));
+  }
+  const points=Array.from({length:128},(_,i)=>({
+    id:`B${i}`,longitudeDeg:i*360/128,
+  }));
+  const full=build({positions:{...positions,points}});
+  for(let j=0;j<3;j++){
+    const method=full.occupancyByMethod[j];
+    assert.equal(method.houses.reduce((total,h)=>total+h.count,0),128);
+    for(const house of method.houses){
+      const expected=full.rows.filter(row=>row.placements[j].house===house.house)
+        .map(row=>row.id);
+      assert.deepEqual(house.pointIds,expected);
+    }
+  }
+});
+
+test('occupancy is deeply immutable and detached from modified input points',()=>{
+  const mutable=structuredClone(base);
+  const result=buildSourcedHousePlacementMatrix(mutable);
+  mutable.positions.points[0].id='ALTERED';
+  mutable.methods[0].snapshot.cuspsDeg[0]=0;
+  assert.equal(result.occupancyByMethod[0].houses[1].pointIds[0],'SUN');
+  assert.ok(Object.isFrozen(result.occupancyByMethod));
+  for(const method of result.occupancyByMethod){
+    assert.ok(Object.isFrozen(method));
+    assert.ok(Object.isFrozen(method.houses));
+    for(const house of method.houses){
+      assert.ok(Object.isFrozen(house));
+      assert.ok(Object.isFrozen(house.pointIds));
+    }
+  }
+  assert.throws(()=>{result.occupancyByMethod[0].houses[1].pointIds[0]='X'},TypeError);
+  assert.throws(()=>{result.occupancyByMethod[0].houses[1].count=999},TypeError);
+  assert.doesNotThrow(()=>JSON.stringify(result));
+});
