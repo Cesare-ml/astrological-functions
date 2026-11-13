@@ -62,3 +62,13 @@ void wrongCenter;
 request.bodyName = 'Moon';
 // @ts-expect-error The natal input's body list is readonly.
 input.bodyNames.push('Moon');
+
+// @ts-expect-error Legacy profile cannot be omitted: the compatibility policy must be explicit.
+const missingProfile: HouseSystemSelection = { houseSystem: 'VEHLOW' };
+void missingProfile;
+// @ts-expect-error Legacy house aliases require the explicitly selected legacy profile.
+const legacyAliasInCanonical: HouseSystemSelection = { houseSystem: 'porfirio', calculationProfile: 'CANONICAL_V1' };
+void legacyAliasInCanonical;
+// @ts-expect-error The Rust/WASM adapter must not accept a geometric frame as apparent-of-date.
+const wrongFrame: EphemerisRequest = { ...request, frame: 'MEAN_ECLIPTIC_OF_DATE' };
+void wrongFrame;
