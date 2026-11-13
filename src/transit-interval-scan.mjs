@@ -85,7 +85,8 @@ export async function scanTransitAspectCandidateIntervals(input) {
   }
   function metadata(value, isRange) {
     const m = obj(value, 'INCOMPATIBLE_EPHEMERIS');
-    if (m.center !== 'EARTH' || m.frame !== 'ECLIPTIC_OF_DATE' ||
+    if (m.contractVersion !== VERSION || m.center !== 'EARTH' ||
+        m.frame !== 'ECLIPTIC_OF_DATE' ||
         m.corrections !== 'APPARENT' || m.coverage !== POINT_COVERAGE ||
         KEYS.some(key => m[key] !== ephemerisProvenance[key]) ||
         (isRange && (m.enclosureCoverage !== RANGE_COVERAGE ||
