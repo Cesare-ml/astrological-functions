@@ -48,8 +48,11 @@ export function dodecatemoriaLongitude(longitude) {
  */
 export function locateLongitudeInHouses(longitude, cusps) {
   const lon=normalize360(longitude);
-  if (!Array.isArray(cusps)||cusps.length!==12)
-    throw new AstrologyError('INVALID_CUSPS', 'Exactly twelve house cusp longitudes are required');
+  if (!Array.isArray(cusps) || cusps.length !== 12 ||
+      Array.from({length:12}, (_,i)=>i).some(i =>
+        !Object.hasOwn(cusps,i) || typeof cusps[i] !== 'number' ||
+        !Number.isFinite(cusps[i])))
+    throw new AstrologyError('INVALID_CUSPS', 'Exactly twelve finite, dense house cusp longitudes are required');
   const points=cusps.map(normalize360);
   const spans=points.map((v,i)=>normalize360(points[(i+1)%12]-v));
   if (spans.some(x=>x<=1e-10) || Math.abs(spans.reduce((a,b)=>a+b,0)-360)>1e-7)
