@@ -152,6 +152,13 @@ export async function scanTransitAspectCandidateIntervals(input) {
     if (bounds.lowerDeg > 0 || bounds.upperDeg < 0) { excludedIntervals++; continue; }
     const mid = left + Math.floor((right-left)/2);
     if (right - left > widthMs && depth < maxDepth && mid > left && mid < right) {
+      // Before either child can be excluded, sample their shared UTC boundary.
+      // A pair of overlapping but fictitious enclosures can otherwise prune
+      // both children without ever checking the true point residual.
+      // point() caches this sample and charges it against maxProviderCalls.
+      const midpointResidualDeg = await point(mid);
+      if (midpointResidualDeg < bounds.lowerDeg || midpointResidualDeg > bounds.upperDeg)
+        error('INVALID_ENCLOSURE', 'Sampled split midpoint violates parent all-time enclosure');
       // The two children share this private record; the first (left) is
       // inspected before the second (right) due to LIFO traversal.
       const childSiblings = {first:null};
