@@ -51,3 +51,26 @@ On 12 November 2026, the **actual authenticated GitHub JS blobs** for the main p
 - This stack targets PR #43, not `main`; a future merge must account for PRs #29 and #39 first and drop duplicate staging files when the producers become part of the target.
 - The former overlapping F3 PR #34 and comparator #44 should not be merged alongside their canonical counterparts.
 - Scientific and legal release gates, original VirgoStars attribution, and the `private: true` package boundary remain unchanged.
+
+
+## Experimental ESM package consumer subpaths
+
+The **stacked private development branch** now exposes two ESM-only subpaths through its package `exports` map, without publishing the package or changing production:
+
+```ts
+import { compareWholeSignAndEqualFromAscendant }
+  from 'astrological-functions/whole-equal-house-comparison';
+import { compareHouseMethodPlacements }
+  from 'astrological-functions/house-method-comparison';
+```
+
+Each subpath has a conditional `types` target pointing to an exact `.d.mts` declaration and an `import` target pointing to the existing `.mjs` implementation. There are no CJS/`require` or accidental unlisted exports; the root `astrological-functions` API is unchanged, and `package.json` keeps `private: true`. This is intended for a *future* pinned local desktop/backend dependency after approval, **not** a distributable npm artifact now.
+
+New consumer regression commands (in addition to the focused integration and full-suite commands above):
+
+```sh
+node --test test/house-comparison-package-consumer.test.mjs
+tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext test/types/house-comparison-package-consumer.test.ts
+```
+
+These package-import assertions need a **native Node and TypeScript run on the actual checkout**. The V8 pure-module integration results below do not execute Node package resolution or TypeScript typechecking. `package.json` is a shared file also touched by other draft export PRs; merge only after reconciling the complete exports map rather than overwriting their subpaths. The declared 0.1.0 experimental contracts do not certify real astronomical inputs.
