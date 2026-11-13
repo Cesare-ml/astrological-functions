@@ -65,11 +65,11 @@ The code change is confined to the existing pure math source
   **6 of 216** deterministic before/on/after-cusp checks across six starting
   cusp offsets were wrong, including four first-cusp cases.
 - After this correction, the same **216/216** boundary checks passed.
-- **82/82 synthetic runtime tests passed** in one strict isolated V8 harness
+- **83/83 synthetic runtime tests passed** in one strict isolated V8 harness
   with actual GitHub code/test blobs. The suites included:
   - 4 original main math tests;
   - 8 PR #50 angle-precision tests;
-  - 6 new cusp preboundary tests from this branch;
+  - 7 cusp preboundary tests from this branch (including a deterministic\n    2,500-chart stress test with **90,000/90,000** adjacent cusp\n    predecessor/exact/successor checks);
   - 12 PR #43 house-method comparator tests;
   - 13 PR #48 pinned-source tests;
   - 16 PR #55 point provenance tests;
@@ -84,7 +84,7 @@ The code change is confined to the existing pure math source
 ```text
 78a494e5aca0e9d9e4423f88d9401c50046fd570  src/index.mjs (parent #50)
 6af1b546681416383773d6d48b30b8a330469e1a  src/index.mjs (this fix)
-e44bfad554852b91d695d509aca969422e370ee0  test/house-cusp-preboundary-ulp.test.mjs
+350cbc027aea79de9de8d823d6e9f02a7d9a68bb  test/house-cusp-preboundary-ulp.test.mjs
 154eab9b76b13eb25748007a0bedd5ab7b53f3d2  test/angle-normalization-precision.test.mjs (#50)
 7e04dc63e4a1dfd8124ba36b45849d1b1a6c8f27  test/math.test.mjs (main)
 d93b158ad9b50029a322c94602d1b03635c34093  src/house-method-comparison.mjs (#43)
