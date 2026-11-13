@@ -40,6 +40,7 @@ Only `zodiac: 'TROPICAL'` is permitted; sidereal requires a separately validated
 - If a provider explicitly includes `metadata.zodiac`, it must be `TROPICAL`. If `metadata.observer` exists, it must be `null` (geocentric). Explicit `SIDEREAL` or topocentric coordinates reject as `INCOMPATIBLE_EPHEMERIS`. Absence of these optional fields remains supported; the required Earth center and ecliptic frame still apply.
 - Reject invalid or non-finite longitudes and latitudes outside the physical coordinate interval.
 - Provider exceptions become typed `EPHEMERIS_PROVIDER_FAILED`, without relaying provider messages.
+- Provider results with **nonempty or malformed warning collections** in either `state.warnings` or `state.metadata.warnings` fail closed with `EPHEMERIS_WARNINGS_UNSUPPORTED`. Explicitly empty arrays are compatible; unreported warnings cannot be inferred.
 - Return an immutable snapshot with both validated positions, the pinned provenance and one immutable lunar sector result.
 
 **Important scientific limitation:** An intentionally fabricated provider can claim matching metadata; passing the gate is **not proof** of correct astronomical calculations or genuine NASA/JPL kernel use. Scientific parity, kernel validation, actual provider behavior, precision limits and real NASA kernel tests belong to VirgoStars Ephemeris and require independent review.
@@ -130,3 +131,17 @@ Two new mock regressions cover incompatible and compatible annotations. **16/16 
 - `test/lunar-elongation-provider.test.mjs`: `0b3b10b511237396f72e04c23c359c6bba9e4d22`
 
 The updated NodeNext TypeScript fixture adds negative compile assertions. **The native Node 24/24 result and the earlier successful TypeScript compile above predate these newer commits.** Run current full `npm test` and `tsc` before marking this ready for review. No actual kernel, Rust/WASM binding or scientific accuracy validation occurred.
+
+## Precision-warning fail-closed gate — 2026-11-13
+
+Provider results may carry explicit warning collections even when the standard Earth-centered, apparent-of-date and kernel/version identifiers match. The lunar sector consumer must not silently treat these as fully supported astronomical inputs. `validatePosition` now rejects nonempty or malformed `state.warnings` and `metadata.warnings`, using the typed error `EPHEMERIS_WARNINGS_UNSUPPORTED` without exposing upstream warning detail. Absent or empty-array warning fields remain valid. This policy is intentionally conservative until a versioned quality/precision acceptance policy exists.
+
+Three new mock-provider regressions exercise top-level and metadata warning channels, empty arrays and Moon-only warnings. The TypeScript metadata and position declarations expose warning arrays; the consumer type fixture includes warning-bearing positions and a negative compile assertion against non-string warning codes.
+
+**Verification record:** All 19 provider test bodies and all 31 current repository runtime test bodies passed using a standalone V8 adapter against GitHub-fetched source and test blobs. The two ESM consumer tests used simulated package resolution in this V8 run. This is **not** the native `npm test` suite, TypeScript compilation or JPL scientific validation. The previous native 24/24 and TypeScript result above apply to older commits only. Current PR has 31 declared runtime test cases pending full native execution.
+
+Current checked Git blobs:
+- `src/lunar-elongation-provider.mjs`: `4bdebf4f45c2a7cbf97d6c7a981351c31b201418`
+- `test/lunar-elongation-provider.test.mjs`: `0de7a2e614e2604fe90894fcb66f5f0a6e0bd7f6`
+
+**Blockers:** a full private-repository checkout was not accessible from the local Node container in this run, so do not interpret the synthetic V8 evidence as a fresh Node.js test run. Real Rust/WASM adapter, actual kernel coverage and numerical accuracy remain independent release gates. No merge or deployment.
