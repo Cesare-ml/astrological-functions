@@ -48,3 +48,26 @@ npm test
 ```
 
 No existing module, package export, backend, Astrolabio, app, deployment or GitHub Actions is changed. A real validated Rust/WASM VirgoStars Ephemeris provider and full repository integration tests remain independent gates. Before any public release, review author rights and mandatory [VirgoStars](https://github.com/Cesare-ml/VirgoStars-Ephemeris) attribution.
+
+## Binary64 seam precision (13 November 2026)
+
+The previous double-modulo normalization could collapse the immediately preceding
+binary64 value to 360 degrees (359.99999999999994) into 0. The previous +540
+translation in the signed-distance formula also collapsed some residuals immediately
+before/after a 180-degree opposition into exact zero. Both could incorrectly report
+`EXACT` rather than `APPLYING` or `SEPARATING` when the exact tolerance is zero.
+
+This patch computes signed residuals directly from the input longitudes reduced
+separately modulo 360, then wraps the *signed* residual without a large added
+offset. The display field `observedForwardDeg` remains normalized: in binary64
+a negative offset smaller than half a ULP at 360 cannot be represented as a number
+just below 360 and therefore displays as 0, even though `signedResidualDeg`
+correctly retains the negative small-angle displacement. Consumers must use
+`signedResidualDeg` for trend decisions, not reconstruct it by subtracting
+normalized display longitudes.
+
+Focused regressions cover the representable predecessor of 360, both binary64
+neighbors of 180, a tiny negative wrapped offset and exact/reverse branch
+behavior. These are synthetic mathematical checks, not claims of physical
+longitude precision or certified Ephemeris data. The current package remains
+private and experimental.
