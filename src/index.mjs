@@ -55,8 +55,15 @@ export function locateLongitudeInHouses(longitude, cusps) {
   if (spans.some(x=>x<=1e-10) || Math.abs(spans.reduce((a,b)=>a+b,0)-360)>1e-7)
     throw new AstrologyError('INVALID_CUSPS', 'House cusps must define one forward zodiac revolution');
   for(let i=0;i<12;i++){
-    const dist=normalize360(lon-points[i]);
-    if(dist < spans[i]) return Object.freeze({house:i+1, startDeg:points[i], endDeg:points[(i+1)%12], distanceFromCuspDeg:dist});
+    const start = points[i], end = points[(i+1)%12];
+    // Compare the half-open zodiac interval directly: normalizing a tiny
+    // negative (lon - start) can round to 0 and falsely claim the next cusp.
+    const inside = start < end
+      ? lon >= start && lon < end
+      : lon >= start || lon < end;
+    if (!inside) continue;
+    const distanceFromCuspDeg = lon >= start ? lon - start : (360 - start) + lon;
+    return Object.freeze({house:i+1, startDeg:start, endDeg:end, distanceFromCuspDeg});
   }
   throw new AstrologyError('INVALID_CUSPS','Unable to place longitude in house intervals');
 }
