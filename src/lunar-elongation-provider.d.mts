@@ -19,6 +19,7 @@ export interface LunarGeocentricProvider {
   getGeocentricEcliptic(input: Readonly<{
     datetimeUtc: string;
     bodyName: 'Sun' | 'Moon';
+    center: 'EARTH';
     kernelSetId: string;
     timeModelId: string;
     frame: 'ECLIPTIC_OF_DATE';
