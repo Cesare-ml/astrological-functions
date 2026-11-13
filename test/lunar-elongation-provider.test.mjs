@@ -254,3 +254,29 @@ test('explicit Earth center survives the mock-provider request boundary', async 
   assert.equal(result.sectors.sectorId, 'FIRST_QUARTER');
   assert.deepEqual(requests.map(request => request.center), ['EARTH', 'EARTH']);
 });
+
+test('explicitly sidereal or topocentric responses cannot pass as geocentric tropical', async () => {
+  for (const extra of [
+    { zodiac: 'SIDEREAL' },
+    { zodiac: null },
+    { observer: { latitudeDeg: 44, longitudeDegEast: 11 } },
+    { observer: 'TOPOCENTRIC' },
+  ]) {
+    const p = provider({ mutate: state => ({
+      ...state,
+      metadata: { ...state.metadata, ...extra },
+    }) });
+    await assert.rejects(() => run(p), e => e.code === 'INCOMPATIBLE_EPHEMERIS');
+    assert.equal(p.requests.length, 1);
+  }
+});
+
+test('compatible optional tropical/geocentric annotations are accepted', async () => {
+  const p = provider({ mutate: state => ({
+    ...state,
+    metadata: { ...state.metadata, zodiac: 'TROPICAL', observer: null },
+  }) });
+  const facts = await run(p);
+  assert.equal(facts.sectors.sectorId, 'NEW');
+  assert.deepEqual(p.requests.map(request => request.bodyName), ['Sun', 'Moon']);
+});
