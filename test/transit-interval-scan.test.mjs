@@ -226,7 +226,8 @@ test('detects a false parent range immediately using its interior split sample',
 });
 
 test('caches the shared midpoint and accounts for it exactly once in the provider budget',async()=>{
-  const p=makeProvider(linear,lineBounds);
+  // Conservative envelopes keep both leaves eligible for endpoint sampling.
+  const p=makeProvider(linear,()=>[-1,1]);
   let pointCalls=0;
   const original=p.getUnwrappedAspectResidual.bind(p);
   p.getUnwrappedAspectResidual=async req=>{pointCalls++;return original(req);};
