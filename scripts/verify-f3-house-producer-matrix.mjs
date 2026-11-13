@@ -16,6 +16,7 @@ import { calculateEqualHouseCusps } from '../src/equal-house-cusps.mjs';
 import { calculatePorphyryHouseCusps } from '../src/porphyry-houses.mjs';
 import { adaptPorphyryToPinnedComparison } from '../src/porphyry-sourced-side.mjs';
 import { buildSourcedHousePlacementMatrix } from '../src/sourced-house-placement-matrix.mjs';
+import { locateLongitudeInHouses } from '../src/index.mjs';
 
 const datetimeUtc = '2026-11-13T16:00:00.000Z';
 const longitudeBasis = { type: 'TROPICAL' };
@@ -174,4 +175,36 @@ test('known birth time is mandatory with real producer snapshots', () => {
 test('invalid Porphyry angles fail instead of triggering silent house fallback', () => {
   assert.throws(()=>makeInputs({ascendantDeg:350,midheavenDeg:170}),
     hasCode('DEGENERATE_QUADRANTS'));
+});
+
+test('36x36 ASC/MC producer grid composes all valid geometry with exact placements', () => {
+  let valid = 0, degenerate = 0, placements = 0;
+  for (let ascendantDeg = 0; ascendantDeg < 360; ascendantDeg += 10) {
+    for (let midheavenDeg = 0; midheavenDeg < 360; midheavenDeg += 10) {
+      let sides;
+      try {
+        sides = makeInputs({ ascendantDeg, midheavenDeg });
+      } catch (e) {
+        assert.equal(e?.code, 'DEGENERATE_QUADRANTS');
+        degenerate++;
+        continue;
+      }
+      const methods = [sides.whole, sides.equal, sides.porphyry];
+      const longitudes = [0,360,-15,ascendantDeg,midheavenDeg,ascendantDeg+180];
+      const points = longitudes.map((longitudeDeg,i)=>({id:`P${i}`,longitudeDeg}));
+      const result = create(methods,points);
+      valid++;
+      for (let i = 0; i < points.length; i++) {
+        const expected = methods.map(method =>
+          locateLongitudeInHouses(points[i].longitudeDeg,method.snapshot.cuspsDeg).house);
+        assert.deepEqual(result.rows[i].placements.map(p=>p.house),expected);
+        placements += expected.length;
+      }
+      const distinct = new Set(result.pairwiseChanges.flatMap(pair=>pair.changedPointIds));
+      assert.equal(result.changedCount,distinct.size);
+    }
+  }
+  assert.equal(valid,612);
+  assert.equal(degenerate,684);
+  assert.equal(placements,11016);
 });
