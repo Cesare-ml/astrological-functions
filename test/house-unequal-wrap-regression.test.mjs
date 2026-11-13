@@ -146,3 +146,18 @@ test('nonnumeric cusp entries fail closed with INVALID_CUSPS in both APIs', () =
     }), error => error.code === 'INVALID_CUSPS');
   }
 });
+
+test('external cusp metadata cannot silently select another house system or placement method', () => {
+  const base = {
+    houseSystem: 'VEHLOW', calculationProfile: 'CANONICAL_V1', cusps,
+    metadata: { houseSystem: 'VEHLOW', placementMethod: 'CUSP_INTERVAL' },
+  };
+  assert.throws(
+    () => validateHouseCuspSet({ ...base, metadata: { ...base.metadata, houseSystem: 'PLACIDUS' } }),
+    error => error.code === 'INCOMPATIBLE_HOUSE_SYSTEM',
+  );
+  assert.throws(
+    () => validateHouseCuspSet({ ...base, metadata: { ...base.metadata, placementMethod: 'LEGACY_HOUSES_POS' } }),
+    error => error.code === 'UNSUPPORTED_HOUSE_PLACEMENT',
+  );
+});
