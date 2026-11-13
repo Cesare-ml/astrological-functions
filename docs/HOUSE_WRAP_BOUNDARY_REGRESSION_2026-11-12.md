@@ -67,3 +67,15 @@ house algorithm or astronomical ephemeris was introduced.
 Run: `node --test test/house-unequal-wrap-regression.test.mjs` followed by
 `npm test` in a complete checkout. **Neither command was executed here**;
 these new assertions are unvalidated pending native execution.
+
+## Signed zero and whole-turn boundary aliases (2026-11-13)
+
+The unequal-wrap fixture also checks that `-0`, `-360`, `360` and `720`
+produce exactly the same immutable house placement as `0` for a synthetic
+wheel whose first cusp is 350 degrees. Exact hits on the first and second
+cusps must have zero distance from the starting cusp. This is a geometric
+normalization regression, not a validation of astronomical house calculation.
+
+Command: `node --test test/house-unequal-wrap-regression.test.mjs`.
+Execution status: **not executed natively**; run this and `npm test` in a
+complete Node.js checkout before promotion beyond IMPLEMENTED_ISOLATED.
