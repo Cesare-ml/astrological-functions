@@ -20,10 +20,14 @@ const normalized = deg => {
   const wrapped = remainder + 360;
   return wrapped === 360 ? 0 : wrapped;
 };
-// Compute the local signed displacement without the +540 translation,
-// which erases sub-ULP residuals close to exact 0 and 180 degree aspects.
+// Compare against the nearest unwrapped copy of the exact angle.
+// Subtracting (-120) from (240 + one ULP), then reducing modulo 360,
+// first rounds that tiny residual away at 360; moving the exact angle
+// by an integer turn BEFORE subtraction preserves the local difference.
 const signedDifference = (from, to) => {
-  const residual = (to - from) % 360;
+  const turns = Math.round((to - from) / 360);
+  const nearestExact = from + turns * 360;
+  const residual = to - nearestExact;
   return residual >= 180 ? residual - 360
     : residual < -180 ? residual + 360 : residual;
 };
