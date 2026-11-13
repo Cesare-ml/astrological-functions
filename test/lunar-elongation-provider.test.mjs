@@ -280,3 +280,42 @@ test('compatible optional tropical/geocentric annotations are accepted', async (
   assert.equal(facts.sectors.sectorId, 'NEW');
   assert.deepEqual(p.requests.map(request => request.bodyName), ['Sun', 'Moon']);
 });
+
+test('fail closed on reported precision or missing-capability warnings', async () => {
+  for (const warnings of [
+    [{ code: 'PRECISION_REQUIREMENT_UNMET', detail: 'mock precision downgrade' }],
+    [{ code: 'UNSUPPORTED_FRAME' }],
+    'not-an-array',
+    null,
+    { code: 'MISSING_KERNEL' },
+  ]) {
+    for (const source of ['state', 'metadata']) {
+      const p = provider({ mutate: state => source === 'state'
+        ? { ...state, warnings }
+        : { ...state, metadata: { ...state.metadata, warnings } } });
+      await assert.rejects(() => run(p), e =>
+        e.code === 'EPHEMERIS_WARNINGS_UNSUPPORTED' &&
+        !e.message.includes('mock precision downgrade'));
+      assert.equal(p.requests.length, 1);
+    }
+  }
+});
+
+test('allow explicitly empty warning arrays at both supported levels', async () => {
+  const p = provider({ mutate: state => ({
+    ...state,
+    warnings: [],
+    metadata: { ...state.metadata, warnings: [] },
+  }) });
+  const facts = await run(p);
+  assert.equal(facts.sectors.sectorId, 'NEW');
+  assert.deepEqual(p.requests.map(r => r.bodyName), ['Sun', 'Moon']);
+});
+
+test('reject Moon-only warnings without publishing any partial facts', async () => {
+  const p = provider({ mutate: state => state.metadata.bodyName === 'Moon'
+    ? { ...state, warnings: [{ code: 'UNCERTAIN_KERNEL' }] }
+    : state });
+  await assert.rejects(() => run(p), e => e.code === 'EPHEMERIS_WARNINGS_UNSUPPORTED');
+  assert.deepEqual(p.requests.map(r => r.bodyName), ['Sun', 'Moon']);
+});
