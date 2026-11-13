@@ -93,3 +93,39 @@ and ESM `export` keywords stripped for evaluation. This is **not native Node
 
 The patch intentionally does not change the private package export map,
 the provider contract, numerical provenance, or production integration.
+
+
+### Follow-up: reverse-branch 120–180° false exactness
+
+An additional issue remained after the initial seam patch: for a reverse
+120°/150°/180° aspect, the unwrapped observed longitude can lie around
+240°/210°/180° while its exact signed branch is -120°/-150°/-180°.
+The old calculation subtracted the negative exact angle **before** reducing
+modulo 360, creating a result near 360°. At that magnitude, the binary64
+rounding interval is larger than the previous or following ULP of the observed
+point, so a nonzero offset rounded to zero.
+
+**Correction:** choose the nearest integer-turn copy of the exact branch
+(`from + 360 * round((to - from)/360)`) **before** subtracting it from
+the unwrapped observed angle. This retains local ULP differences around both
+the 0° seam and 180° opposition. The sign/range convention stays
+[-180°, 180°), and the existing orb/branch limits do not change.
+
+**Reproduction / validation on 2026-11-13:**
+- Pre-follow-up code blob `021218e9327667a4d2a2e5d172d757333ca42b5c`:
+  **26/27** test bodies pass, with the new reverse-major-aspect ULP regression
+  failing at 120°. The same earlier source individually misclassifies
+  one-ULP neighbors of 120°, 150°, 180° as `EXACT`.
+- Fixed code blob `73cfd908d37103409cb2932d7fd6424e7e643c0b`
+  with complete fixture blob `45a7a67056428ba312f3644b4ece077a92782060`:
+  **27/27** test bodies pass in a strict isolated V8 harness.
+- The two additional `node:test` cases cover six reverse-branch angles
+  at the prior/exact/next representable longitude (18 observations)
+  and swapped-direction/speed equivalence for 120°/150°/180° across
+  two one-ULP offsets (six more observations).
+
+As before, this harness adapts `node:test` and `node:assert/strict`
+to the V8 environment, so the result **must not** be represented as
+native Node.js or `npm test`. Complete authenticated-checkout Node/TS
+validation, the upstream precision PR #50 reconciliation, source/licensing
+review and real Ephemeris accuracy remain pending.
