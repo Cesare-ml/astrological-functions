@@ -24,8 +24,8 @@ function instant(utc, label) {
   return Date.parse(utc);
 }
 function name(value, label) {
-  if (typeof value !== 'string' || !value.trim())
-    fail('INVALID_ARGUMENT', `${label} must be a nonempty identifier`);
+  if (typeof value !== 'string' || !value.trim() || value !== value.trim())
+    fail('INVALID_ARGUMENT', `${label} must be a nonempty, canonically trimmed identifier`);
   return value;
 }
 function provenanceSnapshot(value) {
