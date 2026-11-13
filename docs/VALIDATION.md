@@ -51,3 +51,18 @@ No production migration while: ephemeris accuracy unspecified; legacy critical m
 The exact GitHub `src/index.mjs` and `test/math.test.mjs` blobs from the active feature branch were executed in an isolated JavaScript V8 runtime, with `node:test` and `node:assert/strict` semantics adapted for that runtime. **4/4 existing test cases passed**, including the async mock `calculateNatalWithProvider` test that rejects geometric J2000 data for apparent-of-date natal requirements.
 
 Independently, the upstream public Ephemeris branch ran **33/33 test cases** in a similar V8 execution of the actual GitHub JavaScript source (including IAU 2000B full nutation), with binary/URL adapters where necessary. These are NOT full native Node.js `npm test` results, and neither group represents real NASA/JPL SPK/Horizons scientific validation. The strict `APPARENT/ECLIPTIC_OF_DATE` contract remains unchanged.
+
+## PR #18 native validation gate — 13 November 2026
+
+The synthetic wrapped-cusp regressions in PR #18 are **IMPLEMENTED_ISOLATED**, not native-validated. This PR is stacked on the experimental provider-contract branch (PR #3); GitHub mergeability alone is not evidence of test success or scientific accuracy.
+
+Run these commands from a complete checkout of the PR #18 head with Node.js >=20 (do not run GitHub Actions):
+
+```sh
+node --version
+node --test test/house-unequal-wrap-regression.test.mjs
+node --test test/house-wrap-boundary.test.mjs
+npm test
+```
+
+Record the checked-out commit SHA, Node.js version, exit codes, test totals, failing assertions and UTC execution date in the PR before changing the status to VALIDATED_LOCAL. If the second targeted file is absent at the checked-out revision, record that explicitly and rely on the full suite rather than claiming it passed. Check the PR #3 base dependency and review its contract changes before considering a rebase; do not silently retarget PR #18 to main. No astronomical correctness claim follows from these synthetic cases, and no release, merge or deployment is authorized by this checklist.

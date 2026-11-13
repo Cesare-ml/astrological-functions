@@ -2,13 +2,15 @@
 
 **Private extraction and redesign workspace for the astrological calculations used by VirgoStars and Astrolabio.**
 
-**Status: ISOLATED EXPERIMENTAL PROTOTYPE, NOT PRODUCTION.** The initial pure-math Node.js package and local tests exist on the feature branch; this is not yet a complete astrology engine, public package or production source of truth. Public release is possible later, only after code provenance, dependency licenses, and privacy/security reviews.
+**Status: ISOLATED EXPERIMENTAL PROTOTYPE, NOT PRODUCTION.** The experimental pure-math Node.js package and synthetic regression tests exist on feature branches; this is not yet a complete astrology engine, public package or production source of truth. Public release is possible later, only after code provenance, dependency licenses, and privacy/security reviews.
 
 ## Mission
 
 Build a modular, testable, framework-independent JavaScript/TypeScript library for astrology. Its independent astronomical backend is planned to be [VirgoStars Ephemeris](https://github.com/Cesare-ml/virgostars-ephemeris), which uses NASA/JPL SPK data rather than Swiss Ephemeris. Do not vendor Swiss Ephemeris or copy code from it.
 
-**Language boundary:** This library stays in **TypeScript**; its independent astronomical dependency will have a **single Rust core** exposed to JS/TS via WASM, and separately to Python via PyO3/maturin. No astronomy algorithms are duplicated here. See [ADR-0001](docs/ADR-0001-RUST-CORE-AND-BINDINGS.md).\n\nThe source of existing VirgoStars behavior remains the private monorepo `Cesare-ml/virgo-stars` until migration is tested and approved. This library may extract/reimplement **selected** methods: it is *not* a promise to migrate every legacy script.
+**Language boundary:** This library targets **TypeScript**; its independent astronomical dependency will have a **single Rust core** exposed to JS/TS via WASM, and separately to Python via PyO3/maturin. The current experimental implementation includes JavaScript ESM (`.mjs`) prototypes; it is not yet a complete TypeScript package. No astronomy algorithms are duplicated here. See [ADR-0001](docs/ADR-0001-RUST-CORE-AND-BINDINGS.md).
+
+The source of existing VirgoStars behavior remains the private monorepo `Cesare-ml/virgo-stars` until migration is tested and approved. This library may extract/reimplement **selected** methods: it is *not* a promise to migrate every legacy script.
 
 ### Inside this package
 
@@ -29,7 +31,8 @@ Build a modular, testable, framework-independent JavaScript/TypeScript library f
 
 ## Documentation
 
-- [Architecture and package boundaries](docs/ARCHITECTURE.md)\n- [Rust Ephemeris dependency and bindings — ADR-0001](docs/ADR-0001-RUST-CORE-AND-BINDINGS.md)
+- [Architecture and package boundaries](docs/ARCHITECTURE.md)
+- [Rust Ephemeris dependency and bindings — ADR-0001](docs/ADR-0001-RUST-CORE-AND-BINDINGS.md)
 - [Legacy extraction inventory](docs/MIGRATION_INVENTORY.md)
 - [Roadmap and migration gates](docs/ROADMAP.md)
 - [Contracts with Ephemeris](docs/CONTRACTS.md)
@@ -37,6 +40,10 @@ Build a modular, testable, framework-independent JavaScript/TypeScript library f
 - [License and publication decisions](docs/LEGAL_AND_PUBLICATION.md)
 - [Contributor / AI agent instructions](AGENTS.md)
 - [Italian overview](docs/README.it.md)
+
+## Validation status — 13 November 2026
+
+The experimental house-cusp regression branch (draft [PR #18](https://github.com/Cesare-ml/astrological-functions/pull/18), stacked on PR #3) includes synthetic boundary and provider-metadata tests. **Those tests have not been executed natively in Node.js on that branch**; their existence is not evidence of scientific accuracy or Rust/WASM integration. See [validation instructions](docs/VALIDATION.md). The historical 4/4 isolated test checkpoint below applies only to its stated 9 November snapshot, not to subsequent changes.
 
 ## Critical guardrail
 
