@@ -4,7 +4,15 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.mjs"
+    ".": "./src/index.mjs",
+    "./house-method-comparison": {
+      "types": "./src/house-method-comparison.d.mts",
+      "import": "./src/house-method-comparison.mjs"
+    },
+    "./whole-equal-house-comparison": {
+      "types": "./src/whole-equal-house-comparison.d.mts",
+      "import": "./src/whole-equal-house-comparison.mjs"
+    }
   },
   "engines": {
     "node": ">=20"
