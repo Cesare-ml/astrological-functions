@@ -178,3 +178,12 @@ Run `node --test test/house-unequal-wrap-regression.test.mjs` and `npm test`
 in a complete Node.js checkout. **These commands have not been executed in
 this GitHub-only run.** Keep the PR in draft pending native validation,
 stacked-base conflict inspection and independent review.
+
+
+## Validated cusp snapshot isolation — 13 November 2026
+
+The regression `validated cusp snapshots detach both cusp values and provider metadata` asserts that `validateHouseCuspSet` returns a frozen result, a frozen normalized cusp array and frozen canonical provider metadata. Mutating the caller's original cusp array or provider metadata after validation must not change the result or its house placement. This protects downstream chart assembly from mutable input aliases; it does **not** authenticate the provider or prove astronomical correctness.
+
+Commit: `417f5628242d7067ebb24089928f913a16b9a07f`.
+
+**Execution pending:** run `node --test test/house-unequal-wrap-regression.test.mjs`, `node --test test/house-wrap-boundary.test.mjs`, then `npm test` on a complete Node >=20 checkout. This GitHub-only edit did not execute native Node tests. Check the stacked PR #3 base and conflicts before any merge. No Actions, release or production modification.
