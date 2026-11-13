@@ -71,3 +71,25 @@ neighbors of 180, a tiny negative wrapped offset and exact/reverse branch
 behavior. These are synthetic mathematical checks, not claims of physical
 longitude precision or certified Ephemeris data. The current package remains
 private and experimental.
+
+
+### Reproducible regression evidence
+
+On 2026-11-13, the exact GitHub source and test blobs were executed in an
+isolated strict V8 JavaScript harness. Only the `node:test` and
+`node:assert/strict` imports were replaced with local test/assert adapters,
+and ESM `export` keywords stripped for evaluation. This is **not native Node
+`npm test`** and does not certify any astronomical positions.
+
+- Parent source blob `2688755269dcbea5f5f1b8e3a4e83ff62db4064b`
+  plus the new test fixture: **21 passed / 4 failed** (the four new seam cases).
+- Patched source blob `021218e9327667a4d2a2e5d172d757333ca42b5c`
+  plus fixture blob `b7d4f4507bc587ff5f99d182f0f974e261d91348`:
+  **25 passed / 0 failed**.
+- Existing 21 aspect-trend regression cases remain passing.
+- Follow-up gate on an authenticated complete checkout:
+  `node --test test/aspect-trend.test.mjs`, strict `tsc` check above,
+  and `npm test`. No native results for this increment are claimed.
+
+The patch intentionally does not change the private package export map,
+the provider contract, numerical provenance, or production integration.
