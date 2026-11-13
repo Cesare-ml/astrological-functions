@@ -13,11 +13,23 @@ function finite(value, field) {
 }
 export function normalize360(degrees) {
   finite(degrees, 'degrees');
-  return ((degrees % 360) + 360) % 360;
+  // Adding 360 to a positive remainder can round 359.99999999999994 to 360.
+  // Preserve positive remainders and normalize negative zero explicitly.
+  const remainder = degrees % 360;
+  if (remainder < 0) {
+    const positive = remainder + 360;
+    return positive === 360 ? 0 : positive;
+  }
+  return remainder === 0 ? 0 : remainder;
 }
 /** Signed shortest difference from a to b, in [-180, 180). */
 export function signedAngularDistance(a,b) {
-  return ((normalize360(b)-normalize360(a)+540)%360)-180;
+  // Both values are in [0, 360). Avoid the +540 shift: it can round away
+  // sub-ULP separations near the 0°/360° boundary.
+  const difference = normalize360(b) - normalize360(a);
+  if (difference >= 180) return difference - 360;
+  if (difference < -180) return difference + 360;
+  return difference === 0 ? 0 : difference;
 }
 export function angularSeparation(a,b) {
   return Math.abs(signedAngularDistance(a,b));
