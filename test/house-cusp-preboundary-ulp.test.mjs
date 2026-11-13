@@ -89,3 +89,54 @@ test('invalid cusp geometry and nonfinite points remain rejected',()=>{
   assert.throws(()=>locateLongitudeInHouses(NaN,cuspsFrom(30)),
     e=>e instanceof AstrologyError && e.code==='INVALID_ANGLE');
 });
+
+test('deterministic 2500-chart sweep retains predecessor/exact/successor ownership',()=>{
+  // No runtime randomness: fixed LCG seed and explicit arithmetic order make
+  // this a reproducible stress check over nonuniform 12-cusp systems.
+  let seed=0x4f6bcd12;
+  const random=()=>{
+    seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+    return seed/4294967296;
+  };
+  const predecessor=longitude=>{
+    if(longitude===0) return 359.99999999999994;
+    const bits=new DataView(new ArrayBuffer(8));
+    bits.setFloat64(0,longitude,false);
+    bits.setBigUint64(0,bits.getBigUint64(0,false)-1n,false);
+    return bits.getFloat64(0,false);
+  };
+  const successor=longitude=>{
+    if(longitude===359.99999999999994) return 0;
+    const bits=new DataView(new ArrayBuffer(8));
+    bits.setFloat64(0,longitude,false);
+    bits.setBigUint64(0,bits.getBigUint64(0,false)+1n,false);
+    return bits.getFloat64(0,false);
+  };
+  let checks=0;
+  for(let k=0;k<2500;k++){
+    const weights=Array.from({length:12},()=>0.5+random()*90);
+    const total=weights.reduce((sum,value)=>sum+value,0);
+    const first=random()*360;
+    const cusps=[first];
+    let cursor=first;
+    for(let i=1;i<12;i++){
+      cursor+=weights[i-1]*360/total;
+      cusps.push(normalize360(cursor));
+    }
+    for(let i=0;i<12;i++){
+      const cusp=cusps[i],tests=[
+        [predecessor(cusp),i===0?12:i,'predecessor'],
+        [cusp,i+1,'exact'],
+        [successor(cusp),i+1,'successor'],
+      ];
+      for(const [longitude,wanted,label] of tests){
+        const result=locateLongitudeInHouses(longitude,cusps);
+        assert.equal(result.house,wanted,
+          `chart ${k}, cusp ${i+1}, ${label}`);
+        assert.ok(result.distanceFromCuspDeg>=0);
+        checks++;
+      }
+    }
+  }
+  assert.equal(checks,90000);
+});
