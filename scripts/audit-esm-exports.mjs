@@ -6,6 +6,7 @@
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { resolve, relative, isAbsolute, dirname, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { resolveNodeEsmExport } from './resolve-node-esm-export.mjs';
 
 function isWithin(directory, file) {
   const rel = relative(directory, file);
@@ -116,6 +117,13 @@ export async function auditEsmExports(packageJsonPath) {
       continue;
     }
     await walk(name, value, name);
+    if (value !== null) {
+      const selection = resolveNodeEsmExport(value);
+      if (selection.status !== 'resolved') {
+        report('UNAVAILABLE_NODE_ESM_EXPORT', name, null,
+          `No usable target under the default Node.js ESM import conditions (result: ${selection.status})`);
+      }
+    }
   }
   return { ok: diagnostics.length === 0, checkedTargets, diagnostics };
 }
