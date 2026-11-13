@@ -161,3 +161,18 @@ test('external cusp metadata cannot silently select another house system or plac
     error => error.code === 'UNSUPPORTED_HOUSE_PLACEMENT',
   );
 });
+
+
+test('house cusp metadata must explicitly identify its placement semantics', () => {
+  for (const metadata of [undefined, null, {}, { houseSystem: 'VEHLOW' },
+    { houseSystem: 'VEHLOW', placementMethod: null },
+    { houseSystem: 'VEHLOW', placementMethod: 'UNKNOWN' }]) {
+    assert.throws(() => validateHouseCuspSet({
+      houseSystem: 'VEHLOW', calculationProfile: 'CANONICAL_V1',
+      cusps, metadata,
+    }), error => error.code === (
+      metadata == null || typeof metadata !== 'object' ? 'INVALID_HOUSE_METADATA' :
+      metadata.houseSystem !== 'VEHLOW' ? 'INCOMPATIBLE_HOUSE_SYSTEM' : 'UNSUPPORTED_HOUSE_PLACEMENT'
+    ));
+  }
+});
