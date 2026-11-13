@@ -86,3 +86,37 @@ test('invalid primitive target is reported', async t => {
   const report = await auditEsmExports(manifest);
   assert.equal(report.diagnostics[0].code, 'INVALID_EXPORT_TARGET');
 });
+
+
+test('noncanonical or reserved subpath names fail rather than produce false passes', async t => {
+  const {manifest} = await fixture(t, {
+    './a/../alias': './src/index.mjs',
+    './double//slash': './src/index.mjs',
+    './node_modules/internal': './src/index.mjs',
+    './encoded%2fslash': './src/index.mjs',
+    './query?part': './src/index.mjs',
+    './bad\\segment': './src/index.mjs',
+  });
+  const report = await auditEsmExports(manifest);
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.diagnostics.map(d => d.code), Array(6).fill('INVALID_EXPORT_SUBPATH'));
+  assert.equal(report.checkedTargets, 0);
+});
+
+test('wildcard subpaths and targets are reported as unsupported, not silently accepted', async t => {
+  const {manifest} = await fixture(t, {
+    './features/*': './src/index.mjs',
+    './literal': './src/*.mjs',
+  });
+  const report = await auditEsmExports(manifest);
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.diagnostics.map(d => d.code), Array(2).fill('UNSUPPORTED_EXPORT_PATTERN'));
+  assert.equal(report.checkedTargets, 0);
+});
+
+test('node_modules path segments are rejected even if the file exists', async t => {
+  const {manifest} = await fixture(t, {'.': './node_modules/index.mjs'}, ['node_modules/index.mjs']);
+  const report = await auditEsmExports(manifest);
+  assert.deepEqual(report.diagnostics.map(d => d.code), ['UNSAFE_EXPORT_TARGET']);
+  assert.equal(report.checkedTargets, 0);
+});
