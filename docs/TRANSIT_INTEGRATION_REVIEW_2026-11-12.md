@@ -30,7 +30,7 @@ Both #15/#16 and #25 modify `package.json` exports from the shared #13 base. **A
 
 - **Rust remains the only astronomical engine.** A provider must meet actual geocentric `APPARENT / ECLIPTIC_OF_DATE` semantics, not relabel geometric or mean-of-date positions. Confirm exact observer, center, corrections, kernel set, engine version and time model.
 - The event scanner's `CALLER_ASSERTED_INTERVAL_BOUNDS_ALL_TIMES`, station and floating-error coverage are provider **declarations**, not scientific validation. A complete physical error-enclosure construction, including retrograde reversals and tangencies, remains upstream work.
-- The scanner checks each child interval bound is within its parent and a cached shared endpoint lies inside the newly asserted bounds. This catches **self-contradictory provider results**, not physically inaccurate but self-consistent envelopes.
+- The scanner intersects possibly loose child and parent interval enclosures (neither must be a subset of the other), rejects an empty intersection, checks overlapping sibling bounds at their common UTC, and validates cached endpoints before pruning. These catch **self-contradictory provider results**, not physically inaccurate but self-consistent enclosures.
 - The pipeline also rejects a provider returning different finite residuals for an identical timestamp across scan and refinement. Neither control proves an event is unique or that no transit was missed.
 
 ## Integration checklist (manual, not permission)
