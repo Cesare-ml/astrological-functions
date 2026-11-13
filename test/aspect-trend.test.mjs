@@ -176,3 +176,40 @@ test('reverse aspect branch remains exact at wrapped -angle and preserves local 
   assert.equal(near.signedResidualDeg,2**-44);
   assert.equal(near.trend,'SEPARATING');
 });
+
+
+test('reverse major-aspect binary64 neighbors do not collapse to EXACT',()=>{
+  for (const angle of [30,60,90,120,150,180]) {
+    const exact=360-angle;
+    const ulp=2**(Math.floor(Math.log2(exact))-52);
+    const inputs={aspectAngleDeg:angle,branch:'REVERSE',maxOrbDeg:1,exactToleranceDeg:0,
+      source:{longitudeDeg:0,longitudeSpeedDegPerDay:0}};
+    const before=classify({...inputs,target:{longitudeDeg:exact-ulp,longitudeSpeedDegPerDay:1}});
+    const on=classify({...inputs,target:{longitudeDeg:exact,longitudeSpeedDegPerDay:1}});
+    const after=classify({...inputs,target:{longitudeDeg:exact+ulp,longitudeSpeedDegPerDay:1}});
+    assert.equal(before.signedResidualDeg,-ulp,'reverse '+angle+' before');
+    assert.equal(on.signedResidualDeg,0,'reverse '+angle+' exact');
+    assert.equal(after.signedResidualDeg,ulp,'reverse '+angle+' after');
+    assert.equal(before.trend,'APPLYING','reverse '+angle+' before');
+    assert.equal(on.trend,'EXACT','reverse '+angle+' exact');
+    assert.equal(after.trend,'SEPARATING','reverse '+angle+' after');
+  }
+});
+
+test('swapped forward/reverse major aspect retains derivative trend at one ULP',()=>{
+  for (const angle of [120,150,180]) {
+    const exact=360-angle;
+    const ulp=2**(Math.floor(Math.log2(exact))-52);
+    for (const offset of [-ulp,ulp]) {
+      const source={longitudeDeg:0,longitudeSpeedDegPerDay:0};
+      const target={longitudeDeg:exact+offset,longitudeSpeedDegPerDay:1};
+      const a=classify({source,target,aspectAngleDeg:angle,branch:'REVERSE',
+        maxOrbDeg:1,exactToleranceDeg:0});
+      const b=classify({source:target,target:source,aspectAngleDeg:angle,branch:'FORWARD',
+        maxOrbDeg:1,exactToleranceDeg:0});
+      assert.equal(a.trend,b.trend,'swapped aspect '+angle);
+      assert.equal(a.signedResidualDeg,-b.signedResidualDeg,'swapped residual '+angle);
+      assert.equal(a.relativeSpeedDegPerDay,-b.relativeSpeedDegPerDay);
+    }
+  }
+});
