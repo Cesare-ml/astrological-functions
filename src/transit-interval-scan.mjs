@@ -117,19 +117,32 @@ export async function scanTransitAspectCandidateIntervals(input) {
     metadata(result.metadata, true);
     return Object.freeze({lowerDeg: result.lowerDeg, upperDeg: result.upperDeg});
   }
-  const pending = [{left:startMs, right:endMs, depth:0, parentBounds:null}];
+  const pending = [{left:startMs, right:endMs, depth:0, parentBounds:null, siblings:null}];
   while (pending.length) {
-    const {left, right, depth, parentBounds} = pending.pop();
-    const bounds = await range(left, right);
+    const {left, right, depth, parentBounds, siblings} = pending.pop();
+    const reportedBounds = await range(left, right);
     inspectedIntervals++;
-    // A true all-time enclosure for a child must be contained in the parent's
-    // all-time enclosure. Reject contradictory range claims before pruning.
-    if (parentBounds &&
-        (bounds.lowerDeg < parentBounds.lowerDeg || bounds.upperDeg > parentBounds.upperDeg))
-      error('INVALID_ENCLOSURE', 'Child residual bounds contradict the parent all-time enclosure');
-    // Even otherwise nested bounds may contradict a previously sampled shared
-    // endpoint. Do not discard a branch whose endpoint is known to lie outside
-    // its claimed range.
+    // Providers may return *loose* all-time enclosures. A child's reported
+    // range need not be a subset of its parent's range; only the intersection
+    // must be nonempty. Tighten using both valid assertions instead of
+    // rejecting sound but differently conservative bounds.
+    const bounds = Object.freeze(parentBounds ? {
+      lowerDeg: Math.max(reportedBounds.lowerDeg, parentBounds.lowerDeg),
+      upperDeg: Math.min(reportedBounds.upperDeg, parentBounds.upperDeg)
+    } : reportedBounds);
+    if (bounds.lowerDeg > bounds.upperDeg)
+      error('INVALID_ENCLOSURE', 'Child and parent enclosures have no common residual');
+    // Adjacent children share the split instant. Their enclosures must overlap
+    // at that instant even when both children are pruned before point sampling.
+    if (siblings) {
+      if (siblings.first &&
+          (bounds.lowerDeg > siblings.first.upperDeg ||
+           bounds.upperDeg < siblings.first.lowerDeg))
+        error('INVALID_ENCLOSURE', 'Sibling enclosures disagree at their shared UTC boundary');
+      if (!siblings.first) siblings.first = bounds;
+    }
+    // Cached point samples can detect contradictions that nonempty enclosure
+    // intersections alone cannot. Check *before* excluding a branch.
     for (const endpoint of [left, right]) {
       if (cache.has(endpoint) &&
           (cache.get(endpoint) < bounds.lowerDeg || cache.get(endpoint) > bounds.upperDeg))
@@ -138,9 +151,11 @@ export async function scanTransitAspectCandidateIntervals(input) {
     if (bounds.lowerDeg > 0 || bounds.upperDeg < 0) { excludedIntervals++; continue; }
     const mid = left + Math.floor((right-left)/2);
     if (right - left > widthMs && depth < maxDepth && mid > left && mid < right) {
-      // Stack is LIFO; push the right interval first for chronological results.
-      pending.push({left:mid, right, depth:depth+1, parentBounds:bounds});
-      pending.push({left, right:mid, depth:depth+1, parentBounds:bounds});
+      // The two children share this private record; the first (left) is
+      // inspected before the second (right) due to LIFO traversal.
+      const childSiblings = {first:null};
+      pending.push({left:mid, right, depth:depth+1, parentBounds:bounds, siblings:childSiblings});
+      pending.push({left, right:mid, depth:depth+1, parentBounds:bounds, siblings:childSiblings});
       continue;
     }
     const startResidualDeg = await point(left);
