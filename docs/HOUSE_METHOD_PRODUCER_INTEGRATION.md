@@ -44,7 +44,7 @@ tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution noden
 npm test
 ```
 
-On 12 November 2026, the **actual authenticated GitHub JS blobs** for the main primitives, both cusp producers, generic comparator and new facade were executed in a **V8 isolated harness** adapting `node:test` and `node:assert/strict` test functions: **11/11 new integration cases passed**. This was **not** the native Node.js test runner or the full authenticated checkout, and the TypeScript fixture has not yet been compiled on a complete checkout. These caveats must remain visible.
+On 12 November 2026, an isolated V8 harness executed the real GitHub modules (11/11 synthetic integration cases). **Updated on 13 November 2026:** native Node.js 22.16.0 and TypeScript 5.8.3 were run successfully on a locally reconstructed 14-file workspace of **exact GitHub blobs**: 15/15 F3+consumer tests, 19/19 including main math regression via `npm test`, and strict NodeNext TypeScript checks (exit 0). This is still **not a complete authenticated repository checkout**. See [the reproducible evidence and blob hashes](F3_NATIVE_TEST_EVIDENCE_2026-11-13.md).
 
 ### Branch coordination
 
@@ -73,4 +73,4 @@ node --test test/house-comparison-package-consumer.test.mjs
 tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext test/types/house-comparison-package-consumer.test.ts
 ```
 
-These package-import assertions need a **native Node and TypeScript run on the actual checkout**. The V8 pure-module integration results below do not execute Node package resolution or TypeScript typechecking. `package.json` is a shared file also touched by other draft export PRs; merge only after reconciling the complete exports map rather than overwriting their subpaths. The declared 0.1.0 experimental contracts do not certify real astronomical inputs.
+These package-import assertions **have now been run natively** in a **14-file reconstructed local workspace with exact GitHub blobs** (Node self-reference imports: 4/4 passed; TypeScript NodeNext: passed). They still need an independent rerun in a complete, authenticated checkout including all competing PRs. The earlier V8-only checks never exercised Node package resolution; the new evidence does. `package.json` is shared with other export PRs: reconcile their complete exports map before merge rather than overwriting subpaths. The declared 0.1.0 experimental contracts do not certify real astronomical inputs.
