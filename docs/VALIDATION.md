@@ -86,3 +86,7 @@ npm test
 ```
 
 Record compiler/Node versions, each exit code and diagnostics. This fixture is **added but not yet compiled on the complete authenticated checkout**; no TS success claim is made. A local `tsc` installation alone does not validate GitHub package resolution. The package is still private, the export is ESM-only, and root-package typings are intentionally out of scope.
+
+### Additional compile-only contract guards — 13 November 2026
+
+The TypeScript package-subpath consumer fixture now also rejects an omitted house calculation profile, a legacy house alias under `CANONICAL_V1`, and a `MEAN_ECLIPTIC_OF_DATE` request where `ECLIPTIC_OF_DATE` is required. These are type-level safeguards only: compile the same NodeNext and Bundler commands above before claiming they pass. They do not implement or validate astronomical frame conversion, house algorithms, or Rust/WASM interoperability.
