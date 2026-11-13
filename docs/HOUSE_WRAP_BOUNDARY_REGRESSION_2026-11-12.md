@@ -91,3 +91,15 @@ This is a deliberate geometric contract, not an astronomical accuracy claim.
 Run `node --test test/house-unequal-wrap-regression.test.mjs` and `npm test`
 on a full authenticated checkout. Native execution is **pending**; the
 GitHub connector confirms committed source, not test success.
+
+## Full twelve-cusp boundary sweep (2026-11-13)
+
+A single deterministic loop now checks **all twelve** unequal synthetic cusp
+boundaries, including the final house-to-first-house transition. For each
+cusp it verifies ownership just before, exactly at, and just after the
+boundary (epsilon = 0.000001°), plus zero distance at the cusp. This extends
+the earlier four-cusp sample without adding house astronomy.
+
+Run `node --test test/house-unequal-wrap-regression.test.mjs` and `npm test`
+from a full checkout. **Not executed natively in this run**; source committed
+through GitHub is not evidence of a passing Node test or scientific parity.
