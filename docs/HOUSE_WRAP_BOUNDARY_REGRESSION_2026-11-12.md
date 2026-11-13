@@ -103,3 +103,24 @@ the earlier four-cusp sample without adding house astronomy.
 Run `node --test test/house-unequal-wrap-regression.test.mjs` and `npm test`
 from a full checkout. **Not executed natively in this run**; source committed
 through GitHub is not evidence of a passing Node test or scientific parity.
+
+## Strict cusp element types (2026-11-13)
+
+The unequal-wrap suite now rejects `null`, `undefined`, numeric strings,
+objects and booleans inside the twelve-cusp array with `INVALID_CUSPS` in
+both `locateLongitudeInHouses` and `validateHouseCuspSet`. This protects
+against implicit coercion of external provider values. Existing source uses
+`Array.from` and finite-number guards, so the tests cover the public API
+contract without adding astronomical calculations.
+
+Validation required in a complete checkout:
+
+```sh
+node --test test/house-unequal-wrap-regression.test.mjs
+node --test test/house-wrap-boundary.test.mjs
+npm test
+```
+
+**Execution not performed in this GitHub-only environment.** The tests are
+implemented but not yet validated by native Node. No scientific parity,
+Rust/WASM provider readiness or release status is implied.
