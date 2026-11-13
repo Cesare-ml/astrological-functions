@@ -68,7 +68,8 @@ export async function getTransitSkySnapshotWithProvider(input) {
     fail('INCONSISTENT_EPHEMERIS', 'Provider capabilities differ from the caller-pinned ephemeris');
 
   const requests = Object.freeze(ids.map(bodyName => Object.freeze({
-    datetimeUtc, bodyName, ...FRAME, kernelSetId: expected.kernelSetId, timeModel: expected.timeModel
+    datetimeUtc, bodyName, ...FRAME, engineVersion: expected.engineVersion,
+    kernelSetId: expected.kernelSetId, timeModel: expected.timeModel
   })));
   const points = [];
   for (const request of requests) {
