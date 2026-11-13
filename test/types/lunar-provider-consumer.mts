@@ -8,6 +8,7 @@ import {
   type LunarGeocentricProvider,
   type LunarElongationProviderInput,
   type LunarProviderPin,
+  type LunarProviderPosition,
 } from 'astrological-functions/lunar-provider';
 import {
   calculateLunarElongationSectors,
@@ -91,3 +92,31 @@ void wrongContext;
 
 // @ts-expect-error consumers must not mutate snapshots
 direct.sectorId = 'NEW';
+
+const compatibleMetadata: LunarProviderPosition['metadata'] = {
+  bodyName: 'Moon',
+  datetimeUtc: input.datetimeUtc,
+  center: 'EARTH',
+  frame: 'ECLIPTIC_OF_DATE',
+  corrections: 'APPARENT',
+  zodiac: 'TROPICAL',
+  observer: null,
+  engineVersion: pin.engineVersion,
+  kernelSetId: pin.kernelSetId,
+  timeModelId: pin.timeModelId,
+};
+void compatibleMetadata;
+
+const explicitlySidereal: LunarProviderPosition['metadata'] = {
+  ...compatibleMetadata,
+  // @ts-expect-error sidereal coordinates cannot satisfy tropical provider metadata
+  zodiac: 'SIDEREAL',
+};
+void explicitlySidereal;
+
+const explicitlyTopocentric: LunarProviderPosition['metadata'] = {
+  ...compatibleMetadata,
+  // @ts-expect-error observer coordinates cannot satisfy geocentric provider metadata
+  observer: { latitudeDeg: 42 },
+};
+void explicitlyTopocentric;
