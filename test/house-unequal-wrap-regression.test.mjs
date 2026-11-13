@@ -178,6 +178,13 @@ test('house cusp metadata must explicitly identify its placement semantics', () 
 });
 
 
+test('array metadata is rejected instead of being treated as a provider record', () => {
+  assert.throws(() => validateHouseCuspSet({
+    houseSystem: 'VEHLOW', calculationProfile: 'CANONICAL_V1', cusps,
+    metadata: ['VEHLOW', 'CUSP_INTERVAL'],
+  }), error => error.code === 'INVALID_HOUSE_METADATA');
+});
+
 test('legacy egizia label requires an explicit profile and canonical Vehlow provider metadata', () => {
   const base = {
     houseSystem: 'egizia', calculationProfile: 'VIRGOSTARS_LEGACY_V1', cusps,
