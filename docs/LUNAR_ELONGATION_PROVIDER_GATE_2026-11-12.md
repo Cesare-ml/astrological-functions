@@ -37,6 +37,7 @@ Only `zodiac: 'TROPICAL'` is permitted; sidereal requires a separately validated
 - UTC accepts explicit Z timestamps with seconds or 1–3 fractional digits, and rejects invalid calendar instants and time offsets.
 - The injected provider is queried sequentially for Sun then Moon. Invalid Sun output prevents requesting the Moon.
 - Inconsistent body identity, instant, center, frame, corrections, engine/kernel/time model reject the calculation with `INCOMPATIBLE_EPHEMERIS`.
+- If a provider explicitly includes `metadata.zodiac`, it must be `TROPICAL`. If `metadata.observer` exists, it must be `null` (geocentric). Explicit `SIDEREAL` or topocentric coordinates reject as `INCOMPATIBLE_EPHEMERIS`. Absence of these optional fields remains supported; the required Earth center and ecliptic frame still apply.
 - Reject invalid or non-finite longitudes and latitudes outside the physical coordinate interval.
 - Provider exceptions become typed `EPHEMERIS_PROVIDER_FAILED`, without relaying provider messages.
 - Return an immutable snapshot with both validated positions, the pinned provenance and one immutable lunar sector result.
@@ -118,3 +119,14 @@ The provider adapter now snapshots the caller's `datetimeUtc`, provider object a
 Two synthetic regressions now cover: (1) mutation of the caller UTC, provider reference and provider method from the first callback while preserving identical Sun/Moon requests; (2) explicit Earth center on both calls. The 14 provider test bodies from the current GitHub branch passed in an isolated V8 harness with adapted assertions against the actual fetched sources (**14/14 PASS**). Types and ESM smoke were updated, but **native `npm test` and `tsc` were not rerun after these changes**. The previous 24/24 native results above are historical results for the earlier commit; with the two new cases the suite now contains 26 tests pending native rerun.
 
 This remains an injected mock-provider contract, not a direct Rust/WASM integration or evidence of actual JPL kernel use.
+
+## Optional-coordinate-annotation hardening — 2026-11-13
+
+A provider may return additional metadata that exposes a coordinate-system mismatch even when the mandatory center, frame and correction fields match. The gate now rejects a declared sidereal zodiac or non-null observing site rather than accepting them as tropical geocentric longitudes. Optional explicit `TROPICAL` and `observer: null` annotations remain compatible; either optional field may be absent. The TypeScript metadata contract encodes the same restrictions.
+
+Two new mock regressions cover incompatible and compatible annotations. **16/16 provider tests passed in the isolated V8 harness using exact GitHub source blobs**:
+
+- `src/lunar-elongation-provider.mjs`: `7c1c7790a726334f0e7c2c92f98d35ee5c484e97`
+- `test/lunar-elongation-provider.test.mjs`: `0b3b10b511237396f72e04c23c359c6bba9e4d22`
+
+The updated NodeNext TypeScript fixture adds negative compile assertions. **The native Node 24/24 result and the earlier successful TypeScript compile above predate these newer commits.** Run current full `npm test` and `tsc` before marking this ready for review. No actual kernel, Rust/WASM binding or scientific accuracy validation occurred.
