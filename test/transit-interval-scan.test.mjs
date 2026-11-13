@@ -202,3 +202,43 @@ test('rejects untrimmed scan identifiers before requesting any enclosure',async(
   }
   assert.equal(calls,0);
 });
+
+test('rejects overlapping false sibling bounds using an eagerly sampled shared midpoint',async()=>{
+  // The real continuous residual crosses zero at 00:22:12; both child
+  // enclosures falsely claim [0.5,1] and would previously be pruned.
+  const p=makeProvider(linear,(a,b)=>
+    a===startMs && b===startMs+3600000 ? [-1,1] : [.5,1]);
+  let pointCalls=0;
+  const original=p.getUnwrappedAspectResidual.bind(p);
+  p.getUnwrappedAspectResidual=async req=>{pointCalls++;return original(req);};
+  await throws({provider:p,maxDepth:1,targetIntervalMs:60000,
+    maxProviderCalls:20},'INVALID_ENCLOSURE');
+  assert.equal(pointCalls,1); // Shared midpoint sampled before either child is pruned.
+});
+
+test('detects a false parent range immediately using its interior split sample',async()=>{
+  const p=makeProvider(linear,()=>[-.5,.01]); // midpoint is +0.13: not enclosed.
+  let rangeCalls=0;
+  const original=p.getUnwrappedResidualEnclosure.bind(p);
+  p.getUnwrappedResidualEnclosure=async req=>{rangeCalls++;return original(req);};
+  await throws({provider:p,maxDepth:1,targetIntervalMs:60000},'INVALID_ENCLOSURE');
+  assert.equal(rangeCalls,1); // Do not descend after detecting the parent contradiction.
+});
+
+test('caches the shared midpoint and accounts for it exactly once in the provider budget',async()=>{
+  const p=makeProvider(linear,lineBounds);
+  let pointCalls=0;
+  const original=p.getUnwrappedAspectResidual.bind(p);
+  p.getUnwrappedAspectResidual=async req=>{pointCalls++;return original(req);};
+  const r=await scanTransitAspectCandidateIntervals({...base(p),maxDepth:1,
+    targetIntervalMs:60000,maxProviderCalls:6});
+  assert.equal(r.signChangeCandidates.length,1);
+  assert.equal(pointCalls,3); // start, shared midpoint, end
+  assert.equal(r.providerCalls,6); // 3 range calls + 3 unique point calls
+});
+
+test('fails closed when split-point validation exceeds the provider call budget',async()=>{
+  const p=makeProvider(linear,lineBounds);
+  await throws({provider:p,maxDepth:1,targetIntervalMs:60000,
+    maxProviderCalls:1},'SEARCH_BUDGET_EXHAUSTED');
+});
