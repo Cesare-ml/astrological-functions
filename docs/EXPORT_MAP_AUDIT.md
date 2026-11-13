@@ -16,4 +16,18 @@ The read-only audit walks root and named subpath entries, including nested condi
 
 **Additional fail-closed guards:** names with dot/traversal, empty, encoded or reserved `node_modules` segments are rejected even if their target file exists. Node export patterns using `*` are valid in some configurations, but this tool deliberately does **not** expand or resolve them: it emits `UNSUPPORTED_EXPORT_PATTERN` rather than a false success. Review such branches with a separate Node consumer-import test before integration. This preflight is restricted to **concrete export paths**, not a complete validator for every Node exports feature.
 
+## Node ESM condition reachability
+
+In addition to target existence, the preflight now checks that each non-null declared export has a target reachable under the **default Node ESM import conditions**. It respects conditional object **property order**, nested `node`/`import`/`default` conditions and array fallback. It deliberately ignores TypeScript-only `types` and CommonJS-only `require` conditions when testing ESM reachability. An existing declaration file is **not** proof of an ESM runtime entrypoint.
+
+For example, `{ "types": "./src/provider.d.mts" }` and `{ "require": "./src/provider.mjs" }` fail the Node ESM reachability check with `UNAVAILABLE_NODE_ESM_EXPORT`. So does `{ "default": null, "import": "./src/provider.mjs" }` because the first matching `default` blocks the later `import`. A deliberately blocked **whole** export (`"./internal": null`) remains valid.
+
+Run an additional manual resolver cross-check:
+
+```sh
+node --test test/resolve-node-esm-export.test.mjs
+```
+
+These tests use real Node package self-resolution in temporary synthetic packages. They do **not** import or execute the actual draft consumers. Custom Node `--conditions`, target module execution/format, strict TypeScript types, multi-PR package exports and scientific parity require separate checks.
+
 **Limits:** passing this check **does not** establish that Node can resolve a conditional export for any specific consumer; it does not prove `.d.mts` types match JavaScript, `require` is blocked where intended, all dependencies load, or the module runs successfully. It does not validate Rust/WASM, JPL kernel provenance, zodiac/observer semantics or scientific accuracy. Follow with real consumer `import` tests, strict TypeScript checks and full native `npm test` on the consolidated branch. This helper is not a public release API and requires no license/visibility change. Preserve the project's VirgoStars attribution and independent human review before merging.
