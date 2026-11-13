@@ -85,7 +85,8 @@ export async function refineBracketedTransitAspectHit(input) {
     if (result.datetimeUtc !== datetimeUtc || !finite(result.residualDeg))
       fail('INVALID_RESIDUAL', 'Residual must be finite and echoed for requested UTC');
     const metadata = object(result.metadata, 'INCOMPATIBLE_EPHEMERIS', 'Residual metadata is required');
-    if (metadata.center !== 'EARTH' || metadata.frame !== 'ECLIPTIC_OF_DATE' ||
+    if (metadata.contractVersion !== VERSION || metadata.center !== 'EARTH' ||
+        metadata.frame !== 'ECLIPTIC_OF_DATE' ||
         metadata.corrections !== 'APPARENT' || metadata.coverage !== COVERAGE ||
         PROVENANCE_KEYS.some(key => metadata[key] !== provenance[key]))
       fail('INCOMPATIBLE_EPHEMERIS', 'Residual provenance/frame/coverage mismatch');
