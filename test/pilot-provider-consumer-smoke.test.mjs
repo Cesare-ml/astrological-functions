@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as adapter from '../src/ephemeris-provider.js';
 import * as runtime from '../src/index.mjs';
 import * as packageRoot from 'astrological-functions';
+import * as packageProvider from 'astrological-functions/ephemeris-provider';
 
 const declaredAdapterExports = [
     'calculateNatalWithProvider', 'resolveHouseSystem',
@@ -34,4 +35,11 @@ test('unsupported house placement still fails closed through adapter', () => {
     }),
     { code: 'UNSUPPORTED_HOUSE_PLACEMENT' }
   );
+});
+
+test('provider subpath self-import resolves the same guarded runtime exports', () => {
+  assert.deepEqual(Object.keys(packageProvider).sort(), [...declaredAdapterExports].sort());
+  for (const name of declaredAdapterExports) {
+    assert.strictEqual(packageProvider[name], adapter[name], name);
+  }
 });
