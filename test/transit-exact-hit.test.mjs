@@ -52,6 +52,48 @@ test('a retrograde-like loop can yield separate roots, never a claim of exhausti
 test('signless tangent touch is not wrongly reported as absent or found', async()=>{
   await reject({provider:provider(ms=>((ms-startMs)/3600000-.5)**2)},'ROOT_NOT_BRACKETED');
 });
+test('exact-zero first endpoint reports SAMPLED_ZERO with one evaluation', async()=>{
+  const result=await refineBracketedTransitAspectHit({
+    ...base(),provider:provider(ms=>(ms-startMs)/3600000)
+  });
+  assert.equal(result.status,'SAMPLED_ZERO');
+  assert.equal(result.residualDeg,0);
+  assert.equal(result.datetimeUtc,'2026-11-12T00:00:00.000Z');
+  assert.equal(result.iterations,0);
+  assert.equal(result.evaluations,1);
+});
+
+test('exact-zero final endpoint reports SAMPLED_ZERO with two evaluations', async()=>{
+  const endMs=startMs+3600000;
+  const result=await refineBracketedTransitAspectHit({
+    ...base(),provider:provider(ms=>(ms-endMs)/3600000)
+  });
+  assert.equal(result.status,'SAMPLED_ZERO');
+  assert.equal(result.residualDeg,0);
+  assert.equal(result.datetimeUtc,'2026-11-12T01:00:00.000Z');
+  assert.equal(result.iterations,0);
+  assert.equal(result.evaluations,2);
+});
+
+test('negative signed-zero endpoint also reports SAMPLED_ZERO', async()=>{
+  const result=await refineBracketedTransitAspectHit({
+    ...base(),provider:provider(ms=>ms===startMs ? -0 : (ms-startMs)/3600000)
+  });
+  assert.equal(result.status,'SAMPLED_ZERO');
+  assert.ok(Object.is(result.residualDeg,-0));
+  assert.equal(result.evaluations,1);
+});
+
+test('near-zero final endpoint stays a tolerance sample, not an exact zero', async()=>{
+  const endMs=startMs+3600000;
+  const result=await refineBracketedTransitAspectHit({
+    ...base(),provider:provider(ms=>.00005+(ms-endMs)/3600000)
+  });
+  assert.equal(result.status,'SAMPLED_WITHIN_RESIDUAL_TOLERANCE');
+  assert.equal(result.datetimeUtc,'2026-11-12T01:00:00.000Z');
+  assert.equal(result.evaluations,2);
+});
+
 test('a near-zero endpoint is labeled as a tolerance sample, not an exact root', async()=>{
   const r=await refineBracketedTransitAspectHit({...base(),provider:provider(ms=>.00005+(ms-startMs)/1000000)});
   assert.equal(r.status,'SAMPLED_WITHIN_RESIDUAL_TOLERANCE');
