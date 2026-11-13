@@ -113,3 +113,21 @@ test('near-cusp positions retain their side without implicit rounding', () => {
     assert.ok(after.distanceFromCuspDeg < 2 * epsilon);
   }
 });
+
+
+test('all twelve cusp boundaries preserve ownership across the final-to-first wrap', () => {
+  const epsilon = 1e-6;
+  for (let index = 0; index < cusps.length; index++) {
+    const cusp = cusps[index];
+    const house = index + 1;
+    const previousHouse = index === 0 ? 12 : index;
+    const before = locateLongitudeInHouses(cusp - epsilon, cusps);
+    const exact = locateLongitudeInHouses(cusp, cusps);
+    const after = locateLongitudeInHouses(cusp + epsilon, cusps);
+    assert.equal(before.house, previousHouse, `before cusp ${house}`);
+    assert.equal(exact.house, house, `at cusp ${house}`);
+    assert.equal(after.house, house, `after cusp ${house}`);
+    assert.equal(exact.distanceFromCuspDeg, 0);
+    assert.ok(after.distanceFromCuspDeg > 0 && after.distanceFromCuspDeg < 2 * epsilon);
+  }
+});
