@@ -124,3 +124,17 @@ npm test
 **Execution not performed in this GitHub-only environment.** The tests are
 implemented but not yet validated by native Node. No scientific parity,
 Rust/WASM provider readiness or release status is implied.
+
+## Provider house metadata mismatch regression (2026-11-13)
+
+The synthetic cusp-set suite now verifies that a requested `VEHLOW`
+system cannot accept provider metadata identifying `PLACIDUS`:
+`validateHouseCuspSet` must raise `INCOMPATIBLE_HOUSE_SYSTEM`.
+Likewise, a provider claiming `LEGACY_HOUSES_POS` cannot be silently
+treated as geometric `CUSP_INTERVAL` placement and must raise
+`UNSUPPORTED_HOUSE_PLACEMENT`. This guards the future Rust/WASM
+boundary without calculating any astronomical values.
+
+Run `node --test test/house-unequal-wrap-regression.test.mjs`
+and `npm test` in an authenticated full checkout. **Not executed
+natively here**; the status remains IMPLEMENTED_ISOLATED.
