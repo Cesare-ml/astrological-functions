@@ -68,6 +68,20 @@ export function buildSourcedHousePlacementMatrix(input) {
     return Object.freeze({id: fact.id, longitudeDeg: fact.longitudeDeg, placements, changed});
   }));
   const changedPointIds = Object.freeze(rows.filter(row => row.changed).map(row => row.id));
+  // Give Desktop a complete pairwise change summary without calling any house
+  // geometry or source validators again. In a three-method matrix there are
+  // exactly three unordered method pairs; in a two-method matrix, one.
+  const pairwiseChanges = Object.freeze(methodNames.flatMap((leftHouseSystem, i) =>
+    methodNames.slice(i + 1).map((rightHouseSystem, offset) => {
+      const j = i + 1 + offset;
+      const changedPointIds = Object.freeze(rows
+        .filter(row => row.placements[i].house !== row.placements[j].house)
+        .map(row => row.id));
+      return Object.freeze({
+        leftHouseSystem, rightHouseSystem,
+        changedCount: changedPointIds.length, changedPointIds,
+      });
+    })));
   return Object.freeze({
     contract: 'SourcedHousePlacementMatrix',
     contractVersion: '0.1.0-experimental',
@@ -76,7 +90,7 @@ export function buildSourcedHousePlacementMatrix(input) {
     source: comparisons[0].source,
     methodNames,
     rows,
-    changedPointIds,
+    changedPointIds, pairwiseChanges,
     pointCount: rows.length,
     changedCount: changedPointIds.length,
   });
