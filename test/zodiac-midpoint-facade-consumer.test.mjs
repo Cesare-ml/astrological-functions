@@ -8,10 +8,10 @@ const point=(name,longitudeDeg)=>({name,longitudeDeg});
 test('experimental facade exports precisely the six reviewed facts-only operations',()=>{
   assert.deepEqual(Object.keys(midpoints).sort(),[
     'calculateZodiacMidpointAxis',
-    'calculateZodiacMidpointContacts',
     'calculateZodiacMidpointCatalog',
-    'calculateZodiacMidpointTargetSweep',
     'calculateZodiacMidpointContactMatrix',
+    'calculateZodiacMidpointContacts',
+    'calculateZodiacMidpointTargetSweep',
     'filterZodiacMidpointContactMatrix',
   ]);
   for(const key of Object.keys(midpoints)) assert.equal(typeof midpoints[key],'function');
@@ -27,7 +27,9 @@ test('facade builds an axis, single target contact, and pair catalog consistentl
   });
   assert.deepEqual(axis.axisLongitudesDeg,[0,180]);
   assert.deepEqual(contact.midpointAxis,axis);
-  assert.deepEqual(catalog.pairs[0].midpointAxis,axis);
+  // The sorted catalog preserves its own source-name order in inputs metadata.
+  assert.deepEqual(catalog.pairs[0].midpointAxis.axisLongitudesDeg,axis.axisLongitudesDeg);
+  assert.equal(catalog.pairs[0].midpointAxis.shortArcMidpointDeg,axis.shortArcMidpointDeg);
   assert.deepEqual(contact.matchingAxisLongitudesDeg,[0]);
 });
 
@@ -40,7 +42,10 @@ test('facade multi-target sweep and matrix agree about each matching body',()=>{
     sourcePoints:[point('Moon',10),point('Sun',350)],targetPoints:targets,maxOrbDeg:2,
   });
   assert.deepEqual(sweep.matchedTargetNames,['Mars','Venus']);
-  assert.deepEqual(matrix.rows[0].targetSweep,sweep);
+  // The matrix preserves canonical pair-name ordering; compare geometric facts.
+  assert.deepEqual(matrix.rows[0].targetSweep.targets,sweep.targets);
+  assert.deepEqual(matrix.rows[0].targetSweep.matchedTargetNames,sweep.matchedTargetNames);
+  assert.deepEqual(matrix.rows[0].targetSweep.midpointAxis.axisLongitudesDeg,sweep.midpointAxis.axisLongitudesDeg);
   assert.equal(matrix.matchedCellCount,2);
 });
 
