@@ -59,9 +59,10 @@ const methodName: 'WHOLE_SIGN'|'EQUAL_ASCENDANT'|'PORPHYRY'=
   outputThree.occupancyByMethod[0].houseSystem;
 void occupancies;void occupancyId;void houseIndex;void methodName;
 
-// @ts-expect-error one method cannot form a bounded comparison
 const onlyOne: SourcedHousePlacementMatrixInput={
-  birthTimeKnown:true,methods:[whole],positions,
+  birthTimeKnown:true,
+  // @ts-expect-error one method cannot form a bounded comparison
+  methods:[whole],positions,
 };
 void onlyOne;
 const four: SourcedHousePlacementMatrixInput={
@@ -71,9 +72,10 @@ const four: SourcedHousePlacementMatrixInput={
   positions,
 };
 void four;
-// @ts-expect-error a caller cannot pretend that provenance is verified
 const forgedStatus: SourcedHousePlacementMatrixInput={
-  ...two,positions:{...positions,provenanceStatus:'VERIFIED'},
+  ...two,
+  // @ts-expect-error a caller cannot pretend that provenance is verified
+  positions:{...positions,provenanceStatus:'VERIFIED'},
 };
 void forgedStatus;
 // @ts-expect-error method tuple is readonly
@@ -84,8 +86,9 @@ outputTwo.occupancyByMethod[0].houses[0].count=42;
 outputTwo.occupancyByMethod[0].houses[0].pointIds.push('FORGED');
 // @ts-expect-error method occupancy arrays cannot be replaced
 outputTwo.occupancyByMethod[0]=outputTwo.occupancyByMethod[1];
-// @ts-expect-error no default entry for unsupported historical "egizia"
 const unknown: SourcedHousePlacementMatrixInput={
-  ...two,methods:[{...whole,snapshot:{...whole.snapshot,houseSystem:'egizia'}},equal],
+  ...two,
+  // @ts-expect-error no fallback for unsupported historical "egizia"
+  methods:[{...whole,snapshot:{...whole.snapshot,houseSystem:'egizia'}},equal],
 };
 void unknown;
