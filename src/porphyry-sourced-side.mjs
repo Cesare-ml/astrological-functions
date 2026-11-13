@@ -132,6 +132,21 @@ export function adaptPorphyryToPinnedComparison(input) {
         Math.abs(normalize360(anchors[(i+1)%4] - start) - result.quadrantSpansDeg[i]) <= 1e-7)) {
     fail('INVALID_PORPHYRY_ANGLES', 'House 1/4/7/10 cusps must match ASC/IC/DSC/MC');
   }
+  // A producer-shaped object with correct quadrant anchors can still carry
+  // forged interior cusps. Check the actual Porphyry trisection geometry,
+  // rather than only the four anchor cusps and quadrant-span totals.
+  // Retain the existing 1e-7 degree tolerance for floating-point roundoff.
+  for (let quadrant = 0; quadrant < 4; quadrant++) {
+    for (let third = 1; third <= 2; third++) {
+      const index = quadrant * 3 + third;
+      const expected = normalize360(
+        anchors[quadrant] + result.quadrantSpansDeg[quadrant] * third / 3);
+      if (!sameLongitude(cuspsDeg[index], expected)) {
+        fail('INVALID_PORPHYRY_GEOMETRY',
+          'All eight interior cusps must trisect their declared quadrants');
+      }
+    }
+  }
   const snapshot = Object.freeze({
     houseSystem:'PORPHYRY', datetimeUtc:declared.datetimeUtc,
     frame:'ECLIPTIC_OF_DATE', longitudeBasis:declared.longitudeBasis,
