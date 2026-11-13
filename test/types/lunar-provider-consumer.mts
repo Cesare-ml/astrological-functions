@@ -25,6 +25,8 @@ const pin: LunarProviderPin = {
 const provider: LunarGeocentricProvider = {
   async getGeocentricEcliptic(request) {
     const name: 'Sun' | 'Moon' = request.bodyName;
+    const center: 'EARTH' = request.center;
+    void center;
     const kernel: string = request.kernelSetId;
     const timeModel: string = request.timeModelId;
     void [kernel, timeModel];
