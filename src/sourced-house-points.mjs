@@ -28,6 +28,12 @@ function assertedSameSource(pointSource, houseSource) {
       !exactKeys(pointSource.longitudeBasis, BASIS_KEYS) ||
       !exactKeys(pointSource.observer, OBSERVER_KEYS) ||
       !Object.hasOwn(pointSource.longitudeBasis, 'type') ||
+      (pointSource.longitudeBasis.type !== 'TROPICAL' &&
+       pointSource.longitudeBasis.type !== 'SIDEREAL') ||
+      (pointSource.longitudeBasis.type === 'TROPICAL' &&
+       Object.hasOwn(pointSource.longitudeBasis, 'ayanamsaId')) ||
+      (pointSource.longitudeBasis.type === 'SIDEREAL' &&
+       !Object.hasOwn(pointSource.longitudeBasis, 'ayanamsaId')) ||
       !Object.hasOwn(pointSource.observer, 'latitudeDeg') ||
       !Object.hasOwn(pointSource.observer, 'longitudeDegEast')) {
     fail('INVALID_POINT_SOURCE_CONTEXT', 'An explicit complete point source envelope is required');
