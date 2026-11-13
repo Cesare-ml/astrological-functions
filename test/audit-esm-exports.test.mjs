@@ -120,3 +120,30 @@ test('node_modules path segments are rejected even if the file exists', async t 
   assert.deepEqual(report.diagnostics.map(d => d.code), ['UNSAFE_EXPORT_TARGET']);
   assert.equal(report.checkedTargets, 0);
 });
+
+test('type-only conditional export cannot masquerade as a usable ESM runtime import', async t => {
+  const {manifest} = await fixture(t, {'./provider': {types: './src/provider.d.mts'}}, ['src/provider.d.mts']);
+  const report = await auditEsmExports(manifest);
+  assert.equal(report.checkedTargets, 1);
+  assert.deepEqual(report.diagnostics.map(d => d.code), ['UNAVAILABLE_NODE_ESM_EXPORT']);
+});
+
+test('require-only conditional export is not reachable from an ESM importer', async t => {
+  const {manifest} = await fixture(t, {'./provider': {require: './src/provider.mjs'}}, ['src/provider.mjs']);
+  const report = await auditEsmExports(manifest);
+  assert.deepEqual(report.diagnostics.map(d => d.code), ['UNAVAILABLE_NODE_ESM_EXPORT']);
+});
+
+test('condition order can hide an existing import target behind a null default', async t => {
+  const {manifest} = await fixture(t, {'./provider': {default: null, import: './src/provider.mjs'}}, ['src/provider.mjs']);
+  const report = await auditEsmExports(manifest);
+  assert.equal(report.checkedTargets, 1);
+  assert.deepEqual(report.diagnostics.map(d => d.code), ['UNAVAILABLE_NODE_ESM_EXPORT']);
+});
+
+test('an import condition before a null default is accepted', async t => {
+  const {manifest} = await fixture(t, {'./provider': {import: './src/provider.mjs', default: null}}, ['src/provider.mjs']);
+  const report = await auditEsmExports(manifest);
+  assert.equal(report.ok, true);
+  assert.equal(report.checkedTargets, 1);
+});
