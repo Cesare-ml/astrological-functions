@@ -129,3 +129,50 @@ test('relative speed overflow fails closed even for individually finite rates',(
   rejects({source:{longitudeDeg:10,longitudeSpeedDegPerDay:-1e308},
     target:{longitudeDeg:95,longitudeSpeedDegPerDay:1e308}}, 'INVALID_RELATIVE_SPEED');
 });
+
+
+test('one-ULP pre-360 conjunction stays applying, not falsely exact',()=>{
+  const below360=360-2**-44; // immediately previous representable binary64 value
+  const fact=classify({aspectAngleDeg:0,maxOrbDeg:1,exactToleranceDeg:0,
+    source:{longitudeDeg:0,longitudeSpeedDegPerDay:0},
+    target:{longitudeDeg:below360,longitudeSpeedDegPerDay:1}});
+  assert.equal(fact.observedForwardDeg,below360);
+  assert.equal(fact.signedResidualDeg,-2**-44);
+  assert.equal(fact.trend,'APPLYING');
+});
+
+test('binary64 values on either side of opposition retain direction',()=>{
+  const before=classify({aspectAngleDeg:180,maxOrbDeg:1,exactToleranceDeg:0,
+    source:{longitudeDeg:0,longitudeSpeedDegPerDay:0},
+    target:{longitudeDeg:180-2**-45,longitudeSpeedDegPerDay:1}});
+  const after=classify({aspectAngleDeg:180,maxOrbDeg:1,exactToleranceDeg:0,
+    source:{longitudeDeg:0,longitudeSpeedDegPerDay:0},
+    target:{longitudeDeg:180+2**-45,longitudeSpeedDegPerDay:1}});
+  assert.equal(before.signedResidualDeg,-2**-45);
+  assert.equal(after.signedResidualDeg,2**-45);
+  assert.equal(before.trend,'APPLYING');
+  assert.equal(after.trend,'SEPARATING');
+});
+
+test('sub-ULP negative zodiac offset preserves trend even if displayed longitude aliases zero',()=>{
+  const tiny=2**-50;
+  const fact=classify({aspectAngleDeg:0,maxOrbDeg:1,exactToleranceDeg:0,
+    source:{longitudeDeg:0,longitudeSpeedDegPerDay:0},
+    target:{longitudeDeg:-tiny,longitudeSpeedDegPerDay:1}});
+  assert.equal(fact.observedForwardDeg,0);
+  assert.equal(fact.signedResidualDeg,-tiny);
+  assert.equal(fact.trend,'APPLYING');
+  assert.equal(fact.withinOrb,true);
+});
+
+test('reverse aspect branch remains exact at wrapped -angle and preserves local signed offset',()=>{
+  const exact=classify({aspectAngleDeg:30,branch:'REVERSE',maxOrbDeg:1,
+    source:{longitudeDeg:0,longitudeSpeedDegPerDay:0},
+    target:{longitudeDeg:330,longitudeSpeedDegPerDay:1}});
+  const near=classify({aspectAngleDeg:30,branch:'REVERSE',maxOrbDeg:1,
+    source:{longitudeDeg:0,longitudeSpeedDegPerDay:0},
+    target:{longitudeDeg:330+2**-44,longitudeSpeedDegPerDay:1}});
+  assert.equal(exact.trend,'EXACT');
+  assert.equal(near.signedResidualDeg,2**-44);
+  assert.equal(near.trend,'SEPARATING');
+});
