@@ -36,8 +36,7 @@ const missingRight: PinnedWholeEqualInput = { ...input, equalAscendantSource: un
 // @ts-expect-error No implicit or missing sidereal ayanamsa.
 const invalidSidereal: PinnedWholeEqualInput = { ...input, longitudeBasis: { type: 'SIDEREAL' } };
 // @ts-expect-error The provider must explicitly assert apparent corrections.
-const badCorrection: PinnedWholeEqualInput = { ...input,
-  equalAscendantSource: { ...source, corrections: 'GEOMETRIC' } };
+const badCorrection: PinnedWholeEqualInput = { ...input, equalAscendantSource: { ...source, corrections: 'GEOMETRIC' } };
 // @ts-expect-error Returned planetary placements are readonly.
 result.comparison.facts[0].leftHouse = 5;
 // @ts-expect-error Astronomical source snapshots are readonly.
