@@ -183,3 +183,22 @@ test('accepts deterministic zero endpoints regardless of signed-zero representat
   assert.equal(result.sampledZeros.length,1);
   assert.equal(result.sampledZeros[0].datetimeUtc,'2026-11-12T00:30:00.000Z');
 });
+
+test('rejects version change after scan when exact-hit refinement repeats an endpoint',async()=>{
+  const p=makeProvider();
+  const original=p.getUnwrappedAspectResidual.bind(p);
+  const visited=new Set();
+  let repeated=0;
+  p.getUnwrappedAspectResidual=async request=>{
+    const response=await original(request);
+    if (visited.has(request.datetimeUtc)) {
+      repeated++;
+      return {...response,metadata:{...response.metadata,contractVersion:'0.2.0-incompatible'}};
+    }
+    visited.add(request.datetimeUtc);
+    return response;
+  };
+  await assert.rejects(()=>prepareTransitAspectEventCandidates(options(p)),
+    error=>error.code==='INCOMPATIBLE_EPHEMERIS');
+  assert.ok(repeated>0);
+});
