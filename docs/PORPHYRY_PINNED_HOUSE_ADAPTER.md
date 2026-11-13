@@ -22,10 +22,10 @@ const adapted = adaptPorphyryForPinnedHouseComparison({
     frame: 'ECLIPTIC_OF_DATE',
     longitudeBasis: { type: 'TROPICAL' },
     observerType: 'TOPOCENTRIC',
-    observer: { latitudeDeg: 44, longitudeDegEast: 11 },
-    engineVersion: 'EXPLICIT_PIN_FROM_UPSTREAM',
-    kernelSetId: 'EXPLICIT_KERNEL_FROM_UPSTREAM',
-    timeModel: 'EXPLICIT_TIME_MODEL',
+    observer: porphyry.source.observer,
+    engineVersion: porphyry.source.engineVersion,
+    kernelSetId: porphyry.source.kernelSetId,
+    timeModel: porphyry.source.timeModel,
     corrections: 'APPARENT',
     calculationProfileId: 'CANONICAL_V1',
   },
@@ -38,7 +38,7 @@ const result = compareHousePlacementsWithPinnedSource({
 });
 ```
 
-The `source` values above are **placeholders**, not fallback values. They must be copied from the exact independently validated provider used to calculate both snapshots. The adapter **rejects** any mismatched engine, kernel, time model, observer or UTC, and does not manufacture values that are missing from the producer.
+The metadata copied from `porphyry.source` are producer assertions, **not** verified evidence. The caller-specified corrections and profile ID are also assertions; they must come from the exact independent provider/configuration used for both snapshots. The adapter **rejects** any mismatched engine, kernel, time model, observer or UTC, and does not manufacture values that are missing from the producer.
 
 ## Input and output guarantees
 
