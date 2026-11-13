@@ -19,6 +19,13 @@ export interface HouseMatrixRow {
   readonly placements: readonly HouseMatrixPlacement[];
   readonly changed: boolean;
 }
+export interface HouseMethodPairChanges {
+  readonly leftHouseSystem: HouseMethod;
+  readonly rightHouseSystem: HouseMethod;
+  /** Point IDs appear in caller-supplied order. */
+  readonly changedPointIds: readonly string[];
+  readonly changedCount: number;
+}
 export interface SourcedHousePlacementMatrixResult {
   readonly contract: 'SourcedHousePlacementMatrix';
   readonly contractVersion: '0.1.0-experimental';
@@ -28,6 +35,7 @@ export interface SourcedHousePlacementMatrixResult {
   readonly methodNames: readonly HouseMethod[];
   readonly rows: readonly HouseMatrixRow[];
   readonly changedPointIds: readonly string[];
+  readonly pairwiseChanges: readonly HouseMethodPairChanges[];
   readonly pointCount: number;
   readonly changedCount: number;
 }
