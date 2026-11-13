@@ -4,7 +4,7 @@ import { refineBracketedTransitAspectHit } from '../src/transit-exact-hit.mjs';
 
 const startUtc = '2026-11-12T00:00:00Z';
 const startMs = Date.parse(startUtc);
-const metadata = { center:'EARTH', frame:'ECLIPTIC_OF_DATE', corrections:'APPARENT',
+const metadata = { contractVersion:'0.1.0-experimental', center:'EARTH', frame:'ECLIPTIC_OF_DATE', corrections:'APPARENT',
   coverage:'CALLER_ASSERTED_CONTINUOUS_UNWRAPPED', engineVersion:'synthetic-rust', kernelSetId:'synthetic', timeModel:'synthetic-TDB' };
 function provider(residual, mutate) {
   return { capabilities: { contractVersion:'0.1.0-experimental', ...metadata },
@@ -104,4 +104,33 @@ test('explicit angle and orientation are mandatory', async()=>{
   await reject({orientation:'AUTO'},'INVALID_ASPECT');
   await reject({exactAngleDeg:181},'INVALID_ASPECT');
   await reject({skyBodyName:''},'INVALID_ARGUMENT');
+});
+
+test('rejects missing, mismatched, and mid-search version changes in residual metadata', async()=>{
+  const missing=provider(()=>0);
+  missing.getUnwrappedAspectResidual=async request=>({
+    datetimeUtc:request.datetimeUtc, residualDeg:0,
+    metadata:{...metadata,contractVersion:undefined}
+  });
+  await reject({provider:missing},'INCOMPATIBLE_EPHEMERIS');
+
+  const wrong=provider(()=>0);
+  wrong.getUnwrappedAspectResidual=async request=>({
+    datetimeUtc:request.datetimeUtc,residualDeg:0,
+    metadata:{...metadata,contractVersion:'0.2.0-incompatible'}
+  });
+  await reject({provider:wrong},'INCOMPATIBLE_EPHEMERIS');
+
+  const midsearch=provider(ms=>(ms-startMs-123456)/3600000);
+  const original=midsearch.getUnwrappedAspectResidual.bind(midsearch);
+  let reads=0;
+  midsearch.getUnwrappedAspectResidual=async request=>{
+    const response=await original(request);
+    reads++;
+    return reads>1
+      ? {...response,metadata:{...response.metadata,contractVersion:'0.2.0-incompatible'}}
+      : response;
+  };
+  await reject({provider:midsearch},'INCOMPATIBLE_EPHEMERIS');
+  assert.ok(reads>1);
 });
