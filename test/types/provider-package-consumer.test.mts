@@ -55,8 +55,8 @@ void missingProvider;
 // @ts-expect-error Legacy aliases are not accepted in the canonical profile.
 const wrongProfile: HouseSystemSelection = { houseSystem: 'egizia', calculationProfile: 'CANONICAL_V1' };
 void wrongProfile;
-// @ts-expect-error Provider result metadata must identify the Earth center.
-const wrongCenter: ApparentGeocentricState = { longitudeDeg: 15, latitudeDeg: 0, metadata: { center: 'SUN', frame: 'ECLIPTIC_OF_DATE', corrections: 'APPARENT' } };
+// @ts-expect-error Provider result metadata must identify the Earth center (all other required fields remain valid).
+const wrongCenter: ApparentGeocentricState = { ...state, metadata: { ...state.metadata, center: 'SUN' } };
 void wrongCenter;
 // @ts-expect-error Consumers must not mutate readonly ephemeris requests.
 request.bodyName = 'Moon';
