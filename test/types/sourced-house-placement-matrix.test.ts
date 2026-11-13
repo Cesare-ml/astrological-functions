@@ -1,6 +1,7 @@
 import { buildSourcedHousePlacementMatrix } from '../../src/sourced-house-placement-matrix.mjs';
 import type {
   SourcedHousePlacementMatrixInput, SourcedHousePlacementMatrixResult,
+  HouseMatrixMethodOccupancy,
 } from '../../src/sourced-house-placement-matrix.mjs';
 import type { SourcedHouseSnapshot, DeclaredHouseSource } from '../../src/house-source-consistency.mjs';
 
@@ -86,3 +87,19 @@ const fourMethods: SourcedHousePlacementMatrixInput={
 void fourMethods;
 // @ts-expect-error method tuples are readonly, not editable after initialization
 input.methods.push(whole);
+
+const occupancy: readonly HouseMatrixMethodOccupancy[]=result.occupancyByMethod;
+const occupancyMethod: 'WHOLE_SIGN'|'EQUAL_ASCENDANT'|'PORPHYRY'=
+  result.occupancyByMethod[0].houseSystem;
+const occupancyHouse: number=result.occupancyByMethod[0].houses[0].house;
+const occupancyIds: readonly string[]=result.occupancyByMethod[0].houses[0].pointIds;
+const occupancyCount: number=result.occupancyByMethod[0].houses[0].count;
+void occupancy;void occupancyMethod;void occupancyHouse;void occupancyIds;void occupancyCount;
+// @ts-expect-error occupancy house count is immutable
+result.occupancyByMethod[0].houses[0].count=5;
+// @ts-expect-error occupancy point lists are readonly
+result.occupancyByMethod[0].houses[0].pointIds.push('ALTERED');
+// @ts-expect-error method occupancy is readonly
+result.occupancyByMethod[0].houseSystem='VEHLOW';
+// @ts-expect-error no replacing an occupancy group
+result.occupancyByMethod[0]=result.occupancyByMethod[1];
