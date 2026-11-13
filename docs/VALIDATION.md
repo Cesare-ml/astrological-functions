@@ -90,3 +90,14 @@ Record compiler/Node versions, each exit code and diagnostics. This fixture is *
 ### Additional compile-only contract guards — 13 November 2026
 
 The TypeScript package-subpath consumer fixture now also rejects an omitted house calculation profile, a legacy house alias under `CANONICAL_V1`, and a `MEAN_ECLIPTIC_OF_DATE` request where `ECLIPTIC_OF_DATE` is required. These are type-level safeguards only: compile the same NodeNext and Bundler commands above before claiming they pass. They do not implement or validate astronomical frame conversion, house algorithms, or Rust/WASM interoperability.
+
+### Closed ESM implementation paths — 13 November 2026
+
+The provider package smoke also attempts dynamic ESM imports of three **unexported**
+implementation/typo paths: `astrological-functions/src/ephemeris-provider.js`,
+`astrological-functions/src/index.mjs`, and
+`astrological-functions/ephemeris-provider.js`. All must reject with
+`ERR_PACKAGE_PATH_NOT_EXPORTED`. This is a package-boundary regression, **not**
+a security sandbox (relative filesystem imports remain possible) or an astronomy test.
+Run the focused Node smoke and full `npm test` on the stacked checkout before
+claiming success. This new regression has not been executed natively here.
