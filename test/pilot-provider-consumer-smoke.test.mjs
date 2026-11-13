@@ -62,3 +62,15 @@ test('CommonJS resolution cannot reach the provider subpath', () => {
     { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' }
   );
 });
+
+// Only the declared package subpath is public; consumers must not bypass
+// the guarded adapter by importing its implementation through package exports.
+test('ESM consumers cannot bypass the provider export through internal paths', async () => {
+  for (const specifier of [
+    'astrological-functions/src/ephemeris-provider.js',
+    'astrological-functions/src/index.mjs',
+    'astrological-functions/ephemeris-provider.js'
+  ]) {
+    await assert.rejects(import(specifier), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
+  }
+});
