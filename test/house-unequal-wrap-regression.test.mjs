@@ -176,3 +176,19 @@ test('house cusp metadata must explicitly identify its placement semantics', () 
     ));
   }
 });
+
+
+test('legacy egizia label requires an explicit profile and canonical Vehlow provider metadata', () => {
+  const base = {
+    houseSystem: 'egizia', calculationProfile: 'VIRGOSTARS_LEGACY_V1', cusps,
+    metadata: { houseSystem: 'VEHLOW', placementMethod: 'CUSP_INTERVAL' },
+  };
+  const validated = validateHouseCuspSet(base);
+  assert.equal(validated.houseSystem, 'VEHLOW');
+  assert.equal(validated.calculationProfile, 'VIRGOSTARS_LEGACY_V1');
+  assert.equal(validated.metadata.houseSystem, 'VEHLOW');
+  assert.throws(() => validateHouseCuspSet({ ...base, calculationProfile: 'CANONICAL_V1' }),
+    error => error.code === 'INVALID_HOUSE_SYSTEM');
+  assert.throws(() => validateHouseCuspSet({ ...base, metadata: { ...base.metadata, houseSystem: 'egizia' } }),
+    error => error.code === 'INCOMPATIBLE_HOUSE_SYSTEM');
+});
