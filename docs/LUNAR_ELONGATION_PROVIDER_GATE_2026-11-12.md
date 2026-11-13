@@ -89,8 +89,22 @@ tsc --noEmit --strict --target es2022 --module nodenext --moduleResolution noden
 - Environment: Node.js **22.16.0**, TypeScript **5.8.3**.
 - Native ESM smoke: **2/2 PASS** (package self-resolution and provider-versus-geometry equality).
 - TypeScript NodeNext compile: **PASS**, no diagnostics; negative compile checks for unsupported sidereal mode, missing time-model pin, forbidden tropical ayanamsa and readonly output.
-- These checks are **not** a full repository `npm test` run, external installed-package smoke or Rust/WASM real-kernel integration.
+- These checks used a SHA-matched temporary package mirror, not a published package. A subsequent complete native npm test run is documented below; Rust/WASM real-kernel validation remains outstanding.
 
 ### Rust provider compatibility boundary
 
 `VirgoStars-Ephemeris` currently documents `getGeocentricEcliptic` and astronomical state request types as **proposed**, not implemented stable Rust/WASM exports. The Rust core currently exposes experimental mathematical/DE441 primitives, not an apparent geocentric ecliptic-of-date typed JS provider. The `bodyName`/`datetimeUtc` contract here is an **injected adapter interface**, not an existing Rust API. Future integrations must explicitly map target identifiers, UTC/time scales, center, frame, correction model, kernel/time pins and provenance, and validate against real kernels. Never reinterpret geometric true-of-date or J2000 results as apparent of date.
+
+## Complete native Node test suite — 2026-11-13
+
+All current branch runtime modules, package.json, and all four test/*.test.mjs files were reconstructed in a temporary local package mirror using GitHub-fetched contents. Git blob SHA-1 hashes were checked against GitHub for each source, test, type and package file before running the complete test command. Additional test hashes:
+
+- `test/math.test.mjs` — `7e04dc63e4a1dfd8124ba36b45849d1b1a6c8f27`
+- `test/lunar-elongation.test.mjs` — `dca2665c9cb57640d5a2db260cd23a7838f86ed3`
+- `test/lunar-elongation-provider.test.mjs` — `cae53694daae302215d73ec1cb5dc6a4b546045b`
+
+Executed `npm test` (package script `node --test`) with Node.js 22.16.0 and npm 10.9.2.
+
+**Result: 24 tests / 24 passed; 0 failed, 0 skipped.** Baseline math (4), lunar sectors (6), provider failure/provenance checks (12), and installed-package-style ESM self-reference smoke (2).
+
+This is a native Node test of exact committed files in a SHA-matched temporary mirror, not a Git checkout, npm publish/install test or astronomical JPL/Horizons parity. No GitHub Actions or CI were configured. TypeScript 5.8.3 NodeNext consumer compilation passed separately. Status remains IMPLEMENTED_ISOLATED pending real Rust adapter validation.
