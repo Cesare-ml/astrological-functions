@@ -134,3 +134,22 @@ test('rejects missing, mismatched, and mid-search version changes in residual me
   await reject({provider:midsearch},'INCOMPATIBLE_EPHEMERIS');
   assert.ok(reads>1);
 });
+
+test('rejects untrimmed identifiers before reaching the residual provider', async()=>{
+  const p=provider(ms=>(ms-startMs-123456)/3600000);
+  let calls=0;
+  const original=p.getUnwrappedAspectResidual.bind(p);
+  p.getUnwrappedAspectResidual=async req=>{calls++;return original(req);};
+  for (const patch of [
+    {skyBodyName:' Mars'},
+    {natalBodyName:'Sun '},
+    {aspectId:' square '},
+    {skyBodyName:'\tMars'},
+    {ephemerisProvenance:{engineVersion:' synthetic-rust',kernelSetId:'synthetic',timeModel:'synthetic-TDB'}},
+    {ephemerisProvenance:{engineVersion:'synthetic-rust',kernelSetId:'synthetic ',timeModel:'synthetic-TDB'}},
+    {ephemerisProvenance:{engineVersion:'synthetic-rust',kernelSetId:'synthetic',timeModel:' synthetic-TDB'}}
+  ]) {
+    await reject({...patch,provider:p},'INVALID_ARGUMENT');
+  }
+  assert.equal(calls,0);
+});
