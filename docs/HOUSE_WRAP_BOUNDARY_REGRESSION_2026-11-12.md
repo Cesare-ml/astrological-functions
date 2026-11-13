@@ -164,3 +164,17 @@ or validate the historical `houses_pos` method.
 
 Run `node --test test/house-unequal-wrap-regression.test.mjs` and `npm test`.
 Native execution is still pending; no astronomical parity is claimed.
+
+## Array-shaped provider metadata rejection (2026-11-13)
+
+An additional synthetic case rejects an array supplied as house provider
+metadata with `INVALID_HOUSE_METADATA`. Arrays are objects in JavaScript,
+but they are not valid named metadata records. This prevents positional
+metadata from being mistaken for a declared house system and placement method.
+The implementation already rejects arrays; this change adds a regression
+assertion only and introduces no astronomical calculations.
+
+Run `node --test test/house-unequal-wrap-regression.test.mjs` and `npm test`
+in a complete Node.js checkout. **These commands have not been executed in
+this GitHub-only run.** Keep the PR in draft pending native validation,
+stacked-base conflict inspection and independent review.
