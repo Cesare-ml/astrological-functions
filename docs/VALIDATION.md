@@ -70,3 +70,19 @@ The experimental `./ephemeris-provider` package subpath now resolves `src/epheme
 ### ESM-only provider export gate (13 November 2026)
 
 The experimental `./ephemeris-provider` export intentionally uses conditional `types` and `import`, **not** `default`. This keeps CommonJS consumers from resolving a module that is only supported as ESM. The focused smoke now asserts that `createRequire(import.meta.url).resolve('astrological-functions/ephemeris-provider')` fails with `ERR_PACKAGE_PATH_NOT_EXPORTED` under Node 20, alongside the successful ESM self-import. Run `node --test test/pilot-provider-consumer-smoke.test.mjs` and `npm test` on the complete stacked checkout; this change has not itself been natively executed. A separate strict TypeScript NodeNext/Bundler consumer check remains required. No new astronomical behavior or Rust/WASM parity is implied.
+
+### Strict TypeScript package-subpath consumer fixture — 13 November 2026
+
+The compile-only `test/types/provider-package-consumer.test.mts` imports the **package self-reference**, not a relative declaration path. It exercises the typed provider request, apparent Earth-centered metadata, readonly inputs, canonical house selection, and six `@ts-expect-error` negative contracts. The fixture does not execute astronomical calculations or validate real Rust/WASM integration.
+
+From the **complete stacked PR #54 checkout**, with TypeScript >=5 installed (a global `tsc` or a separately installed local compiler), run both modes independently:
+
+```sh
+tsc --version
+tsc --noEmit --strict --skipLibCheck false --module NodeNext --moduleResolution NodeNext --target ES2022 test/types/provider-package-consumer.test.mts
+tsc --noEmit --strict --skipLibCheck false --module ESNext --moduleResolution Bundler --target ES2022 test/types/provider-package-consumer.test.mts
+node --test test/pilot-provider-consumer-smoke.test.mjs
+npm test
+```
+
+Record compiler/Node versions, each exit code and diagnostics. This fixture is **added but not yet compiled on the complete authenticated checkout**; no TS success claim is made. A local `tsc` installation alone does not validate GitHub package resolution. The package is still private, the export is ESM-only, and root-package typings are intentionally out of scope.
