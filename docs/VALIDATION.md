@@ -101,3 +101,7 @@ implementation/typo paths: `astrological-functions/src/ephemeris-provider.js`,
 a security sandbox (relative filesystem imports remain possible) or an astronomy test.
 Run the focused Node smoke and full `npm test` on the stacked checkout before
 claiming success. This new regression has not been executed natively here.
+
+### Isolated negative metadata fixture — 14 November 2026
+
+The `wrongCenter` compile-only fixture now spreads a fully populated, otherwise valid `ApparentGeocentricState` and overrides **only** `metadata.center` to `SUN`. This prevents a false-positive `@ts-expect-error` caused by missing unrelated required metadata fields. Run the strict NodeNext and Bundler `tsc` commands above; neither mode has been executed on the complete checkout in this change. The fixture does not validate astronomical positions or a real Rust/WASM provider.
