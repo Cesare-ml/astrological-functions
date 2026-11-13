@@ -9,6 +9,9 @@ export interface LunarProviderPosition {
     center: 'EARTH';
     frame: 'ECLIPTIC_OF_DATE';
     corrections: 'APPARENT';
+    /** If annotated, coordinates must be tropical and geocentric. */
+    zodiac?: 'TROPICAL';
+    observer?: null;
     engineVersion: string;
     kernelSetId: string;
     timeModelId: string;
