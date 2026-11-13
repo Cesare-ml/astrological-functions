@@ -62,6 +62,17 @@ function validatePosition(state, bodyName, datetimeUtc, pin) {
     throw new AstrologyError('INCOMPATIBLE_EPHEMERIS',
       `Provider returned incompatible ${bodyName} position/metadata`);
   }
+  // Do not silently consume degraded or approximate ephemeris results.
+  // An explicitly provided warning collection must be an empty array.
+  // Nonempty or malformed warnings require upstream review and a deliberate
+  // separately versioned precision policy, not a hidden downgrade.
+  for (const warnings of [state.warnings, metadata.warnings]) {
+    if (warnings !== undefined &&
+        (!Array.isArray(warnings) || warnings.length !== 0)) {
+      throw new AstrologyError('EPHEMERIS_WARNINGS_UNSUPPORTED',
+        `Provider reported unresolved ${bodyName} ephemeris warnings`);
+    }
+  }
   if (typeof state.latitudeDeg !== 'number' ||
       !Number.isFinite(state.latitudeDeg) ||
       Math.abs(state.latitudeDeg) > 90) {
