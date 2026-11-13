@@ -3,6 +3,8 @@ import type { LunarElongationSectors } from './lunar-elongation.mjs';
 export interface LunarProviderPosition {
   readonly longitudeDeg: number;
   readonly latitudeDeg: number;
+  /** Any reported warning fails closed until a versioned precision policy is reviewed. */
+  readonly warnings?: ReadonlyArray<Readonly<{ code: string; detail?: string }>>;
   readonly metadata: Readonly<{
     bodyName: 'Sun' | 'Moon';
     datetimeUtc: string;
@@ -12,6 +14,8 @@ export interface LunarProviderPosition {
     /** If annotated, coordinates must be tropical and geocentric. */
     zodiac?: 'TROPICAL';
     observer?: null;
+    /** The gate also rejects nonempty metadata-level warnings. */
+    warnings?: ReadonlyArray<Readonly<{ code: string; detail?: string }>>;
     engineVersion: string;
     kernelSetId: string;
     timeModelId: string;
