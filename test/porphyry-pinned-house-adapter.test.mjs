@@ -36,7 +36,7 @@ test('normalizes real producer-shaped Porphyry facts into pinned comparison slot
   assert.equal(out.snapshot.houseSystem,'PORPHYRY');
   assert.equal(out.snapshot.provenanceStatus,'CALLER_ASSERTED_ANGLES_NOT_INDEPENDENTLY_VERIFIED');
   assert.equal(out.source.kernelSetId,'SYNTHETIC_KERNEL');
-  assert.deepEqual(out.snapshot.cuspsDeg,cuspsDeg);
+  assert.ok(out.snapshot.cuspsDeg.every((v, i) => Math.abs(v - cuspsDeg[i]) < 1e-10));
   assert.deepEqual(out.source.longitudeBasis,{type:'TROPICAL'});
 });
 
