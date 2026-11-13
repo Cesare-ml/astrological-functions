@@ -120,3 +120,19 @@ const explicitlyTopocentric: LunarProviderPosition['metadata'] = {
   observer: { latitudeDeg: 42 },
 };
 void explicitlyTopocentric;
+
+/** Warning-bearing positions are representable by providers but rejected at runtime. */
+const degradedEphemerisPosition: LunarProviderPosition = {
+  longitudeDeg: 12,
+  latitudeDeg: 3,
+  warnings: [{ code: 'PRECISION_REQUIREMENT_UNMET', detail: 'synthetic' }],
+  metadata: {
+    ...compatibleMetadata,
+    warnings: [{ code: 'APPROXIMATE_FRAME' }],
+  },
+};
+void degradedEphemerisPosition;
+
+// @ts-expect-error warning codes must be textual identifiers
+const invalidWarning: LunarProviderPosition['warnings'] = [{ code: 42 }];
+void invalidWarning;
