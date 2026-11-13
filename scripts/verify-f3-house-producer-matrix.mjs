@@ -208,3 +208,36 @@ test('36x36 ASC/MC producer grid composes all valid geometry with exact placemen
   assert.equal(degenerate,684);
   assert.equal(placements,11016);
 });
+
+test('real producer house occupancy counts agree with immutable matrix rows',()=>{
+  const {whole,equal,porphyry}=makeInputs();
+  const methods=[whole,equal,porphyry];
+  const pointList=[
+    {id:'FIRST',longitudeDeg:345},
+    {id:'SECOND',longitudeDeg:0},
+    {id:'THIRD',longitudeDeg:345},
+  ];
+  const matrix=create(methods,pointList);
+  assert.deepEqual(matrix.occupancyByMethod.map(item=>item.houseSystem),
+    matrix.methodNames);
+  assert.equal(matrix.occupancyByMethod.length,3);
+  for(let methodIndex=0;methodIndex<methods.length;methodIndex++){
+    const occupancy=matrix.occupancyByMethod[methodIndex];
+    assert.deepEqual(occupancy.houses.map(h=>h.house),
+      Array.from({length:12},(_,i)=>i+1));
+    assert.equal(occupancy.houses.reduce((sum,h)=>sum+h.count,0),
+      matrix.pointCount);
+    for(const house of occupancy.houses){
+      const expected=matrix.rows
+        .filter(row=>row.placements[methodIndex].house===house.house)
+        .map(row=>row.id);
+      assert.deepEqual(house.pointIds,expected);
+      assert.equal(house.count,expected.length);
+      assert.ok(Object.isFrozen(house));
+      assert.ok(Object.isFrozen(house.pointIds));
+    }
+  }
+  const empty=create(methods,[]);
+  assert.ok(empty.occupancyByMethod.every(method=>
+    method.houses.every(house=>house.count===0&&house.pointIds.length===0)));
+});
