@@ -12,6 +12,10 @@
     "./whole-equal-house-comparison": {
       "types": "./src/whole-equal-house-comparison.d.mts",
       "import": "./src/whole-equal-house-comparison.mjs"
+    },
+    "./pinned-whole-equal-comparison": {
+      "types": "./src/pinned-whole-equal-comparison.d.mts",
+      "import": "./src/pinned-whole-equal-comparison.mjs"
     }
   },
   "engines": {
