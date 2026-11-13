@@ -82,6 +82,20 @@ export function buildSourcedHousePlacementMatrix(input) {
         changedCount: changedPointIds.length, changedPointIds,
       });
     })));
+  // Desktop-ready point occupancy facts are derived from already checked
+  // matrix rows. No second house lookup, astronomical math, or source claim.
+  // House labels are explicit 1..12, including zero-count houses.
+  const occupancyByMethod = Object.freeze(methodNames.map((houseSystem, methodIndex) =>
+    Object.freeze({
+      houseSystem,
+      houses: Object.freeze(Array.from({length: 12}, (_,index) => {
+        const house = index + 1;
+        const pointIds = Object.freeze(rows
+          .filter(row => row.placements[methodIndex].house === house)
+          .map(row => row.id));
+        return Object.freeze({house, count: pointIds.length, pointIds});
+      })),
+    })));
   return Object.freeze({
     contract: 'SourcedHousePlacementMatrix',
     contractVersion: '0.1.0-experimental',
@@ -90,7 +104,7 @@ export function buildSourcedHousePlacementMatrix(input) {
     source: comparisons[0].source,
     methodNames,
     rows,
-    changedPointIds, pairwiseChanges,
+    changedPointIds, pairwiseChanges, occupancyByMethod,
     pointCount: rows.length,
     changedCount: changedPointIds.length,
   });
