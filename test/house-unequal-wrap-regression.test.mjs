@@ -199,3 +199,24 @@ test('legacy egizia label requires an explicit profile and canonical Vehlow prov
   assert.throws(() => validateHouseCuspSet({ ...base, metadata: { ...base.metadata, houseSystem: 'egizia' } }),
     error => error.code === 'INCOMPATIBLE_HOUSE_SYSTEM');
 });
+
+
+test('validated cusp snapshots detach both cusp values and provider metadata', () => {
+  const mutableCusps = [...cusps];
+  const mutableMetadata = { houseSystem: 'VEHLOW', placementMethod: 'CUSP_INTERVAL' };
+  const validated = validateHouseCuspSet({
+    houseSystem: 'VEHLOW', calculationProfile: 'CANONICAL_V1',
+    cusps: mutableCusps, metadata: mutableMetadata,
+  });
+  assert.ok(Object.isFrozen(validated));
+  assert.ok(Object.isFrozen(validated.cusps));
+  assert.ok(Object.isFrozen(validated.metadata));
+  mutableCusps[0] = 180;
+  mutableMetadata.houseSystem = 'PLACIDUS';
+  mutableMetadata.placementMethod = 'LEGACY_HOUSES_POS';
+  assert.deepEqual(validated.cusps, cusps);
+  assert.deepEqual(validated.metadata, {
+    houseSystem: 'VEHLOW', placementMethod: 'CUSP_INTERVAL',
+  });
+  assert.equal(locateLongitudeInHouses(0, validated.cusps).house, 1);
+});
