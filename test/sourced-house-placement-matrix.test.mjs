@@ -165,3 +165,42 @@ test('result always discloses caller-asserted, not independently verified, origi
   assert.equal(r.status,'MATCHING_CALLER_ASSERTED_SOURCES_NOT_INDEPENDENTLY_VERIFIED');
   assert.equal(r.pointProvenanceStatus,'CALLER_ASSERTED_NOT_INDEPENDENTLY_VERIFIED');
 });
+
+test('pairwise deltas cover all three unordered house-method pairs in caller order',()=>{
+  const r=build();
+  assert.deepEqual(r.pairwiseChanges.map(x=>[x.leftHouseSystem,x.rightHouseSystem,x.changedCount,x.changedPointIds]),[
+    ['WHOLE_SIGN','EQUAL_ASCENDANT',2,['SUN','VENUS']],
+    ['WHOLE_SIGN','PORPHYRY',4,['SUN','MOON','VENUS','MARS']],
+    ['EQUAL_ASCENDANT','PORPHYRY',4,['SUN','MOON','VENUS','MARS']],
+  ]);
+  assert.equal(r.changedCount,4);
+});
+
+test('pairwise deltas respect non-default method order and two-column matrices',()=>{
+  const r=build({methods:[porphyry,equal],positions:{...positions,
+    points:[{id:'same',longitudeDeg:10},{id:'diff',longitudeDeg:0}]}});
+  assert.deepEqual(r.pairwiseChanges,[{
+    leftHouseSystem:'PORPHYRY',rightHouseSystem:'EQUAL_ASCENDANT',
+    changedCount:1,changedPointIds:['diff'],
+  }]);
+});
+
+test('empty matrices still expose each method pair with zero deltas',()=>{
+  const r=build({positions:{...positions,points:[]}});
+  assert.equal(r.pairwiseChanges.length,3);
+  assert.deepEqual(r.pairwiseChanges.map(x=>x.changedCount),[0,0,0]);
+  assert.deepEqual(r.pairwiseChanges.map(x=>x.changedPointIds),[[],[],[]]);
+});
+
+test('pairwise summaries are detached and deeply frozen',()=>{
+  const mutable=structuredClone(base);
+  const r=buildSourcedHousePlacementMatrix(mutable);
+  mutable.positions.points[0].id='ALTERED';
+  mutable.methods[0].snapshot.cuspsDeg[0]=0;
+  assert.equal(r.pairwiseChanges[0].changedPointIds[0],'SUN');
+  assert.ok(Object.isFrozen(r.pairwiseChanges));
+  assert.ok(Object.isFrozen(r.pairwiseChanges[0]));
+  assert.ok(Object.isFrozen(r.pairwiseChanges[0].changedPointIds));
+  assert.throws(()=>{r.pairwiseChanges[0].changedCount=999;},TypeError);
+  assert.throws(()=>{r.pairwiseChanges[0].changedPointIds[0]='MUTATED';},TypeError);
+});
