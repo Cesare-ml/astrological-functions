@@ -149,3 +149,37 @@ test('rejects mismatched point and enclosure response contract versions',async()
   };
   await throws({provider:pointMissing,targetIntervalMs:3600000},'INCOMPATIBLE_EPHEMERIS');
 });
+
+test('accepts valid loose child enclosures and intersects them with parent bounds',async()=>{
+  const p=makeProvider(linear,(a,b)=>
+    a===startMs && b===startMs+3600000 ? [-1,1] : [-2,2]);
+  const r=await scanTransitAspectCandidateIntervals({
+    ...base(p),maxDepth:1,targetIntervalMs:60000
+  });
+  assert.equal(r.signChangeCandidates.length,1);
+  assert.equal(r.signChangeCandidates[0].lowerDeg,-1);
+  assert.equal(r.signChangeCandidates[0].upperDeg,1);
+  assert.ok(r.unresolvedIntervals.length>0);
+});
+
+test('rejects disjoint sibling enclosures before silent exclusion of both branches',async()=>{
+  // Both children are contained in their broad parent, but their claimed
+  // residual ranges are disjoint at the exact same shared midpoint.
+  const p=makeProvider(linear,(a,b)=>{
+    if (a===startMs && b===startMs+3600000) return [-2,2];
+    return a===startMs ? [-2,-.1] : [.1,2];
+  });
+  await throws({provider:p,maxDepth:1,targetIntervalMs:60000},'INVALID_ENCLOSURE');
+});
+
+test('accepts sibling enclosures touching at their shared sampled boundary',async()=>{
+  const p=makeProvider(linear,(a,b)=>{
+    if (a===startMs && b===startMs+3600000) return [-1,1];
+    return a===startMs ? [linear(a),linear(b)] : [linear(a),linear(b)];
+  });
+  const r=await scanTransitAspectCandidateIntervals({
+    ...base(p),maxDepth:1,targetIntervalMs:60000
+  });
+  assert.equal(r.signChangeCandidates.length,1);
+  assert.equal(r.unresolvedIntervals.length,0);
+});
