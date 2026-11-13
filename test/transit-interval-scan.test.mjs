@@ -183,3 +183,22 @@ test('accepts sibling enclosures touching at their shared sampled boundary',asyn
   assert.equal(r.signChangeCandidates.length,1);
   assert.equal(r.unresolvedIntervals.length,0);
 });
+
+test('rejects untrimmed scan identifiers before requesting any enclosure',async()=>{
+  const p=makeProvider(linear,lineBounds);
+  let calls=0;
+  const original=p.getUnwrappedResidualEnclosure.bind(p);
+  p.getUnwrappedResidualEnclosure=async req=>{calls++;return original(req);};
+  for (const patch of [
+    {skyBodyName:' Mars'},
+    {natalBodyName:'Sun '},
+    {aspectId:' square'},
+    {aspectId:'square\t'},
+    {ephemerisProvenance:{engineVersion:' synthetic',kernelSetId:'kernel-mock',timeModel:'mock-TDB'}},
+    {ephemerisProvenance:{engineVersion:'synthetic',kernelSetId:'kernel-mock ',timeModel:'mock-TDB'}},
+    {ephemerisProvenance:{engineVersion:'synthetic',kernelSetId:'kernel-mock',timeModel:'mock-TDB '}}
+  ]) {
+    await throws({...patch,provider:p},'INVALID_ARGUMENT');
+  }
+  assert.equal(calls,0);
+});
