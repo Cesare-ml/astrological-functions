@@ -12,6 +12,11 @@ function isWithin(directory, file) {
   return rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
 }
 
+// Node export names and targets cannot traverse or contain reserved path segments.
+function invalidPathSegment(segment) {
+  return !segment || segment === '.' || segment === '..' || segment.toLowerCase() === 'node_modules';
+}
+
 function exportEntries(exportsField) {
   if (typeof exportsField === 'string' || Array.isArray(exportsField) || exportsField === null) {
     return [['.', exportsField]];
@@ -52,8 +57,12 @@ export async function auditEsmExports(packageJsonPath) {
       report('INVALID_EXPORT_TARGET', exportPath, null, `Invalid target under ${condition}`);
       return;
     }
+    if (target.includes('*')) {
+      report('UNSUPPORTED_EXPORT_PATTERN', exportPath, target, `Wildcard target under ${condition} needs Node pattern-aware resolution`);
+      return;
+    }
     if (!target.startsWith('./') || target.includes('\\') || target.includes('%') ||
-        target.includes('?') || target.includes('#') || target.split('/').slice(1).some(s => !s || s === '.' || s === '..')) {
+        target.includes('?') || target.includes('#') || target.split('/').slice(1).some(invalidPathSegment)) {
       report('UNSAFE_EXPORT_TARGET', exportPath, target, `Target under ${condition} must be a normal local ./ file path`);
       return;
     }
@@ -97,8 +106,13 @@ export async function auditEsmExports(packageJsonPath) {
   }
 
   for (const [name, value] of entries) {
-    if (name !== '.' && !name.startsWith('./')) {
-      report('INVALID_EXPORT_SUBPATH', name, null, 'Subpath must be . or begin with ./');
+    if (name.includes('*')) {
+      report('UNSUPPORTED_EXPORT_PATTERN', name, null, 'Wildcard subpaths require Node pattern-aware resolution');
+      continue;
+    }
+    if (name !== '.' && (!name.startsWith('./') || name.includes('\\') || name.includes('%') ||
+        name.includes('?') || name.includes('#') || name.split('/').slice(1).some(invalidPathSegment))) {
+      report('INVALID_EXPORT_SUBPATH', name, null, 'Subpath must be . or a normal ./ path without reserved segments');
       continue;
     }
     await walk(name, value, name);
