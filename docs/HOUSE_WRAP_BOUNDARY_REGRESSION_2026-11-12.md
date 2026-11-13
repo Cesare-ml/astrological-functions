@@ -138,3 +138,17 @@ boundary without calculating any astronomical values.
 Run `node --test test/house-unequal-wrap-regression.test.mjs`
 and `npm test` in an authenticated full checkout. **Not executed
 natively here**; the status remains IMPLEMENTED_ISOLATED.
+
+## Missing or unsupported provider placement metadata (2026-11-13)
+
+The synthetic cusp contract now checks that absent/null metadata is rejected
+with `INVALID_HOUSE_METADATA`, while metadata lacking the requested house
+system fails with `INCOMPATIBLE_HOUSE_SYSTEM`. When the system is declared
+but the placement method is missing, null, or unknown, the API must raise
+`UNSUPPORTED_HOUSE_PLACEMENT`. No fallback to geometric cusp intervals is
+permitted. This is an interface guard, not an astronomical calculation.
+
+Validation commands: `node --test test/house-unequal-wrap-regression.test.mjs`
+and `npm test`. **Not executed natively**: the available GitHub connector
+can commit files but does not provide a Node runner. Remains
+`IMPLEMENTED_ISOLATED` pending native execution and independent review.
