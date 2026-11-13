@@ -55,7 +55,7 @@ test('two systems are sufficient and preserve caller-selected column order',()=>
 test('three methods in any order have equivalent per-method assignments',()=>{
   const a=build({methods:[whole,equal,porphyry]});
   const b=build({methods:[porphyry,whole,equal]});
-  const byId=rows=>rows.map(row=>Object.fromEntries(row.placements.map(p=>[p.houseSystem,p.house])));
+  const byId=rows=>rows.map(row=>Object.fromEntries(row.placements.map(p=>[p.houseSystem,p.house]).sort(([a],[b])=>a.localeCompare(b))));
   assert.deepEqual(byId(a.rows),byId(b.rows));
   assert.deepEqual(a.changedPointIds,b.changedPointIds);
 });
@@ -155,8 +155,9 @@ test('deeply frozen result is detached from caller mutation',()=>{
 });
 
 test('top-level malformed structures and unknown keys are explicitly rejected',()=>{
-  for(const input of [null,undefined,[],{}, {...base,extra:true}])
+  for(const input of [null,undefined,[],{...base,extra:true}])
     assert.throws(()=>buildSourcedHousePlacementMatrix(input),err('INVALID_HOUSE_MATRIX'));
+  assert.throws(()=>buildSourcedHousePlacementMatrix({}),err('BIRTH_TIME_UNKNOWN'));
 });
 
 test('result always discloses caller-asserted, not independently verified, origin',()=>{
