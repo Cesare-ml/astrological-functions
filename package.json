@@ -7,7 +7,7 @@
     ".": "./src/index.mjs",
     "./ephemeris-provider": {
       "types": "./src/ephemeris-provider.d.ts",
-      "default": "./src/ephemeris-provider.js"
+      "import": "./src/ephemeris-provider.js"
     }
   },
   "engines": {
