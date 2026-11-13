@@ -28,7 +28,9 @@ export interface OrientedAspectTrendFact {
   readonly branch: AspectBranch;
   readonly aspectAngleDeg: number;
   readonly exactForwardDeg: number;
+  /** Normalized for display; may alias 0 when a negative offset is below a binary64 ULP near 360. */
   readonly observedForwardDeg: number;
+  /** Locally wrapped signed offset, computed before display normalization for precision. */
   readonly signedResidualDeg: number;
   readonly absoluteResidualDeg: number;
   readonly relativeSpeedDegPerDay: number | null;
