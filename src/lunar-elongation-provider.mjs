@@ -52,6 +52,10 @@ function validatePosition(state, bodyName, datetimeUtc, pin) {
       metadata.center !== CONTEXT.center ||
       metadata.frame !== CONTEXT.frame ||
       metadata.corrections !== CONTEXT.corrections ||
+      // A provider may annotate a derived sidereal or topocentric position.
+      // Those incompatible coordinates must not masquerade as tropical/geocentric.
+      (metadata.zodiac !== undefined && metadata.zodiac !== 'TROPICAL') ||
+      (metadata.observer !== undefined && metadata.observer !== null) ||
       metadata.engineVersion !== pin.engineVersion ||
       metadata.kernelSetId !== pin.kernelSetId ||
       metadata.timeModelId !== pin.timeModelId) {
