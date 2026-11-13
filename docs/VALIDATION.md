@@ -51,3 +51,14 @@ No production migration while: ephemeris accuracy unspecified; legacy critical m
 The exact GitHub `src/index.mjs` and `test/math.test.mjs` blobs from the active feature branch were executed in an isolated JavaScript V8 runtime, with `node:test` and `node:assert/strict` semantics adapted for that runtime. **4/4 existing test cases passed**, including the async mock `calculateNatalWithProvider` test that rejects geometric J2000 data for apparent-of-date natal requirements.
 
 Independently, the upstream public Ephemeris branch ran **33/33 test cases** in a similar V8 execution of the actual GitHub JavaScript source (including IAU 2000B full nutation), with binary/URL adapters where necessary. These are NOT full native Node.js `npm test` results, and neither group represents real NASA/JPL SPK/Horizons scientific validation. The strict `APPARENT/ECLIPTIC_OF_DATE` contract remains unchanged.
+
+## Experimental provider consumer import (pending native validation)
+
+The draft provider adapter exposes `astrological-functions/ephemeris-provider` as an ESM package subpath in addition to the package root. It re-exports the existing guarded runtime; it is **not** a Rust/WASM implementation and does not calculate astronomy. From a Node.js >=20 checkout of the stacked PR branch, run:
+
+```sh
+node --test test/pilot-provider-consumer-smoke.test.mjs
+npm test
+```
+
+The focused smoke checks package-root and provider-subpath self-imports, the exact seven-function adapter surface and fail-closed unsupported house placement. Record exit codes and environment before advancing beyond `IMPLEMENTED_ISOLATED`. External TypeScript resolution and real Rust provider parity remain unvalidated; do not publish or merge on this evidence alone.
