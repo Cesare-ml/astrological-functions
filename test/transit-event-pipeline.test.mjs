@@ -202,3 +202,16 @@ test('rejects version change after scan when exact-hit refinement repeats an end
     error=>error.code==='INCOMPATIBLE_EPHEMERIS');
   assert.ok(repeated>0);
 });
+
+test('rejects false-negative sibling enclosures before producing transit facts',async()=>{
+  // Both children report overlapping positive ranges, but the sampled shared
+  // midpoint is +0.13; their asserted [0.5,1] enclosure is inconsistent.
+  // Without midpoint validation the real 00:22:12 crossing disappears.
+  const p=makeProvider(line,(a,b)=>
+    a===t0 && b===t0+3600000 ? [-1,1] : [.5,1]);
+  await assert.rejects(
+    ()=>prepareTransitAspectEventCandidates({...options(p),
+      targetIntervalMs:60000,maxDepth:1,maxProviderCalls:20}),
+    e=>e.code==='INVALID_ENCLOSURE'
+  );
+});
