@@ -42,10 +42,24 @@ instant. This contradiction is detected even when both intervals are
 pruned before any point evaluation, avoiding a false "no transit"
 conclusion. A one-point intersection is allowed.
 
-Before pruning, cached point residuals at interval endpoints are also
-checked against the effective enclosure. Unlike broad interval
-intersection checks, these shared endpoint observations can disprove
-a wrong sibling enclosure even if the sibling ranges overlap.
+**At every actual subdivision**, the scanner now obtains and caches a
+point residual at the exact split UTC *before* either child can be
+pruned. The midpoint must lie within the parent's effective enclosure.
+Both children must then contain this already-sampled shared endpoint
+even when their stated intervals overlap numerically and would
+otherwise both be excluded without leaf sampling. This closes a
+synthetic false-negative case: the parent reported [-1, 1], both
+children reported [0.5, 1], and the true midpoint residual was 0.13.
+Before the fix the search returned zero candidates without any point
+evaluation; it now raises `INVALID_ENCLOSURE` atomically.
+
+Previously sampled point residuals at other interval endpoints are
+likewise checked against the effective enclosure. Each split point is
+cached and sampled only once within a scan. These extra samples are
+charged against the existing explicit `maxProviderCalls` budget:
+insufficient budget raises `SEARCH_BUDGET_EXHAUSTED`, not a partial
+or misleading negative result. A range already excluded at the root
+still does not require any point sample.
 
 These are **consistency checks on provider assertions**, not a proof
 that the numerical bounds are scientifically accurate or that every
