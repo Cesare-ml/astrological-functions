@@ -62,3 +62,7 @@ npm test
 ```
 
 The focused smoke checks package-root and provider-subpath self-imports, the exact seven-function adapter surface and fail-closed unsupported house placement. Record exit codes and environment before advancing beyond `IMPLEMENTED_ISOLATED`. External TypeScript resolution and real Rust provider parity remain unvalidated; do not publish or merge on this evidence alone.
+
+### Conditional TypeScript export (13 November 2026)
+
+The experimental `./ephemeris-provider` package subpath now resolves `src/ephemeris-provider.d.ts` for TypeScript's conditional `types` resolution and `src/ephemeris-provider.js` for ESM runtime via `default`. The smoke test asserts the export map shape. This does **not** prove external TypeScript consumer compilation: from a Node >=20 checkout run the focused smoke and `npm test`, then compile a separate TypeScript consumer with `moduleResolution: NodeNext` (and separately `Bundler`) after installing TypeScript. Record versions, commands, exit codes and diagnostics. The package root remains JS-only; no blanket declaration claim is made for `.`. No astronomical computations or upstream Rust/WASM capabilities are added.
