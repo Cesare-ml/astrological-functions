@@ -131,3 +131,21 @@ test('refuses to exclude an adjacent interval that contradicts a cached shared e
   });
   await throws({provider:p,maxDepth:1,targetIntervalMs:60000},'INVALID_ENCLOSURE');
 });
+
+test('rejects mismatched point and enclosure response contract versions',async()=>{
+  const rangeWrong=makeProvider(linear,lineBounds);
+  const originalRange=rangeWrong.getUnwrappedResidualEnclosure.bind(rangeWrong);
+  rangeWrong.getUnwrappedResidualEnclosure=async req=>{
+    const result=await originalRange(req);
+    return {...result,metadata:{...result.metadata,contractVersion:'0.2.0-incompatible'}};
+  };
+  await throws({provider:rangeWrong},'INCOMPATIBLE_EPHEMERIS');
+
+  const pointMissing=makeProvider(linear,lineBounds);
+  const originalPoint=pointMissing.getUnwrappedAspectResidual.bind(pointMissing);
+  pointMissing.getUnwrappedAspectResidual=async req=>{
+    const result=await originalPoint(req);
+    return {...result,metadata:{...result.metadata,contractVersion:undefined}};
+  };
+  await throws({provider:pointMissing,targetIntervalMs:3600000},'INCOMPATIBLE_EPHEMERIS');
+});
