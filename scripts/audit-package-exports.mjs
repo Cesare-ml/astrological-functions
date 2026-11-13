@@ -45,7 +45,7 @@ export function auditPackageExports(packageRoot) {
   const visited = [];
   const inspectTarget = (key, condition, target) => {
     if (!target.startsWith('./') || target.includes('\\') ||
-        target.includes('?') || target.includes('#') ||
+        target.includes('?') || target.includes('#') || target.includes('%') ||
         target.split('/').slice(1).some(segment => segment === '' || segment === '.' || segment === '..'))
       failure('UNSAFE_EXPORT_TARGET', `${key} (${condition}) has an unsafe export target: ${target}`);
     if (!/\.(?:mjs|js|d\.mts|d\.ts)$/.test(target))
@@ -85,7 +85,7 @@ export function auditPackageExports(packageRoot) {
     }
   };
   for (const [key, value] of entries) {
-    if (key !== '.' && (!key.startsWith('./') || key.includes('*') ||
+    if (key !== '.' && (!key.startsWith('./') || /[\\?#%*]/.test(key) ||
         key.slice(2).split('/').some(segment => !segment || segment === '.' || segment === '..')))
       failure('INVALID_EXPORT_MAP', `Unsupported package subpath: ${key}`);
     inspectEntry(key, value);
