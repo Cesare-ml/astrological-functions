@@ -129,3 +129,46 @@ to the V8 environment, so the result **must not** be represented as
 native Node.js or `npm test`. Complete authenticated-checkout Node/TS
 validation, the upstream precision PR #50 reconciliation, source/licensing
 review and real Ephemeris accuracy remain pending.
+
+
+### Follow-up: single-read point validation and deterministic stress (14 November 2026)
+
+The aspect-trend input contract must validate **the same longitude and speed
+values that it uses**. JavaScript properties may be accessors; the previous
+`validatePoint` implementation read `longitudeDeg` three times and
+`longitudeSpeedDegPerDay` repeatedly. A getter returning a finite longitude
+on its first read and `NaN` afterward passed the initial check but
+produced a frozen `OUTSIDE_ORB` fact with nonfinite angle values. Changing
+speed getters could spuriously throw a typed rate error rather than validate
+the supplied first value.
+
+The fix captures each point's longitude and rate **once**, validates the
+captured values, and computes normalized/display longitudes and the relative
+rate only from these snapshots. A nonfinite initial reading still raises
+`INVALID_POINT`. This protects consistency against changing accessor values;
+it does not independently authenticate inputs or promise behavior for getters
+that throw exceptions or execute arbitrary code.
+
+New native-compatible `node:test` cases:
+- Snapshot a longitude accessor that returns 95° and then `NaN`.
+- Snapshot a rate accessor that returns 1°/day and then `NaN`.
+- Reject an initially nonfinite accessor value with `INVALID_POINT`.
+- Run a fixed-seed, reproducible **35,000-case** local geometric/kinematic sweep
+  using seven explicit aspect angles, both oriented branches, a ±4° local
+  displacement, and finite positive/negative relative rates. This checks
+  local `APPLYING`/`SEPARATING` and residual consistency, not astronomical
+  ephemeris correctness.
+
+**Executed isolated strict V8 validation (2026-11-14):** the exact GitHub
+test blob `bb2375c486a433dbba3162a460890a813bf8263d` against previous
+source blob `73cfd908d37103409cb2932d7fd6424e7e643c0b` yielded
+**29/31** passing test bodies; both accessor-snapshot regressions failed.
+Against fixed source blob
+`ebd27e90c9dc792df3ecf5cd79df552550e93a51`, **31/31** passed,
+including the full deterministic sweep.
+
+The V8 harness adapts `node:test` and `node:assert/strict`; it is **not
+native Node.js `npm test`**. Re-run focused and full native Node tests and
+strict TypeScript consumer compilation from a complete authenticated checkout
+before integration. This remains a draft stacked on #32, without any
+astronomy, production, public API/export, licensing or release change.
