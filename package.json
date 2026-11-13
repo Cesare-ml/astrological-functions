@@ -4,7 +4,11 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.mjs"
+    ".": "./src/index.mjs",
+    "./sourced-house-placement-matrix": {
+      "types": "./src/sourced-house-placement-matrix.d.mts",
+      "import": "./src/sourced-house-placement-matrix.mjs"
+    }
   },
   "engines": {
     "node": ">=20"
