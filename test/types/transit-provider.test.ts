@@ -4,6 +4,8 @@ const metadata = { center:'EARTH',frame:'ECLIPTIC_OF_DATE',corrections:'APPARENT
 const provider: TransitPositionProvider = {
   capabilities:{...metadata,contract:'TransitPositionProviderCapabilities',contractVersion:'0.1.0-experimental'},
   async getGeocentricEcliptic(request) {
+    const explicitlyPinnedEngine: string = request.engineVersion;
+    void explicitlyPinnedEngine;
     return {bodyName:request.bodyName, datetimeUtc:request.datetimeUtc,longitudeDeg:1,
       latitudeDeg:0,metadata};
   }

@@ -7,6 +7,7 @@ export interface TransitPositionRequest {
   readonly center: 'EARTH';
   readonly frame: 'ECLIPTIC_OF_DATE';
   readonly corrections: 'APPARENT';
+  readonly engineVersion: string;
   readonly kernelSetId: string;
   readonly timeModel: string;
 }

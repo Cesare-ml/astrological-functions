@@ -39,6 +39,8 @@ test('reconstructs frozen sky snapshot with apparent provenance, wrap and precis
   assert.ok(Object.isFrozen(out.sky.points[0]));
   assert.ok(Object.isFrozen(calls[0]));
   assert.equal(calls[0].center,'EARTH');
+  assert.equal(calls[0].engineVersion,'fixture-rust-0');
+  assert.equal(calls[1].engineVersion,'fixture-rust-0');
   assert.equal(calls[0].frame,'ECLIPTIC_OF_DATE');
   assert.equal(calls[0].corrections,'APPARENT');
 });
@@ -98,7 +100,8 @@ test('inputs and requests are snapshotted before first await; no reentrant mutat
   input.provider.getGeocentricEcliptic=async request=>{
     if(request.bodyName==='Mars') {
       input.bodyNames[1]='Changed';input.datetimeUtc='2020-01-01T00:00:00Z';
-      input.expectedEphemeris.kernelSetId='untrusted';input.zodiac.type='SIDEREAL';
+      input.expectedEphemeris.kernelSetId='untrusted';
+      input.expectedEphemeris.engineVersion='mutated-engine';input.zodiac.type='SIDEREAL';
     }
     return old(request);
   };
@@ -108,6 +111,8 @@ test('inputs and requests are snapshotted before first await; no reentrant mutat
   assert.deepEqual(result.sky.points.map(x=>x.name),['Mars','Moon']);
   assert.equal(result.sky.zodiac.type,'TROPICAL');
   assert.equal(result.sky.ephemeris.kernelSetId,'fixture-de441');
+  assert.deepEqual(calls.map(x=>x.engineVersion),['fixture-rust-0','fixture-rust-0']);
+  assert.equal(result.sky.ephemeris.engineVersion,'fixture-rust-0');
 });
 test('provider may omit longitude speed, which remains explicitly null',async()=>{
   const {input}=fixture();const old=input.provider.getGeocentricEcliptic;
