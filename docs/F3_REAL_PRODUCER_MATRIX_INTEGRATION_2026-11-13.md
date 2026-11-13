@@ -34,6 +34,12 @@ profile identifiers were used. The Ascendant (350°) and Midheaven (250°)
 were **supplied**: no astronomical angles or planetary positions were
 derived from JPL or Rust.
 
+The newly added occupancy test additionally checks that all twelve house
+groups are present for each of the three real producers, that grouped point
+IDs preserve caller order, all counts reconcile against source matrix rows,
+nested snapshots are frozen and empty point sets produce zero-count houses.
+These are derived chart facts, **not** a new astronomical computation.
+
 The tests call the actual three cusp producers, normalize only the
 required **producer-result shape** for Whole Sign and Equal Ascendant,
 pass the actual Porphyry result through the corrected #61 adapter,
@@ -52,11 +58,12 @@ Expected changed-point counts:
 - Equal Ascendant vs Porphyry: 0
 - Distinct globally changed points: 2
 
-The **nine** tests cover three-column composition, two-column reorder and
+The **ten** tests cover three-column composition, two-column reorder and
 empty points, incompatible planetary source, incompatible Porphyry-side
 source, forged interior cusp rejection through the corrected actual
 adapter, exact textual UTC representation, unknown birth time,
-degenerate angle failure, and a 36 × 36 deterministic ASC/MC grid. For the
+degenerate angle failure, a 36 × 36 deterministic ASC/MC grid,
+and immutable per-method twelve-house occupancy derived from three real producer snapshots. For the
 **1,296** synthetic configurations on that grid, the Porphyry producer
 accepts **612** and rejects **684** as degenerate. Across the 612 accepted
 configurations, the complete real-producer → matrix pipeline generates
@@ -64,7 +71,7 @@ configurations, the complete real-producer → matrix pipeline generates
 existing canonical `locateLongitudeInHouses`, and the union of the pairwise
 changed-point IDs matches the global changed-point count.
 
-**Validation result:** **9/9 tests passed** in a strict isolated V8
+**Validation result:** **10/10 tests passed** in a strict isolated V8
 harness that evaluated the **exact retrieved GitHub source modules and
 the committed test bodies** with adapted `node:test` and
 `node:assert/strict`. This is explicitly **not** native `node --test`
@@ -82,7 +89,7 @@ d93b158ad9b50029a322c94602d1b03635c34093  src/house-method-comparison.mjs (#43)
 fe4a5b1542333614c3c5045c3da9c99b55cc3546  src/house-source-consistency.mjs (#48)
 1e74eac457157b1140e97019fb42c6ae6b6de035  src/sourced-house-points.mjs (#55)
 1f17dc796be3a8fe7801f29776110484be1de393  src/sourced-house-placement-matrix.mjs (#57)
-468404f4351615312cffc714e09455cd4dc01aa0  scripts/verify-f3-house-producer-matrix.mjs (#57)
+b672d79f4866d74d1931997dd9ca03ddc4d9bf2a  scripts/verify-f3-house-producer-matrix.mjs (#57)
 ```
 
 These are GitHub **blob SHA-1** identifiers (not scientific kernel checksums).
