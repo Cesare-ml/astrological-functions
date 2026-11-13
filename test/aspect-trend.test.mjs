@@ -137,7 +137,7 @@ test('one-ULP pre-360 conjunction stays applying, not falsely exact',()=>{
     source:{longitudeDeg:0,longitudeSpeedDegPerDay:0},
     target:{longitudeDeg:below360,longitudeSpeedDegPerDay:1}});
   assert.equal(fact.observedForwardDeg,below360);
-  assert.equal(fact.signedResidualDeg,-2**-44);
+  assert.equal(fact.signedResidualDeg,-(2**-44));
   assert.equal(fact.trend,'APPLYING');
 });
 
@@ -148,7 +148,7 @@ test('binary64 values on either side of opposition retain direction',()=>{
   const after=classify({aspectAngleDeg:180,maxOrbDeg:1,exactToleranceDeg:0,
     source:{longitudeDeg:0,longitudeSpeedDegPerDay:0},
     target:{longitudeDeg:180+2**-45,longitudeSpeedDegPerDay:1}});
-  assert.equal(before.signedResidualDeg,-2**-45);
+  assert.equal(before.signedResidualDeg,-(2**-45));
   assert.equal(after.signedResidualDeg,2**-45);
   assert.equal(before.trend,'APPLYING');
   assert.equal(after.trend,'SEPARATING');
