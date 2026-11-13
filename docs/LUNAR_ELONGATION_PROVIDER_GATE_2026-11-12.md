@@ -63,3 +63,34 @@ The provider request now carries both `kernelSetId` and `timeModelId`, in additi
 Two synthetic regression cases were added: explicit alternate pin forwarding (rejecting a mock that ignores the alternate pin), and Moon-provider failure after a valid Sun response without partial output or leaking provider error text. The updated GitHub source and all committed provider test bodies were checked in an isolated V8 harness with adapted assertions: **12/12 PASS**.
 
 This is **not** a native Node.js or TypeScript compilation check and provides no real-kernel accuracy claim. In particular, no real Rust adapter has yet been certified to accept these request fields. Validate that adapter contract independently before integration, and do not silently drop or infer the pins.
+
+## Native Node.js / TypeScript consumer smoke — 2026-11-13
+
+A temporary local mirror was created from the **exact GitHub contents**, and Git blob hashes for all relevant files were verified against GitHub:
+
+| File | Verified Git blob |
+| --- | --- |
+| `package.json` | `f2979b6cbb723b5ed8df390f7c6c9a8956deab28` |
+| `src/index.mjs` | `89390790fa83a0ab76c570186020f6a658ee73b5` |
+| `src/lunar-elongation.mjs` | `19152e8e291d8b15402c99a33f48f1f163d1be60` |
+| `src/lunar-elongation-provider.mjs` | `2795cfff60f42ad020b1c00114ab9d77d02ec4a0` |
+| `src/lunar-elongation.d.mts` | `92dacdce80015ae23285ea8b8dc097b5828273be` |
+| `src/lunar-elongation-provider.d.mts` | `d1bccec2f403523bccdb3d6bc0118044294b32d0` |
+| `test/lunar-consumer-esm.test.mjs` | `659d9d9ac5958bf15c0ab94a785dd99b08203d7f` |
+| `test/types/lunar-provider-consumer.mts` | `a6ec73e1d4a9db1de70a0ed2b1607d2a8d00d115` |
+
+Executed from the mirrored package root:
+
+```sh
+node --test test/lunar-consumer-esm.test.mjs
+tsc --noEmit --strict --target es2022 --module nodenext --moduleResolution nodenext test/types/lunar-provider-consumer.mts
+```
+
+- Environment: Node.js **22.16.0**, TypeScript **5.8.3**.
+- Native ESM smoke: **2/2 PASS** (package self-resolution and provider-versus-geometry equality).
+- TypeScript NodeNext compile: **PASS**, no diagnostics; negative compile checks for unsupported sidereal mode, missing time-model pin, forbidden tropical ayanamsa and readonly output.
+- These checks are **not** a full repository `npm test` run, external installed-package smoke or Rust/WASM real-kernel integration.
+
+### Rust provider compatibility boundary
+
+`VirgoStars-Ephemeris` currently documents `getGeocentricEcliptic` and astronomical state request types as **proposed**, not implemented stable Rust/WASM exports. The Rust core currently exposes experimental mathematical/DE441 primitives, not an apparent geocentric ecliptic-of-date typed JS provider. The `bodyName`/`datetimeUtc` contract here is an **injected adapter interface**, not an existing Rust API. Future integrations must explicitly map target identifiers, UTC/time scales, center, frame, correction model, kernel/time pins and provenance, and validate against real kernels. Never reinterpret geometric true-of-date or J2000 results as apparent of date.
