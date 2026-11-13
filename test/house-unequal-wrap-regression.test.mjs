@@ -96,3 +96,20 @@ test('zero and full-turn aliases belong to the same wrapped first house', () => 
   assert.equal(locateLongitudeInHouses(350, cusps).distanceFromCuspDeg, 0);
   assert.equal(locateLongitudeInHouses(20, cusps).distanceFromCuspDeg, 0);
 });
+
+test('near-cusp positions retain their side without implicit rounding', () => {
+  const epsilon = 1e-6;
+  for (const [cusp, previousHouse, nextHouse] of [
+    [350, 12, 1], [20, 1, 2], [50, 2, 3], [90, 3, 4],
+  ]) {
+    const before = locateLongitudeInHouses(cusp - epsilon, cusps);
+    const exact = locateLongitudeInHouses(cusp, cusps);
+    const after = locateLongitudeInHouses(cusp + epsilon, cusps);
+    assert.equal(before.house, previousHouse);
+    assert.equal(exact.house, nextHouse);
+    assert.equal(after.house, nextHouse);
+    assert.equal(exact.distanceFromCuspDeg, 0);
+    assert.ok(after.distanceFromCuspDeg > 0);
+    assert.ok(after.distanceFromCuspDeg < 2 * epsilon);
+  }
+});
