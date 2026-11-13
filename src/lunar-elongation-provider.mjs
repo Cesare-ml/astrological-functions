@@ -82,20 +82,28 @@ export async function calculateLunarElongationWithProvider(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     throw new AstrologyError('INVALID_ARGUMENT', 'Provider calculation input is required');
   }
-  validateUtc(input.datetimeUtc);
+  // Snapshot the caller's instant before the first async provider boundary.
+  // Re-reading input.datetimeUtc after await could mix two different instants.
+  const datetimeUtc = input.datetimeUtc;
+  validateUtc(datetimeUtc);
   if (input.zodiac !== 'TROPICAL') {
     throw new AstrologyError('UNSUPPORTED_LUNAR_ZODIAC',
       'Provider gate is tropical-only until sidereal projection is validated');
   }
   const pin = validatedExpectedPin(input.expectedEphemeris);
-  if (!input.provider || typeof input.provider.getGeocentricEcliptic !== 'function') {
+  // Snapshot provider identity and method: an async callback or caller must not
+  // switch the Sun and Moon to different provider instances during this call.
+  const provider = input.provider;
+  const getPosition = provider?.getGeocentricEcliptic;
+  if (typeof getPosition !== 'function') {
     throw new AstrologyError('MISSING_PROVIDER', 'Explicit EphemerisProvider required');
   }
   const positions = {};
   for (const bodyName of ['Sun', 'Moon']) {
     const request = Object.freeze({
-      datetimeUtc: input.datetimeUtc,
+      datetimeUtc,
       bodyName,
+      center: CONTEXT.center,
       kernelSetId: pin.kernelSetId,
       timeModelId: pin.timeModelId,
       frame: CONTEXT.frame,
@@ -103,12 +111,12 @@ export async function calculateLunarElongationWithProvider(input) {
     });
     let state;
     try {
-      state = await input.provider.getGeocentricEcliptic(request);
+      state = await getPosition.call(provider, request);
     } catch {
       throw new AstrologyError('EPHEMERIS_PROVIDER_FAILED',
         `Provider failed to obtain ${bodyName} position`);
     }
-    positions[bodyName] = validatePosition(state, bodyName, input.datetimeUtc, pin);
+    positions[bodyName] = validatePosition(state, bodyName, datetimeUtc, pin);
   }
   const sectors = calculateLunarElongationSectors({
     sunLongitudeDeg: positions.Sun.longitudeDeg,
@@ -118,7 +126,7 @@ export async function calculateLunarElongationWithProvider(input) {
   return Object.freeze({
     contract: 'LunarElongationWithProvider',
     contractVersion: '0.1.0-experimental',
-    datetimeUtc: input.datetimeUtc,
+    datetimeUtc,
     ephemeris: pin,
     positions: Object.freeze(positions),
     sectors,
