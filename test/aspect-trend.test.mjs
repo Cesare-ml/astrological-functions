@@ -213,3 +213,66 @@ test('swapped forward/reverse major aspect retains derivative trend at one ULP',
     }
   }
 });
+
+
+test('accessor longitude is snapped once, preventing nonfinite output',()=>{
+  let reads=0;
+  const target={
+    get longitudeDeg(){reads++;return reads===1?95:NaN;},
+    longitudeSpeedDegPerDay:1,
+  };
+  const fact=classify({target});
+  assert.equal(reads,1);
+  assert.equal(fact.signedResidualDeg,-5);
+  assert.equal(fact.observedForwardDeg,85);
+  assert.equal(fact.trend,'APPLYING');
+  assert.ok(Number.isFinite(fact.absoluteResidualDeg));
+});
+
+test('accessor speed is snapped once, preventing false provider-rate errors',()=>{
+  let reads=0;
+  const target={
+    longitudeDeg:95,
+    get longitudeSpeedDegPerDay(){reads++;return reads===1?1:NaN;},
+  };
+  const fact=classify({target});
+  assert.equal(reads,1);
+  assert.equal(fact.relativeSpeedDegPerDay,1);
+  assert.equal(fact.trend,'APPLYING');
+});
+
+test('an invalid first accessor reading fails closed with INVALID_POINT',()=>{
+  let reads=0;
+  const target={
+    get longitudeDeg(){reads++;return reads===1?NaN:95;},
+    longitudeSpeedDegPerDay:1,
+  };
+  rejects({target},'INVALID_POINT');
+  assert.equal(reads,1);
+});
+
+test('fixed-seed 35k forward/reverse aspect local-trend sweep',()=>{
+  let seed=0x4a3d2e1f;
+  const rnd=()=>{
+    seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+    return seed/4294967296;
+  };
+  const angles=[0,30,60,90,120,150,180];
+  for(let i=0;i<35000;i++){
+    const a=(rnd()*720)-180;
+    const aspectAngleDeg=angles[i%angles.length];
+    const branch=i%2?'REVERSE':'FORWARD';
+    const displacement=(rnd()-0.5)*8;
+    const speed=(rnd()-0.5)*6;
+    const orientedAngle=branch==='FORWARD'?aspectAngleDeg:-aspectAngleDeg;
+    const fact=classify({
+      source:{longitudeDeg:a,longitudeSpeedDegPerDay:0},
+      target:{longitudeDeg:a+orientedAngle+displacement,longitudeSpeedDegPerDay:speed},
+      aspectAngleDeg,branch,maxOrbDeg:6,exactToleranceDeg:0,
+      stationaryRelativeSpeedDegPerDay:0,motionFrame:'COEVOLVING',
+    });
+    const expected=displacement*speed<0?'APPLYING':'SEPARATING';
+    assert.equal(fact.trend,expected,'deterministic case '+i);
+    assert.ok(Math.abs(fact.signedResidualDeg-displacement)<=2e-13,'numeric case '+i);
+  }
+});
