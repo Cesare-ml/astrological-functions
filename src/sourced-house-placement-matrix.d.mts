@@ -5,7 +5,9 @@ import type { HouseMethod } from './house-method-comparison.mjs';
 /** Two or three distinct methods, in explicit caller-selected display order. */
 export interface SourcedHousePlacementMatrixInput {
   readonly birthTimeKnown: true;
-  readonly methods: readonly SourcedHouseSnapshot[];
+  readonly methods:
+    | readonly [SourcedHouseSnapshot, SourcedHouseSnapshot]
+    | readonly [SourcedHouseSnapshot, SourcedHouseSnapshot, SourcedHouseSnapshot];
   readonly positions: CallerAssertedPointSnapshot;
 }
 export interface HouseMatrixPlacement {
