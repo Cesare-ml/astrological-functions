@@ -59,3 +59,30 @@ result.changedCount=0;
 result.pairwiseChanges[0].changedCount=0;
 // @ts-expect-error pair IDs are readonly
 result.pairwiseChanges[0].changedPointIds.push('UNVERIFIED');
+
+const twoMethods: SourcedHousePlacementMatrixInput={
+  ...input,methods:[whole,equal],
+};
+const threeReadonly: readonly [
+  SourcedHouseSnapshot,SourcedHouseSnapshot,SourcedHouseSnapshot
+]=[whole,equal,porphyry];
+const threeMethods: SourcedHousePlacementMatrixInput={
+  ...input,methods:threeReadonly,
+};
+void buildSourcedHousePlacementMatrix(twoMethods);
+void buildSourcedHousePlacementMatrix(threeMethods);
+
+// @ts-expect-error zero method snapshots are not a valid matrix
+const noMethods: SourcedHousePlacementMatrixInput={...input,methods:[]};
+void noMethods;
+// @ts-expect-error one method cannot form a comparison
+const oneMethod: SourcedHousePlacementMatrixInput={...input,methods:[whole]};
+void oneMethod;
+// @ts-expect-error more than three method snapshots are intentionally unsupported
+const fourMethods: SourcedHousePlacementMatrixInput={
+  ...input,
+  methods:[whole,equal,porphyry,whole],
+};
+void fourMethods;
+// @ts-expect-error method tuples are readonly, not editable after initialization
+input.methods.push(whole);
