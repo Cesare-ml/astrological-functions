@@ -24,7 +24,8 @@ function utc(value) {
   return Date.parse(value);
 }
 function identifier(value) {
-  if (typeof value !== 'string' || !value.trim()) error('INVALID_ARGUMENT', 'Nonempty identifier required');
+  if (typeof value !== 'string' || !value.trim() || value !== value.trim())
+    error('INVALID_ARGUMENT', 'Nonempty, canonically trimmed identifier required');
   return value;
 }
 function number(value) { return typeof value === 'number' && Number.isFinite(value); }
