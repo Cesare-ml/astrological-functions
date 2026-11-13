@@ -78,9 +78,9 @@ void noMethods;
 // @ts-expect-error one method cannot form a comparison
 const oneMethod: SourcedHousePlacementMatrixInput={...input,methods:[whole]};
 void oneMethod;
-// @ts-expect-error more than three method snapshots are intentionally unsupported
 const fourMethods: SourcedHousePlacementMatrixInput={
   ...input,
+  // @ts-expect-error more than three method snapshots are intentionally unsupported
   methods:[whole,equal,porphyry,whole],
 };
 void fourMethods;
