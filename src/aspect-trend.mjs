@@ -11,8 +11,22 @@ export class AspectTrendError extends Error {
 }
 
 const finite = v => typeof v === 'number' && Number.isFinite(v);
-const normalized = deg => ((deg % 360) + 360) % 360;
-const signedDifference = (from, to) => ((normalized(to) - normalized(from) + 540) % 360) - 180;
+// Avoid a second modulo/addition for positive angles: (360 - one ULP)
+// must not round to 0. For tiny negative angles 360 + delta may round
+// to 360 in binary64; report the canonical 0 rather than an invalid 360.
+const normalized = deg => {
+  const remainder = deg % 360;
+  if (remainder >= 0) return remainder;
+  const wrapped = remainder + 360;
+  return wrapped === 360 ? 0 : wrapped;
+};
+// Compute the local signed displacement without the +540 translation,
+// which erases sub-ULP residuals close to exact 0 and 180 degree aspects.
+const signedDifference = (from, to) => {
+  const residual = (to - from) % 360;
+  return residual >= 180 ? residual - 360
+    : residual < -180 ? residual + 360 : residual;
+};
 const plainRecord = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const error = (code, message) => { throw new AspectTrendError(code, message); };
 
@@ -22,7 +36,9 @@ function validatePoint(point, name) {
       !(point.longitudeSpeedDegPerDay === null || finite(point.longitudeSpeedDegPerDay))) {
     error('INVALID_POINT', `${name} requires finite longitudeDeg and explicit finite speed or null`);
   }
-  return {longitudeDeg: normalized(point.longitudeDeg), longitudeSpeedDegPerDay: point.longitudeSpeedDegPerDay};
+  return {longitudeDeg: normalized(point.longitudeDeg),
+    remainderDeg: point.longitudeDeg % 360,
+    longitudeSpeedDegPerDay: point.longitudeSpeedDegPerDay};
 }
 
 /**
@@ -58,8 +74,13 @@ export function classifyOrientedAspectTrend(input) {
   }
 
   const exactForwardDeg = normalized(branch === 'FORWARD' ? aspectAngleDeg : -aspectAngleDeg);
-  const observedForwardDeg = normalized(b.longitudeDeg - a.longitudeDeg);
-  const signedResidualDeg = signedDifference(exactForwardDeg, observedForwardDeg);
+  // Preserve the signed small-angle difference *before* it is normalized
+  // for display: binary64 cannot represent every value just below 360.
+  const observedRawDeg = b.remainderDeg - a.remainderDeg;
+  const observedForwardDeg = normalized(observedRawDeg);
+  const signedResidualDeg = signedDifference(
+    branch === 'FORWARD' ? aspectAngleDeg : -aspectAngleDeg, observedRawDeg
+  );
   const absoluteResidualDeg = Math.abs(signedResidualDeg);
   const relativeSpeedDegPerDay = a.longitudeSpeedDegPerDay === null || b.longitudeSpeedDegPerDay === null
     ? null : b.longitudeSpeedDegPerDay - a.longitudeSpeedDegPerDay;
