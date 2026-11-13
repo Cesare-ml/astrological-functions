@@ -35,14 +35,20 @@ const plainRecord = v => v !== null && typeof v === 'object' && !Array.isArray(v
 const error = (code, message) => { throw new AspectTrendError(code, message); };
 
 function validatePoint(point, name) {
-  if (!plainRecord(point) || !finite(point.longitudeDeg) ||
-      !Object.hasOwn(point, 'longitudeSpeedDegPerDay') ||
-      !(point.longitudeSpeedDegPerDay === null || finite(point.longitudeSpeedDegPerDay))) {
+  if (!plainRecord(point) || !Object.hasOwn(point, 'longitudeSpeedDegPerDay')) {
     error('INVALID_POINT', `${name} requires finite longitudeDeg and explicit finite speed or null`);
   }
-  return {longitudeDeg: normalized(point.longitudeDeg),
-    remainderDeg: point.longitudeDeg % 360,
-    longitudeSpeedDegPerDay: point.longitudeSpeedDegPerDay};
+  // Read each property once. JS accessors may change between reads; checking
+  // one value and calculating from another can otherwise leak NaN into a fact.
+  const longitudeDeg = point.longitudeDeg;
+  const longitudeSpeedDegPerDay = point.longitudeSpeedDegPerDay;
+  if (!finite(longitudeDeg) ||
+      !(longitudeSpeedDegPerDay === null || finite(longitudeSpeedDegPerDay))) {
+    error('INVALID_POINT', `${name} requires finite longitudeDeg and explicit finite speed or null`);
+  }
+  return {longitudeDeg: normalized(longitudeDeg),
+    remainderDeg: longitudeDeg % 360,
+    longitudeSpeedDegPerDay};
 }
 
 /**
