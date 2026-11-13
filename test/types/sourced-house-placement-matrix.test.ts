@@ -37,7 +37,10 @@ const result: Readonly<SourcedHousePlacementMatrixResult>=buildSourcedHousePlace
 const methods: readonly ('WHOLE_SIGN'|'EQUAL_ASCENDANT'|'PORPHYRY')[]=result.methodNames;
 const ids: readonly string[]=result.changedPointIds;
 const index: number=result.rows[0].placements[0].house;
-void methods; void ids; void index;
+const pairCount: number=result.pairwiseChanges[0].changedCount;
+const pairLeft: 'WHOLE_SIGN'|'EQUAL_ASCENDANT'|'PORPHYRY'=result.pairwiseChanges[0].leftHouseSystem;
+const changedInPair: readonly string[]=result.pairwiseChanges[0].changedPointIds;
+void methods; void ids; void index; void pairCount; void pairLeft; void changedInPair;
 // @ts-expect-error house placement comparisons must explicitly know birth time
 const missingBirthTime: SourcedHousePlacementMatrixInput={...input,birthTimeKnown:false};
 void missingBirthTime;
@@ -51,3 +54,8 @@ void overstated;
 result.rows[0].placements[0].house=5;
 // @ts-expect-error result counts are readonly
 result.changedCount=0;
+
+// @ts-expect-error pair summaries cannot be mutated
+result.pairwiseChanges[0].changedCount=0;
+// @ts-expect-error pair IDs are readonly
+result.pairwiseChanges[0].changedPointIds.push('UNVERIFIED');
