@@ -28,6 +28,18 @@ export interface HouseMethodPairChanges {
   readonly changedPointIds: readonly string[];
   readonly changedCount: number;
 }
+/** Immutable point membership in a numbered house (1..12). */
+export interface HouseMatrixOccupancyHouse {
+  readonly house: number;
+  readonly count: number;
+  /** IDs preserve the original caller-supplied point order. */
+  readonly pointIds: readonly string[];
+}
+/** One complete 12-house summary per selected method, in display order. */
+export interface HouseMatrixMethodOccupancy {
+  readonly houseSystem: HouseMethod;
+  readonly houses: readonly HouseMatrixOccupancyHouse[];
+}
 export interface SourcedHousePlacementMatrixResult {
   readonly contract: 'SourcedHousePlacementMatrix';
   readonly contractVersion: '0.1.0-experimental';
@@ -38,6 +50,7 @@ export interface SourcedHousePlacementMatrixResult {
   readonly rows: readonly HouseMatrixRow[];
   readonly changedPointIds: readonly string[];
   readonly pairwiseChanges: readonly HouseMethodPairChanges[];
+  readonly occupancyByMethod: readonly HouseMatrixMethodOccupancy[];
   readonly pointCount: number;
   readonly changedCount: number;
 }
