@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {buildSourcedHousePlacementMatrix} from '../src/sourced-house-placement-matrix.mjs';
+import {locateLongitudeInHouses} from '../src/index.mjs';
 
 const datetimeUtc='2026-11-13T16:00:00Z';
 const longitudeBasis={type:'TROPICAL'};
@@ -203,4 +204,30 @@ test('pairwise summaries are detached and deeply frozen',()=>{
   assert.ok(Object.isFrozen(r.pairwiseChanges[0].changedPointIds));
   assert.throws(()=>{r.pairwiseChanges[0].changedCount=999;},TypeError);
   assert.throws(()=>{r.pairwiseChanges[0].changedPointIds[0]='MUTATED';},TypeError);
+});
+
+test('128-point upper bound agrees with the canonical single-house locator across all three methods',()=>{
+  const points=Array.from({length:128},(_,i)=>({id:`BODY_${String(i).padStart(3,'0')}`,longitudeDeg:360*i/128}));
+  const r=build({positions:{...positions,points}});
+  assert.equal(r.pointCount,128);
+  assert.equal(r.rows.length,128);
+  assert.equal(r.methodNames.length,3);
+  const methodSides=[whole,equal,porphyry];
+  for (let i=0;i<points.length;i++){
+    const row=r.rows[i];
+    assert.equal(row.id,points[i].id);
+    assert.equal(row.longitudeDeg,points[i].longitudeDeg);
+    const houses=methodSides.map(side=>locateLongitudeInHouses(points[i].longitudeDeg,side.snapshot.cuspsDeg).house);
+    assert.deepEqual(row.placements.map(p=>p.house),houses);
+    assert.equal(row.changed,houses.some(h=>h!==houses[0]));
+  }
+  const union=new Set(r.pairwiseChanges.flatMap(pair=>pair.changedPointIds));
+  assert.deepEqual(r.changedPointIds,r.rows.filter(row=>union.has(row.id)).map(row=>row.id));
+  assert.equal(r.changedCount,union.size);
+  for(const pair of r.pairwiseChanges) assert.equal(pair.changedCount,pair.changedPointIds.length);
+});
+
+test('129 points are rejected rather than silently truncated for desktop display',()=>{
+  const points=Array.from({length:129},(_,i)=>({id:`BODY_${i}`,longitudeDeg:i}));
+  assert.throws(()=>build({positions:{...positions,points}}),err('INVALID_POINTS'));
 });
