@@ -79,3 +79,15 @@ normalization regression, not a validation of astronomical house calculation.
 Command: `node --test test/house-unequal-wrap-regression.test.mjs`.
 Execution status: **not executed natively**; run this and `npm test` in a
 complete Node.js checkout before promotion beyond IMPLEMENTED_ISOLATED.
+
+## Near-cusp ownership without hidden rounding (2026-11-13)
+
+The unequal-wrap regression checks points exactly at and 0.000001° on either
+side of four synthetic cusps, including the 350° wrap boundary. An exact
+hit starts the next house; a point just before remains in the preceding
+house; a point just after stays in the new house with positive cusp distance.
+This is a deliberate geometric contract, not an astronomical accuracy claim.
+
+Run `node --test test/house-unequal-wrap-regression.test.mjs` and `npm test`
+on a full authenticated checkout. Native execution is **pending**; the
+GitHub connector confirms committed source, not test success.
