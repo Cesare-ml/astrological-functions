@@ -26,18 +26,26 @@ A provider's `CALLER_ASSERTED_INTERVAL_BOUNDS_ALL_TIMES` declaration, `stationCo
 
 ## Cross-interval enclosure consistency guard
 
-All-time enclosures must satisfy **set containment across subdivisions**:
-the declared child `[lowerDeg, upperDeg]` must lie within its direct
-parent's declared interval range. The scanner rejects a child whose lower
-bound falls below the parent lower bound or whose upper bound exceeds
-the parent upper bound with typed `INVALID_ENCLOSURE`.
+A provider may return **conservative, non-tight enclosures**. The
+child's asserted range need **not** be a subset of the parent's asserted
+range. Both can be valid if their **intersection is nonempty**. For each
+child, the scanner intersects its reported bounds with the already
+effective parent bounds, retaining the intersection as the tighter
+`lowerDeg/upperDeg` output for that segment. Empty parent–child
+intersection raises typed `INVALID_ENCLOSURE`, without falsely rejecting
+valid loose child bounds.
 
-Before pruning any interval, the scanner also checks already cached
-point residuals at the interval's endpoints against the newly declared
-enclosure. In depth-first traversal, adjacent leaf intervals can reuse
-a shared boundary sample. An enclosure that excludes that known sample
-is contradictory even if it is numerically contained in the parent
-interval.
+Adjacent sibling intervals share one exact UTC boundary. Therefore
+their *effective* all-time ranges must also intersect: if both sibling
+ranges are disjoint, neither can contain the residual at that common
+instant. This contradiction is detected even when both intervals are
+pruned before any point evaluation, avoiding a false "no transit"
+conclusion. A one-point intersection is allowed.
+
+Before pruning, cached point residuals at interval endpoints are also
+checked against the effective enclosure. Unlike broad interval
+intersection checks, these shared endpoint observations can disprove
+a wrong sibling enclosure even if the sibling ranges overlap.
 
 These are **consistency checks on provider assertions**, not a proof
 that the numerical bounds are scientifically accurate or that every
