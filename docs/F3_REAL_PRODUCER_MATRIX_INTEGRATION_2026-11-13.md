@@ -52,13 +52,19 @@ Expected changed-point counts:
 - Equal Ascendant vs Porphyry: 0
 - Distinct globally changed points: 2
 
-The eight tests cover three-column composition, two-column reorder and
+The **nine** tests cover three-column composition, two-column reorder and
 empty points, incompatible planetary source, incompatible Porphyry-side
 source, forged interior cusp rejection through the corrected actual
-adapter, exact textual UTC representation, unknown birth time and
-degenerate angle failure.
+adapter, exact textual UTC representation, unknown birth time,
+degenerate angle failure, and a 36 × 36 deterministic ASC/MC grid. For the
+**1,296** synthetic configurations on that grid, the Porphyry producer
+accepts **612** and rejects **684** as degenerate. Across the 612 accepted
+configurations, the complete real-producer → matrix pipeline generates
+**11,016** planet-to-house assignments without discrepancies against the
+existing canonical `locateLongitudeInHouses`, and the union of the pairwise
+changed-point IDs matches the global changed-point count.
 
-**Validation result:** **8/8 tests passed** in a strict isolated V8
+**Validation result:** **9/9 tests passed** in a strict isolated V8
 harness that evaluated the **exact retrieved GitHub source modules and
 the committed test bodies** with adapted `node:test` and
 `node:assert/strict`. This is explicitly **not** native `node --test`
@@ -76,7 +82,7 @@ d93b158ad9b50029a322c94602d1b03635c34093  src/house-method-comparison.mjs (#43)
 fe4a5b1542333614c3c5045c3da9c99b55cc3546  src/house-source-consistency.mjs (#48)
 1e74eac457157b1140e97019fb42c6ae6b6de035  src/sourced-house-points.mjs (#55)
 1f17dc796be3a8fe7801f29776110484be1de393  src/sourced-house-placement-matrix.mjs (#57)
-2b4baee2e1dd5c2979dcac10abc2569277ee8516  scripts/verify-f3-house-producer-matrix.mjs (#57)
+468404f4351615312cffc714e09455cd4dc01aa0  scripts/verify-f3-house-producer-matrix.mjs (#57)
 ```
 
 These are GitHub **blob SHA-1** identifiers (not scientific kernel checksums).
