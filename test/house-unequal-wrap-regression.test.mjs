@@ -131,3 +131,18 @@ test('all twelve cusp boundaries preserve ownership across the final-to-first wr
     assert.ok(after.distanceFromCuspDeg > 0 && after.distanceFromCuspDeg < 2 * epsilon);
   }
 });
+
+
+test('nonnumeric cusp entries fail closed with INVALID_CUSPS in both APIs', () => {
+  for (const invalid of [null, undefined, '110', {}, true]) {
+    const malformed = [...cusps];
+    malformed[4] = invalid;
+    assert.throws(() => locateLongitudeInHouses(0, malformed),
+      error => error.code === 'INVALID_CUSPS');
+    assert.throws(() => validateHouseCuspSet({
+      houseSystem: 'VEHLOW', calculationProfile: 'CANONICAL_V1',
+      cusps: malformed,
+      metadata: { houseSystem: 'VEHLOW', placementMethod: 'CUSP_INTERVAL' },
+    }), error => error.code === 'INVALID_CUSPS');
+  }
+});
