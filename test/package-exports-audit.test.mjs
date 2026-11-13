@@ -4,6 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'node
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 import { auditPackageExports } from '../scripts/audit-package-exports.mjs';
 
 const ownRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -17,6 +18,11 @@ function fixture(manifest, filenames = ['src/index.mjs']) {
   return dir;
 }
 const base = { name: 'astrological-functions', private: true, type: 'module', exports: { '.': './src/index.mjs' } };
+function runConsumer(root, code) {
+  const entry = path.join(root, 'consumer.mjs');
+  writeFileSync(entry, code);
+  return execFileSync(process.execPath, [entry], { cwd: root, encoding: 'utf8', timeout: 5000 }).trim();
+}
 function withFixture(manifest, files, callback) {
   const root = fixture(manifest, files);
   try { callback(root); } finally { rmSync(root, { recursive: true, force: true }); }
@@ -89,4 +95,49 @@ test('rejects an accidentally publishable package or non-ESM type', () => {
     assert.throws(() => auditPackageExports(root), { code: 'PACKAGE_NOT_PRIVATE' }));
   withFixture({ ...base, type: 'commonjs' }, ['src/index.mjs'], root =>
     assert.throws(() => auditPackageExports(root), { code: 'INVALID_PACKAGE_TYPE' }));
+});
+
+test('real package root supports Node ESM self-reference without executing astronomy', async () => {
+  const imported = await import('astrological-functions');
+  assert.equal(typeof imported.normalize360, 'function');
+});
+
+test('Node ESM resolves and executes both root and typed conditional subpath', () => {
+  withFixture({ ...base, exports: {
+    '.': './src/index.mjs',
+    './ephemeris-provider': { types: './src/ephemeris-provider.d.mts', import: './src/ephemeris-provider.js' }
+  } }, ['src/index.mjs', 'src/ephemeris-provider.d.mts', 'src/ephemeris-provider.js'], root => {
+    assert.equal(runConsumer(root, [
+      "const root = await import('astrological-functions');",
+      "const adapter = await import('astrological-functions/ephemeris-provider');",
+      "if (root.example !== true || adapter.example !== true) throw new Error('ESM export mismatch');",
+      "console.log('esm-self-import-ok');"
+    ].join('\n')), 'esm-self-import-ok');
+  });
+});
+
+test('Node CJS resolver cannot resolve import-only subpath', () => {
+  withFixture({ ...base, exports: {
+    '.': './src/index.mjs',
+    './ephemeris-provider': { types: './src/ephemeris-provider.d.mts', import: './src/ephemeris-provider.js' }
+  } }, ['src/index.mjs', 'src/ephemeris-provider.d.mts', 'src/ephemeris-provider.js'], root => {
+    assert.equal(runConsumer(root, [
+      "import { createRequire } from 'node:module';",
+      "const require = createRequire(import.meta.url);",
+      "let code;",
+      "try { require.resolve('astrological-functions/ephemeris-provider'); }",
+      "catch (error) { code = error.code; }",
+      "if (code !== 'ERR_PACKAGE_PATH_NOT_EXPORTED') throw new Error('CommonJS unexpectedly resolved: ' + code);",
+      "console.log('cjs-denied-ok');"
+    ].join('\n')), 'cjs-denied-ok');
+  });
+});
+
+test('rejects ambiguous subpath keys and encoded traversal targets', () => {
+  for (const key of ['./bad\\name', './bad%2fname', './bad?query', './bad#fragment', './bad*']) {
+    withFixture({ ...base, exports: { '.': './src/index.mjs', [key]: './src/index.mjs' } },
+      ['src/index.mjs'], root => assert.throws(() => auditPackageExports(root), { code: 'INVALID_EXPORT_MAP' }));
+  }
+  withFixture({ ...base, exports: { '.': './src/%2e%2e/index.mjs' } }, ['src/index.mjs'], root =>
+    assert.throws(() => auditPackageExports(root), { code: 'UNSAFE_EXPORT_TARGET' }));
 });
