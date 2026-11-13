@@ -151,3 +151,67 @@ test('refinement time tolerance tightens for a narrower scanner leaf interval',a
     assert.equal(v.refinement.timeToleranceMs,span);
   }
 });
+
+test('rejects a changing residual when refinement resamples a scan endpoint',async()=>{
+  const p=makeProvider();
+  const seen=new Map();
+  const original=p.getUnwrappedAspectResidual.bind(p);
+  p.getUnwrappedAspectResidual=async req=>{
+    const result=await original(req);
+    const count=seen.get(req.datetimeUtc) ?? 0;
+    seen.set(req.datetimeUtc,count+1);
+    return count===0 ? result : {...result,residualDeg:result.residualDeg+0.00001};
+  };
+  // All declared provenance remains pinned. Numeric changes must still fail closed.
+  await assert.rejects(
+    ()=>prepareTransitAspectEventCandidates(options(p)),
+    e=>e.code==='INCONSISTENT_RESIDUAL'
+  );
+  assert.ok([...seen.values()].some(count=>count>1));
+});
+
+test('accepts deterministic zero endpoints regardless of signed-zero representation',async()=>{
+  const f=ms=>(ms-t0)/3600000-.5;
+  const p=makeProvider(f,(a,b)=>[f(a),f(b)]);
+  const original=p.getUnwrappedAspectResidual.bind(p);
+  p.getUnwrappedAspectResidual=async req=>{
+    const r=await original(req);
+    if (r.residualDeg===0) return {...r,residualDeg:-0};
+    return r;
+  };
+  const result=await prepareTransitAspectEventCandidates({...options(p),maxDepth:1});
+  assert.equal(result.sampledZeros.length,1);
+  assert.equal(result.sampledZeros[0].datetimeUtc,'2026-11-12T00:30:00.000Z');
+});
+
+test('rejects version change after scan when exact-hit refinement repeats an endpoint',async()=>{
+  const p=makeProvider();
+  const original=p.getUnwrappedAspectResidual.bind(p);
+  const visited=new Set();
+  let repeated=0;
+  p.getUnwrappedAspectResidual=async request=>{
+    const response=await original(request);
+    if (visited.has(request.datetimeUtc)) {
+      repeated++;
+      return {...response,metadata:{...response.metadata,contractVersion:'0.2.0-incompatible'}};
+    }
+    visited.add(request.datetimeUtc);
+    return response;
+  };
+  await assert.rejects(()=>prepareTransitAspectEventCandidates(options(p)),
+    error=>error.code==='INCOMPATIBLE_EPHEMERIS');
+  assert.ok(repeated>0);
+});
+
+test('rejects false-negative sibling enclosures before producing transit facts',async()=>{
+  // Both children report overlapping positive ranges, but the sampled shared
+  // midpoint is +0.13; their asserted [0.5,1] enclosure is inconsistent.
+  // Without midpoint validation the real 00:22:12 crossing disappears.
+  const p=makeProvider(line,(a,b)=>
+    a===t0 && b===t0+3600000 ? [-1,1] : [.5,1]);
+  await assert.rejects(
+    ()=>prepareTransitAspectEventCandidates({...options(p),
+      targetIntervalMs:60000,maxDepth:1,maxProviderCalls:20}),
+    e=>e.code==='INVALID_ENCLOSURE'
+  );
+});

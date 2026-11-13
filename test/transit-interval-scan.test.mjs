@@ -115,3 +115,131 @@ test('freeze requests, snapshot mutable input, and validate point provenance',as
   bad.getUnwrappedAspectResidual=async req=>({datetimeUtc:req.datetimeUtc,residualDeg:0,metadata:{...meta,engineVersion:'wrong'}});
   await throws({provider:bad},'INCOMPATIBLE_EPHEMERIS');
 });
+
+test('fails closed when child enclosures contradict an otherwise plausible parent',async()=>{
+  const p=makeProvider(linear,(a,b)=>{
+    if(a===startMs && b===startMs+3600000) return [-1,1];
+    return [2,3]; // A child cannot exceed the claimed parent upper bound.
+  });
+  await throws({provider:p,maxDepth:1,targetIntervalMs:60000},'INVALID_ENCLOSURE');
+});
+test('refuses to exclude an adjacent interval that contradicts a cached shared endpoint',async()=>{
+  const p=makeProvider(linear,(a,b)=>{
+    if(a===startMs && b===startMs+3600000) return [-10,10];
+    if(a===startMs) return [-1,1]; // Valid first leaf; caches its right endpoint.
+    return [.5,1]; // Nested inside the parent but excludes the cached mid residual.
+  });
+  await throws({provider:p,maxDepth:1,targetIntervalMs:60000},'INVALID_ENCLOSURE');
+});
+
+test('rejects mismatched point and enclosure response contract versions',async()=>{
+  const rangeWrong=makeProvider(linear,lineBounds);
+  const originalRange=rangeWrong.getUnwrappedResidualEnclosure.bind(rangeWrong);
+  rangeWrong.getUnwrappedResidualEnclosure=async req=>{
+    const result=await originalRange(req);
+    return {...result,metadata:{...result.metadata,contractVersion:'0.2.0-incompatible'}};
+  };
+  await throws({provider:rangeWrong},'INCOMPATIBLE_EPHEMERIS');
+
+  const pointMissing=makeProvider(linear,lineBounds);
+  const originalPoint=pointMissing.getUnwrappedAspectResidual.bind(pointMissing);
+  pointMissing.getUnwrappedAspectResidual=async req=>{
+    const result=await originalPoint(req);
+    return {...result,metadata:{...result.metadata,contractVersion:undefined}};
+  };
+  await throws({provider:pointMissing,targetIntervalMs:3600000},'INCOMPATIBLE_EPHEMERIS');
+});
+
+test('accepts valid loose child enclosures and intersects them with parent bounds',async()=>{
+  const p=makeProvider(linear,(a,b)=>
+    a===startMs && b===startMs+3600000 ? [-1,1] : [-2,2]);
+  const r=await scanTransitAspectCandidateIntervals({
+    ...base(p),maxDepth:1,targetIntervalMs:60000
+  });
+  assert.equal(r.signChangeCandidates.length,1);
+  assert.equal(r.signChangeCandidates[0].lowerDeg,-1);
+  assert.equal(r.signChangeCandidates[0].upperDeg,1);
+  assert.ok(r.unresolvedIntervals.length>0);
+});
+
+test('rejects disjoint sibling enclosures before silent exclusion of both branches',async()=>{
+  // Both children are contained in their broad parent, but their claimed
+  // residual ranges are disjoint at the exact same shared midpoint.
+  const p=makeProvider(linear,(a,b)=>{
+    if (a===startMs && b===startMs+3600000) return [-2,2];
+    return a===startMs ? [-2,-.1] : [.1,2];
+  });
+  await throws({provider:p,maxDepth:1,targetIntervalMs:60000},'INVALID_ENCLOSURE');
+});
+
+test('accepts sibling enclosures touching at their shared sampled boundary',async()=>{
+  const p=makeProvider(linear,(a,b)=>{
+    if (a===startMs && b===startMs+3600000) return [-1,1];
+    return a===startMs ? [linear(a),linear(b)] : [linear(a),linear(b)];
+  });
+  const r=await scanTransitAspectCandidateIntervals({
+    ...base(p),maxDepth:1,targetIntervalMs:60000
+  });
+  assert.equal(r.signChangeCandidates.length,1);
+  assert.equal(r.unresolvedIntervals.length,0);
+});
+
+test('rejects untrimmed scan identifiers before requesting any enclosure',async()=>{
+  const p=makeProvider(linear,lineBounds);
+  let calls=0;
+  const original=p.getUnwrappedResidualEnclosure.bind(p);
+  p.getUnwrappedResidualEnclosure=async req=>{calls++;return original(req);};
+  for (const patch of [
+    {skyBodyName:' Mars'},
+    {natalBodyName:'Sun '},
+    {aspectId:' square'},
+    {aspectId:'square\t'},
+    {ephemerisProvenance:{engineVersion:' synthetic',kernelSetId:'kernel-mock',timeModel:'mock-TDB'}},
+    {ephemerisProvenance:{engineVersion:'synthetic',kernelSetId:'kernel-mock ',timeModel:'mock-TDB'}},
+    {ephemerisProvenance:{engineVersion:'synthetic',kernelSetId:'kernel-mock',timeModel:'mock-TDB '}}
+  ]) {
+    await throws({...patch,provider:p},'INVALID_ARGUMENT');
+  }
+  assert.equal(calls,0);
+});
+
+test('rejects overlapping false sibling bounds using an eagerly sampled shared midpoint',async()=>{
+  // The real continuous residual crosses zero at 00:22:12; both child
+  // enclosures falsely claim [0.5,1] and would previously be pruned.
+  const p=makeProvider(linear,(a,b)=>
+    a===startMs && b===startMs+3600000 ? [-1,1] : [.5,1]);
+  let pointCalls=0;
+  const original=p.getUnwrappedAspectResidual.bind(p);
+  p.getUnwrappedAspectResidual=async req=>{pointCalls++;return original(req);};
+  await throws({provider:p,maxDepth:1,targetIntervalMs:60000,
+    maxProviderCalls:20},'INVALID_ENCLOSURE');
+  assert.equal(pointCalls,1); // Shared midpoint sampled before either child is pruned.
+});
+
+test('detects a false parent range immediately using its interior split sample',async()=>{
+  const p=makeProvider(linear,()=>[-.5,.01]); // midpoint is +0.13: not enclosed.
+  let rangeCalls=0;
+  const original=p.getUnwrappedResidualEnclosure.bind(p);
+  p.getUnwrappedResidualEnclosure=async req=>{rangeCalls++;return original(req);};
+  await throws({provider:p,maxDepth:1,targetIntervalMs:60000},'INVALID_ENCLOSURE');
+  assert.equal(rangeCalls,1); // Do not descend after detecting the parent contradiction.
+});
+
+test('caches the shared midpoint and accounts for it exactly once in the provider budget',async()=>{
+  // Conservative envelopes keep both leaves eligible for endpoint sampling.
+  const p=makeProvider(linear,()=>[-1,1]);
+  let pointCalls=0;
+  const original=p.getUnwrappedAspectResidual.bind(p);
+  p.getUnwrappedAspectResidual=async req=>{pointCalls++;return original(req);};
+  const r=await scanTransitAspectCandidateIntervals({...base(p),maxDepth:1,
+    targetIntervalMs:60000,maxProviderCalls:6});
+  assert.equal(r.signChangeCandidates.length,1);
+  assert.equal(pointCalls,3); // start, shared midpoint, end
+  assert.equal(r.providerCalls,6); // 3 range calls + 3 unique point calls
+});
+
+test('fails closed when split-point validation exceeds the provider call budget',async()=>{
+  const p=makeProvider(linear,lineBounds);
+  await throws({provider:p,maxDepth:1,targetIntervalMs:60000,
+    maxProviderCalls:1},'SEARCH_BUDGET_EXHAUSTED');
+});

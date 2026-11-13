@@ -17,11 +17,56 @@ A provider's `CALLER_ASSERTED_INTERVAL_BOUNDS_ALL_TIMES` declaration, `stationCo
 
 ## Contract and guardrails
 
-- Caller specifies real ISO UTC start/end, period no greater than 31 days; oriented aspect (`POSITIVE` or `NEGATIVE`, 0–180°), named source/target bodies, complete version/kernel/time-model provenance, `targetIntervalMs` (at least 1), `maxDepth` (0–24), `maxProviderCalls` (1–4096). No defaults or unbounded recursion.
+- Caller specifies real ISO UTC start/end, period no greater than 31 days; oriented aspect (`POSITIVE` or `NEGATIVE`, 0–180°), named source/target bodies, complete version/kernel/time-model provenance, `targetIntervalMs` (at least 1), `maxDepth` (0–24), `maxProviderCalls` (1–4096). All body/aspect and ephemeris provenance identifiers must be nonempty, **canonically trimmed strings**; leading/trailing whitespace fails with `INVALID_ARGUMENT` before any provider call, consistent with the F4 transit-facts contract. No defaults or unbounded recursion.
 - Provider point capability must match `CALLER_ASSERTED_CONTINUOUS_UNWRAPPED`; it additionally declares `enclosureCoverage: CALLER_ASSERTED_INTERVAL_BOUNDS_ALL_TIMES`, full station and numeric-error coverage, `EARTH / ECLIPTIC_OF_DATE / APPARENT`, matching provenance and both `getUnwrappedAspectResidual` and `getUnwrappedResidualEnclosure` methods.
+- **Contract version must be echoed on every response:** both point-residual and all-time range metadata require `contractVersion: '0.1.0-experimental'`; accepting the version from `provider.capabilities` alone is unsafe when a provider changes response schema mid-search. Missing or incompatible response versions raise `INCOMPATIBLE_EPHEMERIS`, including during refinement in the composed event pipeline.
 - Point and range results must echo the exact requested UTC timestamps, return finite values and compatible metadata. When sampled endpoints fall outside an asserted enclosure the search fails with `INVALID_ENCLOSURE`.
 - A missing/mismatched capability, response error, unsafe limit, or provider-call budget exhaustion causes typed error, **never a partial or apparently complete result**. Inputs are snapshotted before awaiting provider calls; requests and results are immutable.
 - Metadata always states `PROVIDER_ASSERTED_NOT_INDEPENDENTLY_VERIFIED`, and `CONDITIONAL_ON_CALLER_ENCLOSURES_NOT_SCIENTIFICALLY_VALIDATED`. There is no exact-event time calculation here.
+
+## Cross-interval enclosure consistency guard
+
+A provider may return **conservative, non-tight enclosures**. The
+child's asserted range need **not** be a subset of the parent's asserted
+range. Both can be valid if their **intersection is nonempty**. For each
+child, the scanner intersects its reported bounds with the already
+effective parent bounds, retaining the intersection as the tighter
+`lowerDeg/upperDeg` output for that segment. Empty parent–child
+intersection raises typed `INVALID_ENCLOSURE`, without falsely rejecting
+valid loose child bounds.
+
+Adjacent sibling intervals share one exact UTC boundary. Therefore
+their *effective* all-time ranges must also intersect: if both sibling
+ranges are disjoint, neither can contain the residual at that common
+instant. This contradiction is detected even when both intervals are
+pruned before any point evaluation, avoiding a false "no transit"
+conclusion. A one-point intersection is allowed.
+
+**At every actual subdivision**, the scanner now obtains and caches a
+point residual at the exact split UTC *before* either child can be
+pruned. The midpoint must lie within the parent's effective enclosure.
+Both children must then contain this already-sampled shared endpoint
+even when their stated intervals overlap numerically and would
+otherwise both be excluded without leaf sampling. This closes a
+synthetic false-negative case: the parent reported [-1, 1], both
+children reported [0.5, 1], and the true midpoint residual was 0.13.
+Before the fix the search returned zero candidates without any point
+evaluation; it now raises `INVALID_ENCLOSURE` atomically.
+
+Previously sampled point residuals at other interval endpoints are
+likewise checked against the effective enclosure. Each split point is
+cached and sampled only once within a scan. These extra samples are
+charged against the existing explicit `maxProviderCalls` budget:
+insufficient budget raises `SEARCH_BUDGET_EXHAUSTED`, not a partial
+or misleading negative result. A range already excluded at the root
+still does not require any point sample.
+
+These are **consistency checks on provider assertions**, not a proof
+that the numerical bounds are scientifically accurate or that every
+station and tangent root is accounted for. An internally consistent,
+yet physically incorrect, provider can still miss real events.
+The Rust producer must independently demonstrate interval validity
+including floating-point error margins.
 
 ## Example (synthetic provider only)
 

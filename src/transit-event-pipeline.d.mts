@@ -4,6 +4,27 @@ import type { TransitIntervalProvider, TransitIntervalSegment,
 import type { TransitAspectOrientation, TransitHitProvenance,
   BracketedTransitAspectHit } from './transit-exact-hit.mjs';
 
+/**
+ * Public consumer types: downstream packages must not import private /src paths.
+ * The experimental public subpath is astrological-functions/transit-events.
+ */
+export type {
+  TransitIntervalProvider,
+  TransitIntervalCapabilities,
+  TransitRangeRequest,
+  TransitRangeResponse,
+  TransitIntervalSegment,
+  TransitUnresolvedInterval
+} from './transit-interval-scan.mjs';
+export type {
+  TransitAspectOrientation,
+  TransitHitProvenance,
+  TransitResidualCapabilities,
+  TransitResidualRequest,
+  TransitResidualResponse,
+  BracketedTransitAspectHit
+} from './transit-exact-hit.mjs';
+
 export interface TransitRefinementLimits {
   readonly timeToleranceMs: number;
   readonly residualToleranceDeg: number;

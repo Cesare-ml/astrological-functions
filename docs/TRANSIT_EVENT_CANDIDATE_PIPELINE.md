@@ -39,6 +39,24 @@ const result = await prepareTransitAspectEventCandidates({
 
 Refinement caps are 1–128 candidate refinements, 1–128 iterations per candidate, and 1–16,384 total refinement point calls; all positive numeric tolerances are mandatory. The smaller of configured `timeToleranceMs` and the actual leaf span is passed to the refiner. If any scan, provider, or refinement fails, the promise rejects **without returning a partial result**. Before awaiting, immutable copies of configuration, ephemeris provenance, provider capability declarations, and bound provider functions are captured. Provider error messages and typed validation errors are not swallowed.
 
+## Deterministic repeated samples (integration hardening)
+
+The scanner passes exact endpoint samples to the refiner. On a pinned
+`engineVersion / kernelSetId / timeModel`, re-evaluating the same UTC with
+identical sky body, natal body, aspect ID, orientation and angle **must return
+the same finite residual**. The pipeline now records all scanned endpoint
+samples (including unresolved leaves and sampled zeros) and every subsequent
+refinement sample, and raises typed `INCONSISTENT_RESIDUAL` if a provider
+returns a different finite residual for a previously sampled timestamp.
+
+This catches stateful/stale/nondeterministic point providers that otherwise
+could silently shift an exact-hit candidate between the scan and refinement
+passes. Signed zeros (+0/-0) are numerically equivalent for this check.
+Malformed timestamps, non-finite residuals, or incompatible provenance still
+fail under the original provider/refiner validation paths. This guard **does
+not establish true ephemeris accuracy**, independent physical continuity,
+scientific interval enclosure coverage or completeness of root discovery.
+
 ## Verification and release boundary
 
 ```sh

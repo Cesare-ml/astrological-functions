@@ -24,8 +24,8 @@ function instant(utc, label) {
   return Date.parse(utc);
 }
 function name(value, label) {
-  if (typeof value !== 'string' || !value.trim())
-    fail('INVALID_ARGUMENT', `${label} must be a nonempty identifier`);
+  if (typeof value !== 'string' || !value.trim() || value !== value.trim())
+    fail('INVALID_ARGUMENT', `${label} must be a nonempty, canonically trimmed identifier`);
   return value;
 }
 function provenanceSnapshot(value) {
@@ -85,7 +85,8 @@ export async function refineBracketedTransitAspectHit(input) {
     if (result.datetimeUtc !== datetimeUtc || !finite(result.residualDeg))
       fail('INVALID_RESIDUAL', 'Residual must be finite and echoed for requested UTC');
     const metadata = object(result.metadata, 'INCOMPATIBLE_EPHEMERIS', 'Residual metadata is required');
-    if (metadata.center !== 'EARTH' || metadata.frame !== 'ECLIPTIC_OF_DATE' ||
+    if (metadata.contractVersion !== VERSION || metadata.center !== 'EARTH' ||
+        metadata.frame !== 'ECLIPTIC_OF_DATE' ||
         metadata.corrections !== 'APPARENT' || metadata.coverage !== COVERAGE ||
         PROVENANCE_KEYS.some(key => metadata[key] !== provenance[key]))
       fail('INCOMPATIBLE_EPHEMERIS', 'Residual provenance/frame/coverage mismatch');
@@ -105,10 +106,12 @@ export async function refineBracketedTransitAspectHit(input) {
   let leftMs = startMs, rightMs = endMs;
   let left = await sample(leftMs);
   if (Math.abs(left) <= residualToleranceDeg)
-    return output(leftMs, left, 0, leftMs, leftMs, 'SAMPLED_WITHIN_RESIDUAL_TOLERANCE');
+    return output(leftMs, left, 0, leftMs, leftMs,
+      left === 0 ? 'SAMPLED_ZERO' : 'SAMPLED_WITHIN_RESIDUAL_TOLERANCE');
   let right = await sample(rightMs);
   if (Math.abs(right) <= residualToleranceDeg)
-    return output(rightMs, right, 0, rightMs, rightMs, 'SAMPLED_WITHIN_RESIDUAL_TOLERANCE');
+    return output(rightMs, right, 0, rightMs, rightMs,
+      right === 0 ? 'SAMPLED_ZERO' : 'SAMPLED_WITHIN_RESIDUAL_TOLERANCE');
   if (Math.sign(left) === Math.sign(right))
     fail('ROOT_NOT_BRACKETED', 'Endpoints do not show a residual sign change');
   for (let iterations = 1; iterations <= maxIterations; iterations++) {

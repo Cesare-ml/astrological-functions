@@ -4,7 +4,7 @@ import { refineBracketedTransitAspectHit } from '../src/transit-exact-hit.mjs';
 
 const startUtc = '2026-11-12T00:00:00Z';
 const startMs = Date.parse(startUtc);
-const metadata = { center:'EARTH', frame:'ECLIPTIC_OF_DATE', corrections:'APPARENT',
+const metadata = { contractVersion:'0.1.0-experimental', center:'EARTH', frame:'ECLIPTIC_OF_DATE', corrections:'APPARENT',
   coverage:'CALLER_ASSERTED_CONTINUOUS_UNWRAPPED', engineVersion:'synthetic-rust', kernelSetId:'synthetic', timeModel:'synthetic-TDB' };
 function provider(residual, mutate) {
   return { capabilities: { contractVersion:'0.1.0-experimental', ...metadata },
@@ -52,6 +52,48 @@ test('a retrograde-like loop can yield separate roots, never a claim of exhausti
 test('signless tangent touch is not wrongly reported as absent or found', async()=>{
   await reject({provider:provider(ms=>((ms-startMs)/3600000-.5)**2)},'ROOT_NOT_BRACKETED');
 });
+test('exact-zero first endpoint reports SAMPLED_ZERO with one evaluation', async()=>{
+  const result=await refineBracketedTransitAspectHit({
+    ...base(),provider:provider(ms=>(ms-startMs)/3600000)
+  });
+  assert.equal(result.status,'SAMPLED_ZERO');
+  assert.equal(result.residualDeg,0);
+  assert.equal(result.datetimeUtc,'2026-11-12T00:00:00.000Z');
+  assert.equal(result.iterations,0);
+  assert.equal(result.evaluations,1);
+});
+
+test('exact-zero final endpoint reports SAMPLED_ZERO with two evaluations', async()=>{
+  const endMs=startMs+3600000;
+  const result=await refineBracketedTransitAspectHit({
+    ...base(),provider:provider(ms=>(ms-endMs)/3600000)
+  });
+  assert.equal(result.status,'SAMPLED_ZERO');
+  assert.equal(result.residualDeg,0);
+  assert.equal(result.datetimeUtc,'2026-11-12T01:00:00.000Z');
+  assert.equal(result.iterations,0);
+  assert.equal(result.evaluations,2);
+});
+
+test('negative signed-zero endpoint also reports SAMPLED_ZERO', async()=>{
+  const result=await refineBracketedTransitAspectHit({
+    ...base(),provider:provider(ms=>ms===startMs ? -0 : (ms-startMs)/3600000)
+  });
+  assert.equal(result.status,'SAMPLED_ZERO');
+  assert.ok(Object.is(result.residualDeg,-0));
+  assert.equal(result.evaluations,1);
+});
+
+test('near-zero final endpoint stays a tolerance sample, not an exact zero', async()=>{
+  const endMs=startMs+3600000;
+  const result=await refineBracketedTransitAspectHit({
+    ...base(),provider:provider(ms=>.00005+(ms-endMs)/3600000)
+  });
+  assert.equal(result.status,'SAMPLED_WITHIN_RESIDUAL_TOLERANCE');
+  assert.equal(result.datetimeUtc,'2026-11-12T01:00:00.000Z');
+  assert.equal(result.evaluations,2);
+});
+
 test('a near-zero endpoint is labeled as a tolerance sample, not an exact root', async()=>{
   const r=await refineBracketedTransitAspectHit({...base(),provider:provider(ms=>.00005+(ms-startMs)/1000000)});
   assert.equal(r.status,'SAMPLED_WITHIN_RESIDUAL_TOLERANCE');
@@ -104,4 +146,52 @@ test('explicit angle and orientation are mandatory', async()=>{
   await reject({orientation:'AUTO'},'INVALID_ASPECT');
   await reject({exactAngleDeg:181},'INVALID_ASPECT');
   await reject({skyBodyName:''},'INVALID_ARGUMENT');
+});
+
+test('rejects missing, mismatched, and mid-search version changes in residual metadata', async()=>{
+  const missing=provider(()=>0);
+  missing.getUnwrappedAspectResidual=async request=>({
+    datetimeUtc:request.datetimeUtc, residualDeg:0,
+    metadata:{...metadata,contractVersion:undefined}
+  });
+  await reject({provider:missing},'INCOMPATIBLE_EPHEMERIS');
+
+  const wrong=provider(()=>0);
+  wrong.getUnwrappedAspectResidual=async request=>({
+    datetimeUtc:request.datetimeUtc,residualDeg:0,
+    metadata:{...metadata,contractVersion:'0.2.0-incompatible'}
+  });
+  await reject({provider:wrong},'INCOMPATIBLE_EPHEMERIS');
+
+  const midsearch=provider(ms=>(ms-startMs-123456)/3600000);
+  const original=midsearch.getUnwrappedAspectResidual.bind(midsearch);
+  let reads=0;
+  midsearch.getUnwrappedAspectResidual=async request=>{
+    const response=await original(request);
+    reads++;
+    return reads>1
+      ? {...response,metadata:{...response.metadata,contractVersion:'0.2.0-incompatible'}}
+      : response;
+  };
+  await reject({provider:midsearch},'INCOMPATIBLE_EPHEMERIS');
+  assert.ok(reads>1);
+});
+
+test('rejects untrimmed identifiers before reaching the residual provider', async()=>{
+  const p=provider(ms=>(ms-startMs-123456)/3600000);
+  let calls=0;
+  const original=p.getUnwrappedAspectResidual.bind(p);
+  p.getUnwrappedAspectResidual=async req=>{calls++;return original(req);};
+  for (const patch of [
+    {skyBodyName:' Mars'},
+    {natalBodyName:'Sun '},
+    {aspectId:' square '},
+    {skyBodyName:'\tMars'},
+    {ephemerisProvenance:{engineVersion:' synthetic-rust',kernelSetId:'synthetic',timeModel:'synthetic-TDB'}},
+    {ephemerisProvenance:{engineVersion:'synthetic-rust',kernelSetId:'synthetic ',timeModel:'synthetic-TDB'}},
+    {ephemerisProvenance:{engineVersion:'synthetic-rust',kernelSetId:'synthetic',timeModel:' synthetic-TDB'}}
+  ]) {
+    await reject({...patch,provider:p},'INVALID_ARGUMENT');
+  }
+  assert.equal(calls,0);
 });

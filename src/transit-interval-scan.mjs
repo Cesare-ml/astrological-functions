@@ -24,7 +24,8 @@ function utc(value) {
   return Date.parse(value);
 }
 function identifier(value) {
-  if (typeof value !== 'string' || !value.trim()) error('INVALID_ARGUMENT', 'Nonempty identifier required');
+  if (typeof value !== 'string' || !value.trim() || value !== value.trim())
+    error('INVALID_ARGUMENT', 'Nonempty, canonically trimmed identifier required');
   return value;
 }
 function number(value) { return typeof value === 'number' && Number.isFinite(value); }
@@ -85,7 +86,8 @@ export async function scanTransitAspectCandidateIntervals(input) {
   }
   function metadata(value, isRange) {
     const m = obj(value, 'INCOMPATIBLE_EPHEMERIS');
-    if (m.center !== 'EARTH' || m.frame !== 'ECLIPTIC_OF_DATE' ||
+    if (m.contractVersion !== VERSION || m.center !== 'EARTH' ||
+        m.frame !== 'ECLIPTIC_OF_DATE' ||
         m.corrections !== 'APPARENT' || m.coverage !== POINT_COVERAGE ||
         KEYS.some(key => m[key] !== ephemerisProvenance[key]) ||
         (isRange && (m.enclosureCoverage !== RANGE_COVERAGE ||
@@ -116,17 +118,52 @@ export async function scanTransitAspectCandidateIntervals(input) {
     metadata(result.metadata, true);
     return Object.freeze({lowerDeg: result.lowerDeg, upperDeg: result.upperDeg});
   }
-  const pending = [{left:startMs, right:endMs, depth:0}];
+  const pending = [{left:startMs, right:endMs, depth:0, parentBounds:null, siblings:null}];
   while (pending.length) {
-    const {left, right, depth} = pending.pop();
-    const bounds = await range(left, right);
+    const {left, right, depth, parentBounds, siblings} = pending.pop();
+    const reportedBounds = await range(left, right);
     inspectedIntervals++;
+    // Providers may return *loose* all-time enclosures. A child's reported
+    // range need not be a subset of its parent's range; only the intersection
+    // must be nonempty. Tighten using both valid assertions instead of
+    // rejecting sound but differently conservative bounds.
+    const bounds = Object.freeze(parentBounds ? {
+      lowerDeg: Math.max(reportedBounds.lowerDeg, parentBounds.lowerDeg),
+      upperDeg: Math.min(reportedBounds.upperDeg, parentBounds.upperDeg)
+    } : reportedBounds);
+    if (bounds.lowerDeg > bounds.upperDeg)
+      error('INVALID_ENCLOSURE', 'Child and parent enclosures have no common residual');
+    // Adjacent children share the split instant. Their enclosures must overlap
+    // at that instant even when both children are pruned before point sampling.
+    if (siblings) {
+      if (siblings.first &&
+          (bounds.lowerDeg > siblings.first.upperDeg ||
+           bounds.upperDeg < siblings.first.lowerDeg))
+        error('INVALID_ENCLOSURE', 'Sibling enclosures disagree at their shared UTC boundary');
+      if (!siblings.first) siblings.first = bounds;
+    }
+    // Cached point samples can detect contradictions that nonempty enclosure
+    // intersections alone cannot. Check *before* excluding a branch.
+    for (const endpoint of [left, right]) {
+      if (cache.has(endpoint) &&
+          (cache.get(endpoint) < bounds.lowerDeg || cache.get(endpoint) > bounds.upperDeg))
+        error('INVALID_ENCLOSURE', 'Cached endpoint residual contradicts the interval enclosure');
+    }
     if (bounds.lowerDeg > 0 || bounds.upperDeg < 0) { excludedIntervals++; continue; }
     const mid = left + Math.floor((right-left)/2);
     if (right - left > widthMs && depth < maxDepth && mid > left && mid < right) {
-      // Stack is LIFO; push the right interval first for chronological results.
-      pending.push({left:mid, right, depth:depth+1});
-      pending.push({left, right:mid, depth:depth+1});
+      // Before either child can be excluded, sample their shared UTC boundary.
+      // A pair of overlapping but fictitious enclosures can otherwise prune
+      // both children without ever checking the true point residual.
+      // point() caches this sample and charges it against maxProviderCalls.
+      const midpointResidualDeg = await point(mid);
+      if (midpointResidualDeg < bounds.lowerDeg || midpointResidualDeg > bounds.upperDeg)
+        error('INVALID_ENCLOSURE', 'Sampled split midpoint violates parent all-time enclosure');
+      // The two children share this private record; the first (left) is
+      // inspected before the second (right) due to LIFO traversal.
+      const childSiblings = {first:null};
+      pending.push({left:mid, right, depth:depth+1, parentBounds:bounds, siblings:childSiblings});
+      pending.push({left, right:mid, depth:depth+1, parentBounds:bounds, siblings:childSiblings});
       continue;
     }
     const startResidualDeg = await point(left);
