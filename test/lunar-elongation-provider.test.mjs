@@ -33,6 +33,7 @@ test('isolated mock provider yields a directed, typed immutable sector snapshot'
   const facts = await run(p);
   assert.deepEqual(p.requests.map(request => request.bodyName), ['Sun', 'Moon']);
   assert.deepEqual(p.requests.map(request => request.datetimeUtc), [INSTANT, INSTANT]);
+  assert.deepEqual(p.requests.map(request => request.center), ['EARTH', 'EARTH']);
   assert.deepEqual(p.requests.map(request => request.kernelSetId), [
     PIN.kernelSetId, PIN.kernelSetId,
   ]);
@@ -184,4 +185,72 @@ test('Moon provider exceptions are typed and never return a partial lunar result
     e.code === 'EPHEMERIS_PROVIDER_FAILED' &&
     !e.message.includes('internal provider details'));
   assert.deepEqual(requests, ['Sun', 'Moon']);
+});
+
+test('snapshots UTC, provider identity and method across async Sun/Moon fetches', async () => {
+  const requests = [];
+  const input = {
+    datetimeUtc: INSTANT,
+    zodiac: 'TROPICAL',
+    expectedEphemeris: { ...PIN },
+    provider: null,
+  };
+  const originalProvider = {
+    async getGeocentricEcliptic(request) {
+      requests.push(request);
+      if (request.bodyName === 'Sun') {
+        input.datetimeUtc = '2026-11-12T12:31:00Z';
+        input.provider = {
+          getGeocentricEcliptic: async () => { throw Error('wrong provider selected'); },
+        };
+        originalProvider.getGeocentricEcliptic = async () => {
+          throw Error('method replaced between await points');
+        };
+      }
+      return {
+        longitudeDeg: request.bodyName === 'Sun' ? 359 : 1,
+        latitudeDeg: 0,
+        metadata: {
+          bodyName: request.bodyName,
+          datetimeUtc: request.datetimeUtc,
+          center: request.center,
+          frame: request.frame,
+          corrections: request.corrections,
+          ...PIN,
+        },
+      };
+    },
+  };
+  input.provider = originalProvider;
+  const result = await calculateLunarElongationWithProvider(input);
+  assert.equal(result.datetimeUtc, INSTANT);
+  assert.equal(result.sectors.directedElongationDeg, 2);
+  assert.deepEqual(requests.map(request => request.bodyName), ['Sun', 'Moon']);
+  assert.ok(requests.every(request => request.datetimeUtc === INSTANT));
+  assert.ok(requests.every(request => request.center === 'EARTH'));
+});
+
+test('explicit Earth center survives the mock-provider request boundary', async () => {
+  const requests = [];
+  const p = {
+    async getGeocentricEcliptic(request) {
+      requests.push(request);
+      assert.equal(request.center, 'EARTH');
+      return {
+        longitudeDeg: request.bodyName === 'Sun' ? 350 : 80,
+        latitudeDeg: 0,
+        metadata: {
+          bodyName: request.bodyName,
+          datetimeUtc: request.datetimeUtc,
+          center: request.center,
+          frame: request.frame,
+          corrections: request.corrections,
+          ...PIN,
+        },
+      };
+    },
+  };
+  const result = await run(p);
+  assert.equal(result.sectors.sectorId, 'FIRST_QUARTER');
+  assert.deepEqual(requests.map(request => request.center), ['EARTH', 'EARTH']);
 });
