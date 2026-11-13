@@ -86,3 +86,13 @@ test('returned placement is frozen and does not expose mutable cusp input', () =
   assert.equal(placement.startDeg, 350);
   assert.equal(placement.endDeg, 20);
 });
+
+
+test('zero and full-turn aliases belong to the same wrapped first house', () => {
+  const baseline = locateLongitudeInHouses(0, cusps);
+  for (const longitude of [-0, -360, 360, 720]) {
+    assert.deepEqual(locateLongitudeInHouses(longitude, cusps), baseline);
+  }
+  assert.equal(locateLongitudeInHouses(350, cusps).distanceFromCuspDeg, 0);
+  assert.equal(locateLongitudeInHouses(20, cusps).distanceFromCuspDeg, 0);
+});
