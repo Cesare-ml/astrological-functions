@@ -49,6 +49,7 @@ The `wholeSign`, `equalAscendant`, and `porphyry` bindings above must be produce
 ## Contract and validation
 
 - Require **2 or 3 distinct house methods**, in caller order. Supported method identifiers inherit the currently existing pairwise comparator: `WHOLE_SIGN`, `EQUAL_ASCENDANT`, `PORPHYRY`. `VEHLOW`, legacy `egizia`, Placidus/Koch/Regiomontanus and arbitrary extra methods do not silently map to these.
+- The TypeScript declaration models `methods` as a **readonly tuple** of exactly **two or three** `SourcedHouseSnapshot` entries, matching the runtime bounds. A caller with zero, one or four entries is rejected at compile time; `methods.push(...)` is also rejected. It deliberately does **not** claim to prove the method IDs are distinct or that ephemeris metadata is genuine: the runtime gate still verifies these facts. Dynamic arrays must be checked and narrowed to an explicitly sized tuple before calling.
 - No implicit baseline, system order, birth time, point set, timezone, or zodiac. `birthTimeKnown:true` is required; unknown times fail closed. Sparse arrays, duplicated methods, invalid metadata and missing source snapshots fail.
 - **Every other method is compared with the first supplied method** by calling `compareHousePlacementsWithSourcedPoints`. It validates every pair's cusp ordering, exact-cusp ownership, UTC, zodiac, observer, engine/kernel/time model, correction convention, calculation profile and point-source equivalence.
 - The input `positions.points` uses the existing bounded 0–128 named point list; no extra planet defaults are inferred.
@@ -68,6 +69,18 @@ npm test
 ```
 
 The synthetic runtime suite covers 2/3 columns, ordering permutations, whole-turn aliases, exact boundaries, duplicate/unsupported systems, incompatible source fields, empty and malformed point sets, UTC/zodiac constraints, deep immutability and caller-asserted status.
+
+**Native TypeScript tuple verification (13 November 2026).**
+The updated strict consumer fixture covers two- and three-method positive examples,
+zero/one/four-method negative examples, immutable inputs and outputs, and the
+existing provenance guards. The actual `tsc` 5.8.3 invocation above exited
+**0**, with `--strict --noEmit` and `moduleResolution nodenext`, in a
+locally reconstructed five-file declaration workspace. All five
+`git hash-object` SHA-1 values matched the source retrieved from GitHub:
+`3817a388` (#43), `f0347bc6` (#48), `6eb88df0` (#55),
+`fbd7fd2e` (current matrix declaration) and `97ae2e2c` (current
+type fixture). No runtime implementation changed with this type-only
+increment. This does not replace a full private checkout build.
 
 **Integration gates:** native full-repository `npm test`; native unit test on a checkout with all four dependent PR stacks; actual upstream Porphyry/Whole Sign/Equal Ascendant producer integrations; verified Rust/IAU/JPL frame+kernel+observer provenance; GUI/staging/rollback tests; source rights and explicit VirgoStars open-source attribution. **No automatic merge, GitHub Actions, release, deployment, or visibility/license change.**
 
