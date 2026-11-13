@@ -28,7 +28,7 @@ const result = await calculateLunarElongationWithProvider({
 
 This is **example contract syntax**, not evidence that a live Rust adapter exists. The mock provider in the test suite must not be used for production.
 
-The provider is called with `{datetimeUtc, bodyName: 'Sun' | 'Moon', kernelSetId, timeModelId, frame:'ECLIPTIC_OF_DATE', corrections:'APPARENT'}`. Both kernel and time-model pins are **forwarded as required request arguments** and checked again against each response. It must return `longitudeDeg`, `latitudeDeg`, and metadata with **matching** `bodyName`, `datetimeUtc`, `center:'EARTH'`, `frame`, `corrections`, `engineVersion`, `kernelSetId`, and `timeModelId`. The caller supplies all three expected provenance identifiers; missing or mismatched values fail closed. No fallback to geometric J2000/mean-of-date or Swiss.
+The provider is called with `{datetimeUtc, bodyName: 'Sun' | 'Moon', center:'EARTH', kernelSetId, timeModelId, frame:'ECLIPTIC_OF_DATE', corrections:'APPARENT'}`. Both kernel and time-model pins are **forwarded as required request arguments** and checked again against each response. It must return `longitudeDeg`, `latitudeDeg`, and metadata with **matching** `bodyName`, `datetimeUtc`, `center:'EARTH'`, `frame`, `corrections`, `engineVersion`, `kernelSetId`, and `timeModelId`. The caller supplies all three expected provenance identifiers; missing or mismatched values fail closed. No fallback to geometric J2000/mean-of-date or Swiss.
 
 Only `zodiac: 'TROPICAL'` is permitted; sidereal requires a separately validated ayanamsa and coordinate projection adapter. Missing zodiac is rejected rather than assumed.
 
@@ -108,3 +108,13 @@ Executed `npm test` (package script `node --test`) with Node.js 22.16.0 and npm 
 **Result: 24 tests / 24 passed; 0 failed, 0 skipped.** Baseline math (4), lunar sectors (6), provider failure/provenance checks (12), and installed-package-style ESM self-reference smoke (2).
 
 This is a native Node test of exact committed files in a SHA-matched temporary mirror, not a Git checkout, npm publish/install test or astronomical JPL/Horizons parity. No GitHub Actions or CI were configured. TypeScript 5.8.3 NodeNext consumer compilation passed separately. Status remains IMPLEMENTED_ISOLATED pending real Rust adapter validation.
+
+## Async input consistency and explicit Earth center — 2026-11-13
+
+Requests now declare `center: 'EARTH'` explicitly, matching the planned upstream Rust state request principle that astronomical centers cannot be inferred. The response gate continues to reject any non-Earth center. Provider interface types and the ESM consumer smoke assertion reflect the new field.
+
+The provider adapter now snapshots the caller's `datetimeUtc`, provider object and callable provider method **before** awaiting the Sun and Moon requests. This removes a previously possible time-of-check/time-of-use defect: a mutable input or provider method could be changed after the Sun await, causing the Moon request or its metadata validation to use a different timestamp/provider. Pinned version/kernel/time-model data were already snapshotted.
+
+Two synthetic regressions now cover: (1) mutation of the caller UTC, provider reference and provider method from the first callback while preserving identical Sun/Moon requests; (2) explicit Earth center on both calls. The 14 provider test bodies from the current GitHub branch passed in an isolated V8 harness with adapted assertions against the actual fetched sources (**14/14 PASS**). Types and ESM smoke were updated, but **native `npm test` and `tsc` were not rerun after these changes**. The previous 24/24 native results above are historical results for the earlier commit; with the two new cases the suite now contains 26 tests pending native rerun.
+
+This remains an injected mock-provider contract, not a direct Rust/WASM integration or evidence of actual JPL kernel use.
