@@ -4,7 +4,11 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.mjs"
+    ".": "./src/index.mjs",
+    "./zodiac-decan-facts": {
+      "types": "./src/zodiac-decan-facts.d.mts",
+      "import": "./src/zodiac-decan-facts.mjs"
+    }
   },
   "engines": {
     "node": ">=20"
