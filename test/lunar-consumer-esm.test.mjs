@@ -57,6 +57,7 @@ test('injected provider agrees with public standalone geometry subpath', async (
   assert.deepEqual(result.sectors, directlyCalculated);
   assert.equal(result.sectors.sectorId, 'FIRST_QUARTER');
   assert.deepEqual(requests.map(({ bodyName }) => bodyName), ['Sun', 'Moon']);
+  assert.ok(requests.every(request => request.center === 'EARTH'));
   assert.ok(requests.every(request => request.kernelSetId === expected.kernelSetId));
   assert.ok(requests.every(request => request.timeModelId === expected.timeModelId));
 });
