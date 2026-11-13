@@ -152,3 +152,15 @@ Validation commands: `node --test test/house-unequal-wrap-regression.test.mjs`
 and `npm test`. **Not executed natively**: the available GitHub connector
 can commit files but does not provide a Node runner. Remains
 `IMPLEMENTED_ISOLATED` pending native execution and independent review.
+
+## Legacy Vehlow label boundary (2026-11-13)
+
+A synthetic regression verifies that the historical `egizia` input is accepted
+only under `VIRGOSTARS_LEGACY_V1`, resolves to canonical `VEHLOW`, and requires
+the external cusp provider to declare canonical `VEHLOW` metadata. A canonical
+profile cannot accept the legacy alias, and provider metadata cannot use the
+alias as a substitute for the canonical identifier. This does not implement
+or validate the historical `houses_pos` method.
+
+Run `node --test test/house-unequal-wrap-regression.test.mjs` and `npm test`.
+Native execution is still pending; no astronomical parity is claimed.
