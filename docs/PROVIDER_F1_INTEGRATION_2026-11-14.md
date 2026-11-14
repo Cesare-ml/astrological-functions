@@ -15,3 +15,14 @@ This branch combines the exact tree entries added/changed by PR #3 into the `mai
 - Keep this staging PR **draft** pending a complete native Node test run and review; do not merge solely on a GitHub `mergeable` result.
 - Original draft PR #3 remains available, and stacked PR #54 needs separate dependency reconciliation.
 - No production backend, user records, DB, deployment, public publishing, or astronomical engine change.
+
+## Additional synthetic test triage (same day)
+
+The complete integration-branch set contains **36 `.test.mjs` files** with **120 registered test callbacks**. Read-only execution of their exact GitHub file contents in three 12-file JavaScript V8 batches, using a strict-mode `node:test`/assert approximation rather than native Node imports, found two inconsistent old test fixtures:
+
+1. `test/house-cusp-set-contract.test.mjs` expected `INVALID_ANGLE` for a non-finite cusp. The PR #3 `validateHouseCuspSet` deliberately reports `INVALID_CUSPS`, consistent with its own shape/geometry checks. Fixed **only the assertion** in this staging branch.
+2. `test/provider-provenance-consistency.test.mjs` attempted to test mixed missing/present provider provenance with a *partially specified* provider metadata object. The stricter F2 contract correctly rejects partial provenance as `INVALID_EPHEMERIS_RESULT` before comparing two bodies. Changed that fixture to test absent versus **complete** provenance in both orders, preserving the expected `INCONSISTENT_EPHEMERIS` cross-body failure.
+
+One apparent failure involving a frozen property assignment in `test/natal-provenance-snapshot.test.mjs` was a **test-harness strict-mode artifact**, not a runtime defect: Node ESM is strict mode, while the initial `Function`-based shim was not. Re-running that test in strict mode restored the expected `TypeError`.
+
+**Revalidated** the 11 registered callbacks across the three affected files against branch source blob `c674d65532df574a6e211e5994708c2b95dfab80`: **11/11 passed**, including the corrected fixtures. Together with the unchanged batch results (32/32 in batch 1; 52 other passes in batch 2; 33 other passes in batch 3), all **120 unique callbacks** have passing synthetic V8 evidence after the fixes. This remains **not** a native `npm test` execution: the shim can differ from Node's actual module loader, scheduling or strict assertions. Native Node and TypeScript checks remain hard blockers before this draft can be marked merge-ready.
