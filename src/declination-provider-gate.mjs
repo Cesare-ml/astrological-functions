@@ -71,6 +71,52 @@ function snapshotCoordinates(coordinates, datetimeUtc) {
   return Object.freeze({ ...coordinates,
     frameEpochUtc: coordinates.frame === 'ICRS' ? null : datetimeUtc });
 }
+/**
+ * Abort is opt-in: there is no implicit timeout. Do not mistake this for
+ * guaranteed cancellation of work inside the injected astronomical engine.
+ */
+function validateAbortSignal(signal) {
+  if (signal !== undefined && (signal === null ||
+      typeof signal.aborted !== 'boolean' ||
+      typeof signal.addEventListener !== 'function' ||
+      typeof signal.removeEventListener !== 'function')) {
+    throw new AstrologyError('INVALID_DECLINATION_ABORT_SIGNAL', 'A valid AbortSignal is required');
+  }
+  return signal;
+}
+function assertNotAborted(signal) {
+  if (signal?.aborted)
+    throw new AstrologyError('DECLINATION_PROVIDER_ABORTED', 'Declination calculation was aborted');
+}
+/**
+ * Race an in-flight provider call against a consumer abort. Attach rejection
+ * handling and remove listeners for both outcomes; a late provider resolution
+ * or rejection is ignored and never triggers another body request.
+ */
+function invokeProvider(provider, method, request, signal) {
+  if (signal === undefined) return method.call(provider, request);
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const complete = (ok, value) => {
+      if (settled) return;
+      settled = true;
+      signal.removeEventListener('abort', onAbort);
+      if (ok) resolve(value);
+      else reject(value);
+    };
+    const onAbort = () => complete(false,
+      new AstrologyError('DECLINATION_PROVIDER_ABORTED', 'Declination calculation was aborted'));
+    signal.addEventListener('abort', onAbort, { once: true });
+    // Catch an abort fired while the event listener was being installed.
+    if (signal.aborted) { onAbort(); return; }
+    try {
+      Promise.resolve(method.call(provider, request)).then(
+        value => complete(true, value), error => complete(false, error));
+    } catch (error) {
+      complete(false, error);
+    }
+  });
+}
 function assertResponse(result, request) {
   if (!isRecord(result))
     throw new AstrologyError('INVALID_DECLINATION_PROVIDER_RESULT', 'Provider response identity or declination is invalid');
@@ -138,20 +184,25 @@ export async function calculateDeclinationContactsWithProvider(options) {
         d.maxOrbDeg < 0 || d.maxOrbDeg > 90))
     throw new AstrologyError('INVALID_DECLINATION_CONTACT', 'Explicit unique parallel/contra-parallel definitions and finite orbs required');
   const contactDefinitions = Object.freeze(definitions.map(d => Object.freeze(d)));
+  const signal = validateAbortSignal(options.signal);
+  assertNotAborted(signal);
   async function acquire(selection) {
     const frameCoordinates = snapshotCoordinates(coordinates, selection.datetimeUtc);
     const points = [];
     for (const bodyId of selection.bodyIds) {
+      assertNotAborted(signal);
       const request = Object.freeze({
         snapshotId: selection.snapshotId,
         datetimeUtc: selection.datetimeUtc,
         bodyId,
         coordinates: frameCoordinates,
         expectedProvenance,
+        ...(signal === undefined ? {} : { signal }),
       });
-      // Provider failures deliberately propagate; no substitute value is used.
-      // Preserve the original receiver for stateful Rust/WASM adapters.
-      const result = await getGeocentricEquatorialDeclination.call(provider, request);
+      // The provider receives the same AbortSignal when supplied, but may
+      // ignore it. Our wrapper still stops awaiting on abort, with no fallback.
+      const result = await invokeProvider(provider, getGeocentricEquatorialDeclination, request, signal);
+      assertNotAborted(signal);
       points.push(assertResponse(result, request));
     }
     return Object.freeze({
@@ -163,7 +214,9 @@ export async function calculateDeclinationContactsWithProvider(options) {
     });
   }
   const sourceSnapshot = await acquire(source);
+  assertNotAborted(signal);
   const targetSnapshot = await acquire(target);
+  assertNotAborted(signal);
   return calculateSourcedDeclinationContacts({
     direction, sourceSnapshot, targetSnapshot, contactDefinitions,
   });
