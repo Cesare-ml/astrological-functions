@@ -30,56 +30,71 @@ function validateUtc(value) {
   return value;
 }
 function validateSelection(selection, name) {
-  if (!isRecord(selection) || !validId(selection.snapshotId))
+  if (!isRecord(selection))
+    throw new AstrologyError('INVALID_DECLINATION_PROVIDER_INPUT', `${name} requires a snapshotId`);
+  const snapshotId = selection.snapshotId;
+  if (!validId(snapshotId))
     throw new AstrologyError('INVALID_DECLINATION_PROVIDER_INPUT', `${name} requires a snapshotId`);
   const datetimeUtc = validateUtc(selection.datetimeUtc);
-  if (!Array.isArray(selection.bodyIds) || selection.bodyIds.length < 1 || selection.bodyIds.length > 32 ||
-      selection.bodyIds.some(id => !validId(id)) || new Set(selection.bodyIds).size !== selection.bodyIds.length)
+  // Snapshot the list *before* validation: an accessor must not substitute a
+  // different body sequence after unique IDs have been checked.
+  const inputIds = selection.bodyIds;
+  if (!Array.isArray(inputIds) || inputIds.length < 1 || inputIds.length > 32)
     throw new AstrologyError('INVALID_DECLINATION_PROVIDER_INPUT', `${name} requires 1..32 unique bodyIds`);
-  return Object.freeze({ snapshotId: selection.snapshotId, datetimeUtc,
-    bodyIds: Object.freeze([...selection.bodyIds]) });
+  const bodyIds = Array.from(inputIds);
+  if (bodyIds.some(id => !validId(id)) || new Set(bodyIds).size !== bodyIds.length)
+    throw new AstrologyError('INVALID_DECLINATION_PROVIDER_INPUT', `${name} requires 1..32 unique bodyIds`);
+  return Object.freeze({ snapshotId, datetimeUtc, bodyIds: Object.freeze(bodyIds) });
 }
 function validateCoordinates(value) {
-  if (!isRecord(value) || value.origin !== 'EARTH_GEOCENTER' ||
-      value.kind !== 'EQUATORIAL_DECLINATION' || !FRAMES.has(value.frame) ||
-      !CORRECTIONS.has(value.corrections)) {
+  if (!isRecord(value))
+    throw new AstrologyError('INVALID_DECLINATION_PROVIDER_INPUT', 'Explicit supported geocentric equatorial coordinates are required');
+  const { origin, kind, frame, corrections } = value;
+  if (origin !== 'EARTH_GEOCENTER' || kind !== 'EQUATORIAL_DECLINATION' ||
+      !FRAMES.has(frame) || !CORRECTIONS.has(corrections)) {
     throw new AstrologyError('INVALID_DECLINATION_PROVIDER_INPUT', 'Explicit supported geocentric equatorial coordinates are required');
   }
-  return Object.freeze({ origin: 'EARTH_GEOCENTER', kind: 'EQUATORIAL_DECLINATION',
-    frame: value.frame, corrections: value.corrections });
+  return Object.freeze({ origin, kind, frame, corrections });
 }
 function validateProvenance(value) {
-  if (!isRecord(value) || value.providerId !== 'VIRGOSTARS_EPHEMERIS' ||
-      PROVENANCE_FIELDS.some(field => !validId(value[field]))) {
+  if (!isRecord(value))
+    throw new AstrologyError('INVALID_DECLINATION_PROVIDER_INPUT', 'Pinned VirgoStars Ephemeris provenance is required');
+  const { providerId, engineVersion, kernelSetId, timeModelId } = value;
+  const pinned = { providerId, engineVersion, kernelSetId, timeModelId };
+  if (providerId !== 'VIRGOSTARS_EPHEMERIS' ||
+      PROVENANCE_FIELDS.some(field => !validId(pinned[field]))) {
     throw new AstrologyError('INVALID_DECLINATION_PROVIDER_INPUT', 'Pinned VirgoStars Ephemeris provenance is required');
   }
-  return Object.freeze(Object.fromEntries(PROVENANCE_FIELDS.map(field => [field, value[field]])));
+  return Object.freeze(pinned);
 }
 function snapshotCoordinates(coordinates, datetimeUtc) {
   return Object.freeze({ ...coordinates,
     frameEpochUtc: coordinates.frame === 'ICRS' ? null : datetimeUtc });
 }
 function assertResponse(result, request) {
-  if (!isRecord(result) || result.snapshotId !== request.snapshotId ||
-      result.bodyId !== request.bodyId ||
-      result.datetimeUtc !== request.datetimeUtc ||
-      typeof result.declinationDeg !== 'number' || !Number.isFinite(result.declinationDeg) ||
-      Math.abs(result.declinationDeg) > 90) {
+  if (!isRecord(result))
+    throw new AstrologyError('INVALID_DECLINATION_PROVIDER_RESULT', 'Provider response identity or declination is invalid');
+  // A provider result may expose accessors. Validate the exact value we use,
+  // not a value that can change between the range check and frozen output.
+  const { snapshotId, bodyId, datetimeUtc, declinationDeg,
+    coordinates: actualCoordinates, provenance: actualProvenance } = result;
+  if (snapshotId !== request.snapshotId || bodyId !== request.bodyId ||
+      datetimeUtc !== request.datetimeUtc ||
+      typeof declinationDeg !== 'number' || !Number.isFinite(declinationDeg) ||
+      Math.abs(declinationDeg) > 90) {
     throw new AstrologyError('INVALID_DECLINATION_PROVIDER_RESULT', 'Provider response identity or declination is invalid');
   }
-  const actualCoordinates = result.coordinates;
   const expectedCoordinates = request.coordinates;
   if (!isRecord(actualCoordinates) ||
       Object.keys(expectedCoordinates).some(field => actualCoordinates[field] !== expectedCoordinates[field])) {
     throw new AstrologyError('INCOMPATIBLE_DECLINATION_PROVIDER_FRAME', 'Provider response has different coordinate or correction semantics');
   }
-  const actualProvenance = result.provenance;
   if (!isRecord(actualProvenance) ||
       PROVENANCE_FIELDS.some(field => actualProvenance[field] !== request.expectedProvenance[field])) {
     throw new AstrologyError('INCOMPATIBLE_DECLINATION_PROVIDER_PROVENANCE', 'Provider response differs from pinned provenance');
   }
   return Object.freeze({ name: request.bodyId,
-    declinationDeg: result.declinationDeg === 0 ? 0 : result.declinationDeg });
+    declinationDeg: declinationDeg === 0 ? 0 : declinationDeg });
 }
 
 /**
@@ -107,19 +122,22 @@ export async function calculateDeclinationContactsWithProvider(options) {
   // Reuse the existing facts module to check direction, names and orb policy
   // without inventing any placeholder positions: pass the required real numeric
   // coordinates only after provider checks below. Inputs here are structural.
-  if (!['A_TO_B', 'B_TO_A', 'SKY_TO_NATAL'].includes(options.direction))
+  const direction = options.direction;
+  if (!['A_TO_B', 'B_TO_A', 'SKY_TO_NATAL'].includes(direction))
     throw new AstrologyError('INVALID_DECLINATION_DIRECTION', 'Explicit declination direction required');
-  if (!Array.isArray(options.contactDefinitions) || options.contactDefinitions.length < 1 ||
-      options.contactDefinitions.length > 2 ||
-      new Set(options.contactDefinitions.map(d => d?.id)).size !== options.contactDefinitions.length ||
-      options.contactDefinitions.some(d => !isRecord(d) ||
-        !['PARALLEL', 'CONTRA_PARALLEL'].includes(d.id) ||
+  const suppliedDefinitions = options.contactDefinitions;
+  if (!Array.isArray(suppliedDefinitions) || suppliedDefinitions.length < 1 ||
+      suppliedDefinitions.length > 2)
+    throw new AstrologyError('INVALID_DECLINATION_CONTACT', 'Explicit unique parallel/contra-parallel definitions and finite orbs required');
+  // Read each definition value once, then check and freeze that same snapshot.
+  const definitions = Array.from(suppliedDefinitions, d => isRecord(d) ?
+    { id: d.id, maxOrbDeg: d.maxOrbDeg } : null);
+  if (new Set(definitions.map(d => d?.id)).size !== definitions.length ||
+      definitions.some(d => !d || !['PARALLEL', 'CONTRA_PARALLEL'].includes(d.id) ||
         typeof d.maxOrbDeg !== 'number' || !Number.isFinite(d.maxOrbDeg) ||
         d.maxOrbDeg < 0 || d.maxOrbDeg > 90))
     throw new AstrologyError('INVALID_DECLINATION_CONTACT', 'Explicit unique parallel/contra-parallel definitions and finite orbs required');
-  const contactDefinitions = Object.freeze(options.contactDefinitions.map(d =>
-    Object.freeze({ id: d.id, maxOrbDeg: d.maxOrbDeg })));
-  const direction = options.direction;
+  const contactDefinitions = Object.freeze(definitions.map(d => Object.freeze(d)));
   async function acquire(selection) {
     const frameCoordinates = snapshotCoordinates(coordinates, selection.datetimeUtc);
     const points = [];
