@@ -100,3 +100,43 @@ test('actual F5 stack: scanner call budget exhaustion propagates without a parti
     {targetIntervalMs:60000,maxDepth:10,maxProviderCalls:1}),
     error=>error?.code==='SEARCH_BUDGET_EXHAUSTED');
 });
+
+
+test('actual F5 stack: a tight live cap permits only two excluding-enclosure provider calls',async()=>{
+  let providerCalls=0;
+  const constant=()=>1;
+  const provider=providerWith(constant,()=>{providerCalls++;return [.9,1.1];});
+  const runner=makeTransitChunkPipelineRunner({
+    windowInput,identity,
+    scan:{targetIntervalMs:60000,maxDepth:10,maxProviderCalls:400},
+    refinement:{timeToleranceMs:150,residualToleranceDeg:.0001,maxIterations:40,
+      maxCandidateRefinements:64,maxRefinementCalls:1000},
+    maxTotalProviderCalls:2, // Much less than worst-case theoretical 2800.
+    provider,prepareCandidates:prepareTransitAspectEventCandidates,
+  });
+  const report=await collectTransitChunkCandidateReports({
+    windowInput,identity,maxCandidateRecords:128,runChunk:runner,
+  });
+  assert.equal(providerCalls,2);
+  assert.equal(report.totals.refinedCandidateCount,0);
+  assert.equal(report.scientificallyValidated,false);
+});
+
+test('actual F5 stack: live cap interrupts an ongoing scan after one provider call',async()=>{
+  let providerCalls=0;
+  const line=ms=>(ms-epoch)/3600000-.37;
+  const p=providerWith(line,(a,b)=>[line(a),line(b)]);
+  const prior=p.getUnwrappedResidualEnclosure.bind(p);
+  p.getUnwrappedResidualEnclosure=async request=>{providerCalls++;return prior(request);};
+  const runner=makeTransitChunkPipelineRunner({
+    windowInput,identity,
+    scan:{targetIntervalMs:60000,maxDepth:10,maxProviderCalls:400},
+    refinement:{timeToleranceMs:150,residualToleranceDeg:.0001,maxIterations:40,
+      maxCandidateRefinements:64,maxRefinementCalls:1000},
+    maxTotalProviderCalls:1,provider:p,prepareCandidates:prepareTransitAspectEventCandidates,
+  });
+  await assert.rejects(()=>collectTransitChunkCandidateReports({
+    windowInput,identity,maxCandidateRecords:128,runChunk:runner,
+  }),e=>e?.code==='GLOBAL_PIPELINE_BUDGET');
+  assert.equal(providerCalls,1);
+});
