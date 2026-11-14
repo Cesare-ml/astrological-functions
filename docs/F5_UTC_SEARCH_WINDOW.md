@@ -22,7 +22,7 @@ const window = validateUtcSearchWindow({
 
 ## Isolation / verification
 
-This branch adds only this standalone module, its `.d.mts`, one Node runtime test suite, one strict TS consumer fixture and this note. The package stays `private`, with **no package export-map change** (future typed ESM entrypoint integration requires explicit coordination with parallel draft PRs).
+This draft branch adds two independent, **isolated** civil-UTC primitives, their `.d.mts` contracts, two Node runtime test suites, two strict TS consumer fixtures and this note. The package stays `private`, with **no package export-map change** (future typed ESM entrypoint integration requires explicit coordination with parallel draft PRs).
 
 Manual checks on a complete checkout:
 
@@ -33,3 +33,35 @@ tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution noden
 ```
 
 These are synthetic validation checks only. A real VirgoStars Ephemeris Rust/WASM source and scientific comparison remain separate gates. Keep VirgoStars project credits and the current legal/publication review before any public release.
+
+
+## Bounded, deterministic partitioning
+
+The follow-up `splitUtcSearchWindow` helper partitions one already-specified UTC range into immutable **half-open** chunks. It delegates to the strict `validateUtcSearchWindow` input gate; it does not solve for astronomical events.
+
+```js
+import { splitUtcSearchWindow } from './src/utc-search-window-chunks.mjs';
+
+const plan = splitUtcSearchWindow({
+  startUtc: '2026-11-14T00:00:00Z',
+  endUtc: '2026-11-15T00:00:00Z',
+  maxDurationMs: 86_400_000,
+  chunkDurationMs: 3_600_000,
+  maxChunks: 24,
+});
+// plan.chunks.length === 24; all 24 chunks cover one hour.
+```
+
+- `chunkDurationMs` must be a positive safe integer; `maxChunks` must be an explicit positive integer at most **4,096**. A query needing more than its declared `maxChunks` raises `TOO_MANY_CHUNKS` **before allocating chunks**; invalid limits raise `INVALID_CHUNK_DURATION` or `INVALID_CHUNK_LIMIT`.
+- Every chunk contains `{index,startUtc,endUtc,startEpochMs,endEpochMs,durationMs}`. Dates are canonicalized to millisecond-precision UTC. There are no zero-length tails, gaps, overlaps, or duplicated millisecond slots. The plan, snapshot, chunks array, and individual chunks are frozen.
+- Each chunk represents a half-open interval `[startEpochMs, endEpochMs)`, including the first instant and excluding its end. **The overall end instant is not included.** Downstream search algorithms must explicitly decide whether to test the terminal instant, deduplicate exact hits at boundaries, and handle convergence/continuity assumptions.
+- This bounds **the number of partitions**, not the CPU time, astronomical lookups or number of roots in a partition. The search engine must retain separate iteration, time, cancellation, provider-provenance and scientific-validation limits.
+
+Manual isolated checks:
+
+```sh
+node --test test/utc-search-window-chunks.test.mjs
+tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext test/types/utc-search-window-chunks.test.ts
+```
+
+**Verification (2026-11-14):** 5/5 Node 22.16.0 synthetic chunk tests passed; TypeScript 5.8.3 strict NodeNext check passed in a dependency-only local fixture. The four new source/test Git blobs matched local Git object hashes. The fixture substituted only the existing unchanged `AstrologyError` dependency from `src/index.mjs`, not the complete private checkout; consequently these results **do not certify** the full `npm test` suite or scientific ephemeris parity.
