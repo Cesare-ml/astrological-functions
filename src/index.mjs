@@ -349,9 +349,24 @@ export async function calculateNatalWithProvider(input) {
   finite(latitudeDeg, 'latitudeDeg'); finite(longitudeDegEast, 'longitudeDegEast');
   if (latitudeDeg < -90 || latitudeDeg > 90 || longitudeDegEast < -180 || longitudeDegEast > 180)
     throw new AstrologyError('INVALID_COORDINATES', 'Geographic coordinates outside valid bounds');
-  if (!Array.isArray(bodyNames) || bodyNames.length === 0 || bodyNames.length > 32 ||
-      Array.from(bodyNames).some(n => typeof n !== 'string' || !n.trim()) || new Set(bodyNames).size !== bodyNames.length)
+  // Validate and capture every identifier exactly once. Reusing the caller's
+  // iterator (Array.from / Set / spread) could validate one sequence and send
+  // another to the ephemeris if a getter or Symbol.iterator is mutable.
+  const bodyCount = Array.isArray(bodyNames) ? bodyNames.length : 0;
+  if (bodyCount < 1 || bodyCount > 32)
     throw new AstrologyError('INVALID_BODIES', '1..32 unique named bodies required');
+  const requestedBodyNames = new Array(bodyCount);
+  const seenBodyNames = new Set();
+  for (let index = 0; index < bodyCount; index++) {
+    if (!Object.hasOwn(bodyNames, index))
+      throw new AstrologyError('INVALID_BODIES', '1..32 unique named bodies required');
+    const name = bodyNames[index];
+    if (typeof name !== 'string' || !name.trim() || seenBodyNames.has(name))
+      throw new AstrologyError('INVALID_BODIES', '1..32 unique named bodies required');
+    seenBodyNames.add(name);
+    requestedBodyNames[index] = name;
+  }
+  Object.freeze(requestedBodyNames);
   if (!provider || (typeof provider !== 'object' && typeof provider !== 'function') ||
       Array.isArray(provider))
     throw new AstrologyError('MISSING_PROVIDER', 'Explicit independent ephemeris provider required');
@@ -360,9 +375,6 @@ export async function calculateNatalWithProvider(input) {
   const getGeocentricEcliptic = provider.getGeocentricEcliptic;
   if (typeof getGeocentricEcliptic !== 'function')
     throw new AstrologyError('MISSING_PROVIDER', 'Explicit independent ephemeris provider required');
-  // Snapshot validated identifiers before awaiting a potentially reentrant provider.
-  // The caller may mutate its array while an earlier body request is pending.
-  const requestedBodyNames = Object.freeze([...bodyNames]);
   // Null prototype prevents names such as '__proto__' from mutating the result map.
   const bodies = Object.create(null);
   // Every position in one chart must come from the same optional engine/kernel/time model.
