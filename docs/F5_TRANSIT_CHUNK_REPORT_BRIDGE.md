@@ -69,7 +69,7 @@ const runChunk = makeTransitChunkPipelineRunner({
   refinement: {timeToleranceMs:100,residualToleranceDeg:0.0001,
     maxIterations:40,maxCandidateRefinements:64,maxRefinementCalls:1000},
   provider, // Must implement the complete PR #17 apparent-of-date provider contract
-  maxTotalProviderCalls:2800, // Two chunks * (400 scan + 1000 refine calls)
+  maxTotalProviderCalls:2800, // Live cap for all point+enclosure calls across both chunks
   prepareCandidates:prepareTransitAspectEventCandidates,
 });
 const summary = await collectTransitChunkCandidateReports({
@@ -81,7 +81,7 @@ const summary = await collectTransitChunkCandidateReports({
 
 - Verifies **every** chunk fits the F5 input range (at most 31 days). In particular, `scan.targetIntervalMs` must not exceed the **last shortened chunk**; no implicit tolerance or interval adjustment is applied.
 - Validates scanner (`maxDepth` 0–24, `maxProviderCalls` 1–4,096) and refinement (`maxIterations` 1–128, `maxCandidateRefinements` 1–128, `maxRefinementCalls` 1–16,384, positive tolerances) limits **before calling** the provider.
-- Requires a caller-specified `maxTotalProviderCalls` (1–1,000,000) that must cover the **worst-case** `chunkCount × (maxProviderCalls + maxRefinementCalls)`. This conservatively limits the aggregate budget delegated to the F5 pipeline, contingent on that pipeline enforcing its own per-chunk budgets. It is not a wall-clock or memory bound.
+- Requires a caller-specified `maxTotalProviderCalls` (1–1,000,000), enforced against **actual provider calls** across every chunk: point-residual evaluations and all-time interval-enclosure requests share the same live counter. Each call consumes budget *before* invoking the provider, including calls that throw. A cap smaller than the theoretical worst case is allowed: it succeeds only if the real workload fits. If the cap is exhausted, the next provider request fails with `GLOBAL_PIPELINE_BUDGET` **before** invoking the underlying method, and no partial report is returned. This is not a wall-clock, memory, or scientific completeness bound.
 - Validates provider capability declarations for asserted continuous unwrapped, all-time interval enclosure, station/numeric-error coverage and apparent Earth-centered ecliptic-of-date frames. Snapshots capabilities, bound provider methods, scan/refinement settings before asynchronous work.
 - Rejects incorrect chunk coordinates, out-of-order, concurrent or repeated requests; a failed pipeline cannot be implicitly retried. Forwards raw exceptions to callers instead of fabricating an empty report.
 - **Does not** certify provider assertions, scientific events, physical time accuracy or completeness. The report-only bridge never converts refined candidates to exact hits.
@@ -109,3 +109,12 @@ The adapter now requires `identity` **at construction time**, using the exact sa
 Every chunk submitted to `runChunk` must match the pinned `skyBodyName`, `natalBodyName`, `aspectId`, `exactAngleDeg`, `orientation`, `engineVersion`, `kernelSetId`, and `timeModel` in addition to its UTC coordinates/index. A direct adapter caller cannot silently switch planets, aspect orientation, or ephemeris provenance mid-search. Accessor-based requests and mismatched identities fail with typed `INVALID_TRANSIT_IDENTITY` or `INCOMPATIBLE_CHUNK_REQUEST` errors **without calling the pipeline**, and the pinned immutable values (not caller-mutable request fields) are forwarded to PR #21.
 
 Manual and typed examples now supply `identity` explicitly to `makeTransitChunkPipelineRunner`; this is a breaking change to the previously experimental draft adapter API. Synthetic regression checks cover forged later chunks, mutations during provider awaits, accessor/getter attempts, missing/invalid pinned identities and the shared collector gate. No astronomical correctness or event completeness is implied.
+
+
+### Live aggregate provider-call budget (2026-11-14)
+
+`makeTransitChunkPipelineRunner()` wraps **both** bound provider functions, `getUnwrappedAspectResidual()` and `getUnwrappedResidualEnclosure()`, in a shared counter. The guard operates before each actual provider invocation across all chunks; there is no per-chunk reset. It also rejects a reference retained and used **outside an active chunk**. On budget exhaustion the adapter becomes unusable for further chunks, and even if an injected pipeline swallows the error and returns a synthetic success object, the adapter itself rejects with `GLOBAL_PIPELINE_BUDGET`.
+
+The earlier draft **worst-case preallocation requirement** has been removed: the cap is now an **enforced live bound**, rather than merely a conservative configuration estimate. PR #21 continues to own its independent per-chunk scan and refinement limits, while the adapter enforces the aggregate cap. A malicious caller can still invoke the original provider directly if it retains an external reference; this adapter enforces only calls through its own injected provider facade. It does not cancel already-started asynchronous work, impose deadlines, or verify the truth of the provider's scientific enclosure claims.
+
+Local isolated validation (Node.js 22.16.0 / TypeScript 5.8.3): **63/63** focused runtime Node tests passed (4 new live-budget cases), **7/7** actual PR #21 synthetic integration smoke tests passed (2 new aggregate-budget cases), and all strict NodeNext TypeScript fixtures passed. SHA-1 Git blobs of the source/test files were matched with the local tested files. **Full private-repository checkout `npm test` and real astronomical parity remain unexecuted.**
