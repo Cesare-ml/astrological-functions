@@ -170,3 +170,74 @@ test('CLI rejects hidden targets and never rewrites manifest copies', async () =
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('exports-only candidate changes produce no non-export drift', () => {
+  const plan = planEsmExportUnion([manifest(), manifest({ './a': entry('a') })]);
+  assert.deepEqual(plan.nonExportDrift, []);
+});
+
+test('version, engines and script drift is reported without exposing values', () => {
+  const plan = planEsmExportUnion([manifest(), manifest({}, {
+    version: 'SECRET_VERSION_SENTINEL', engines: { node: 'SECRET_ENGINE_SENTINEL' },
+    scripts: { test: 'SECRET_SCRIPT_SENTINEL' }
+  })]);
+  assert.deepEqual(plan.nonExportDrift, [
+    { field: 'engines', sources: ['candidate 1'] },
+    { field: 'scripts', sources: ['candidate 1'] },
+    { field: 'version', sources: ['candidate 1'] }
+  ]);
+  assert.doesNotMatch(JSON.stringify(plan), /SECRET_/);
+});
+
+test('nested object order is ignored but array order changes are detected', () => {
+  const base = manifest({}, { engines: { node: '>=20', another: 'x' }, files: ['src', 'test'] });
+  const equivalent = manifest({ './a': entry('a') }, {
+    engines: { another: 'x', node: '>=20' }, files: ['src', 'test']
+  });
+  assert.deepEqual(planEsmExportUnion([base, equivalent]).nonExportDrift, []);
+  const different = manifest({}, { engines: { another: 'x', node: '>=20' }, files: ['test', 'src'] });
+  assert.deepEqual(planEsmExportUnion([base, different]).nonExportDrift,
+    [{ field: 'files', sources: ['candidate 1'] }]);
+});
+
+test('added and removed fields are attributed by candidate in stable order', () => {
+  const base = manifest({}, { license: 'UNDECIDED', engines: { node: '>=20' } });
+  const first = manifest({}, { engines: { node: '>=20' }, dependencies: { one: 'SENTINEL' } });
+  const second = manifest({}, { license: 'UNDECIDED', engines: { node: '>=22' },
+    optionalDependencies: { two: 'SENTINEL' } });
+  const result = planEsmExportUnion([base, first, second]);
+  assert.deepEqual(result.nonExportDrift, [
+    { field: 'dependencies', sources: ['candidate 1'] },
+    { field: 'engines', sources: ['candidate 2'] },
+    { field: 'license', sources: ['candidate 1'] },
+    { field: 'optionalDependencies', sources: ['candidate 2'] }
+  ]);
+  assert.doesNotMatch(JSON.stringify(result), /SENTINEL/);
+});
+
+test('non-export drift scans without changing frozen manifest inputs', () => {
+  const baseline = Object.freeze(manifest());
+  const candidate = Object.freeze(manifest({ './a': entry('a') }, { version: 'other' }));
+  const result = planEsmExportUnion([baseline, candidate]);
+  assert.deepEqual(result.nonExportDrift, [{ field: 'version', sources: ['candidate 1'] }]);
+});
+
+test('CLI reports drift without leaking candidate values or changing files', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'virgostars-drift-export-'));
+  try {
+    const base = join(directory, 'baseline.json');
+    const candidatePath = join(directory, 'candidate.json');
+    const original = JSON.stringify(manifest({ './a': entry('a') }, { scripts: { test: 'PRIVATE_SENTINEL' } }));
+    await writeFile(base, JSON.stringify(manifest()));
+    await writeFile(candidatePath, original);
+    const script = fileURLToPath(new URL('../scripts/plan-esm-export-union.mjs', import.meta.url));
+    const result = spawnSync(process.execPath, [script, base, candidatePath], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout).nonExportDrift,
+      [{ field: 'scripts', sources: ['candidate 1'] }]);
+    assert.doesNotMatch(result.stdout, /PRIVATE_SENTINEL/);
+    assert.equal(await readFile(candidatePath, 'utf8'), original);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
