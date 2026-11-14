@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, copyFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const script = fileURLToPath(new URL('../scripts/verify-provider-integration.mjs', import.meta.url));
@@ -19,8 +19,9 @@ test('manual native integration gate documents its offline scope', () => {
 test('gate enumerates runtime and declaration fixtures without shell globs', () => {
   const result = execute(script, '--list');
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /test\/math\.test\.mjs/);
-  assert.match(result.stdout, /test\/types\/dodecatemoria-methods\.ts/);
+  const listed = result.stdout.replaceAll('\\', '/');
+  assert.match(listed, /test\/math\.test\.mjs/);
+  assert.match(listed, /test\/types\/dodecatemoria-methods\.ts/);
   assert.match(result.stdout, /Node test files; .* TypeScript fixtures/);
 });
 
