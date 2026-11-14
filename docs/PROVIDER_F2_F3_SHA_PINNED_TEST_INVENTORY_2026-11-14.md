@@ -8,7 +8,7 @@ This change extends the consolidated F2/F3 provider/aspect draft [#112](https://
 
 The parent manual native gate previously required **minimum counts** (64 Node test files, 14 TypeScript fixtures). A missing real test could be masked by an unrelated extra test: the counts could still be satisfied, and an existing test could be modified without detection. Therefore the gate was not tied to the exact GitHub commit reviewed.
 
-The new `scripts/verify-provider-fixture-inventory.mjs` performs read-only offline verification against `test/fixtures/provider-f2-f3-inventory.json`. It compares **all expected and actual file names** and computes the canonical Git SHA-1 blob ID as `SHA1("blob " + byteLength + NUL + content)` for every file. Input paths are restricted to eligible repository-relative paths, preventing path traversal. Any missing/extra path, changed file content or invalid manifest causes a nonzero exit. It never writes or updates the manifest itself.
+The new `scripts/verify-provider-fixture-inventory.mjs` performs read-only offline verification against `test/fixtures/provider-f2-f3-inventory.json`. It compares **all expected and actual file names** and computes the canonical Git SHA-1 blob ID as `SHA1("blob " + byteLength + NUL + content)` for every file. Input paths are restricted to eligible repository-relative paths, preventing path traversal. Any missing/extra path, changed file content or invalid manifest causes a nonzero exit. It never writes or updates the manifest itself. For cross-platform checkouts, the verifier first compares exact raw bytes and, only when different, also accepts a reversible CRLF-to-LF text normalization if the resulting canonical Git blob matches the pinned hash. Unrelated text changes and bare CR characters still fail. This avoids false failures with Git `core.autocrlf` on Windows.
 
 This verifies the exact source/fixture snapshot, **not the correctness of that source**. A reviewer must deliberately regenerate the inventory when a legitimate file changes and review the resulting diff; the lock must not be automatically self-updated during tests.
 
@@ -38,13 +38,14 @@ The last command now executes the inventory verifier **before** any Node test or
 
 ## Actual native regression proof
 
-On a local native Node.js **22.16.0** filesystem fixture, the byte-identical GitHub verifier source (blob `1921e0cbd8ec4935a3140cbd438098ae2833ac54`) and its exact test source (blob `35ee51f4bcc109b6e55921ac9e4d8f4e32e6feed`) passed **6/6** tests:
+On a local native Node.js **22.16.0** filesystem fixture, the byte-identical GitHub verifier source (blob `76d63d50aed0de6df0e53483558b6a4be77b24ae`) and its exact test source (blob `820f67069a062512ea31f44f71c1391fb998e05a`) passed **7/7** tests:
 - matching snapshot succeeds and supports inspection/help;
 - a modified runtime file fails with `SHA_MISMATCH`;
 - missing and unexpected tests fail;
 - invalid/traversal manifest paths fail;
 - incorrect SHA or unexpected CLI options fail;
-- a renamed/replaced test payload cannot be validated by a matching test count.
+- a renamed/replaced test payload cannot be validated by a matching test count;
+- a Windows Git checkout converting LF to CRLF succeeds **only** when the canonical LF Git blob remains identical.
 
 **NOT YET VERIFIED:** the 68 native Node test files and all 14 TypeScript fixtures **together on this exact full PR checkout**, ESM self-reference and real Rust/JPL apparent-of-date ephemeris parity, security/license/privacy/commercial readiness, and downstream integration/release. These remain hard blockers for main merge. Keep both parent and child PRs in draft.
 
