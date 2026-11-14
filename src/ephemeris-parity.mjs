@@ -28,7 +28,9 @@ function checkedTolerances(value) {
     longitudeArcsec: nonnegativeFinite(value.longitudeArcsec, 'longitudeArcsec'),
     latitudeArcsec: nonnegativeFinite(value.latitudeArcsec, 'latitudeArcsec'),
     longitudeSpeedArcsecPerDay: nonnegativeFinite(value.longitudeSpeedArcsecPerDay, 'longitudeSpeedArcsecPerDay'),
+    latitudeSpeedArcsecPerDay: nonnegativeFinite(value.latitudeSpeedArcsecPerDay, 'latitudeSpeedArcsecPerDay'),
     distanceAu: nonnegativeFinite(value.distanceAu, 'distanceAu'),
+    distanceSpeedAuPerDay: nonnegativeFinite(value.distanceSpeedAuPerDay, 'distanceSpeedAuPerDay'),
   });
 }
 
@@ -57,7 +59,10 @@ function checkedState(value, label) {
     throw new EphemerisParityError('INVALID_STATE', `${label} state is missing`);
   }
   const metadata = requiredMetadata(value.metadata, label);
-  const fields = ['longitudeDeg', 'latitudeDeg', 'longitudeSpeedDegPerDay', 'distanceAu'];
+  // Six polar coordinates/rates, corresponding to the Swiss apparent-position
+  // output fields; an omitted speed must never turn into a false parity PASS.
+  const fields = ['longitudeDeg', 'latitudeDeg', 'longitudeSpeedDegPerDay',
+    'latitudeSpeedDegPerDay', 'distanceAu', 'distanceSpeedAuPerDay'];
   const numeric = {};
   for (const field of fields) {
     const number = value[field];
@@ -128,7 +133,11 @@ export async function compareApparentEphemerisProviders({
       latitudeArcsec: (candidate.latitudeDeg - reference.latitudeDeg) * 3600,
       longitudeSpeedArcsecPerDay:
         (candidate.longitudeSpeedDegPerDay - reference.longitudeSpeedDegPerDay) * 3600,
+      latitudeSpeedArcsecPerDay:
+        (candidate.latitudeSpeedDegPerDay - reference.latitudeSpeedDegPerDay) * 3600,
       distanceAu: candidate.distanceAu - reference.distanceAu,
+      distanceSpeedAuPerDay:
+        candidate.distanceSpeedAuPerDay - reference.distanceSpeedAuPerDay,
     });
     const passed = Object.keys(limits).every(field => Math.abs(residual[field]) <= limits[field]);
     comparisons.push(Object.freeze({
@@ -138,7 +147,7 @@ export async function compareApparentEphemerisProviders({
   }
   const failed = comparisons.filter(row => !row.passed).length;
   return Object.freeze({
-    contract: 'APPARENT_EPHEMERIS_PARITY_V1', datetimeUtc,
+    contract: 'APPARENT_EPHEMERIS_PARITY_V2', datetimeUtc,
     tolerances: limits, total: comparisons.length, passed: comparisons.length - failed,
     failed, status: failed === 0 ? 'PASS' : 'FAIL',
     comparisons: Object.freeze(comparisons),
