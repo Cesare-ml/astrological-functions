@@ -485,3 +485,93 @@ Rust/WASM/JPL astronomy, provenance or licensing. Keep PR #69 draft;
 no main merge, automatic GitHub Actions, npm publication, deployment
 or visibility change. Keep
 [VirgoStars Ephemeris attribution](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+
+## Named public ESM export contract verification — 14 November 2026
+
+An importable ESM subpath can still omit the function expected by its
+downstream consumer. The trusted-checkout smoke tool now supports
+\`--expect-export ./subpath:exportName\` (or \`.:exportName\` for the
+root export), in addition to the existing \`--expect ./subpath\` option.
+
+Example **only after creating a trusted, complete checkout of the stacked
+provider branch** (including its PR #3 base):
+
+\`\`\`sh
+node scripts/verify-esm-checkout.mjs /path/to/provider-checkout \
+  --expect ./ephemeris-provider \
+  --expect-export ./ephemeris-provider:calculateNatalWithProvider \
+  --expect-export ./ephemeris-provider:resolveHouseSystem \
+  --expect-export ./ephemeris-provider:validateHouseCuspContext
+\`\`\`
+
+The tool parses and validates each requested identifier without injecting
+it into executable source text, then inspects actual Node module namespace
+objects in a child process. A missing subpath fails with
+\`MISSING_EXPECTED_EXPORT\`; a missing symbol from an otherwise importable
+module fails explicitly with \`MISSING_NAMED_EXPORT\`. The JSON report
+includes \`verifiedNamedExports\` on success. This is a **trusted-code**
+smoke test; importing modules can execute side effects, even though the
+verifier itself does not write files.
+
+### Authentic PR #54 manifest and symbol declaration audit
+
+A read-only GitHub source inspection of the active head of
+\`agent/provider-runtime-import-smoke-20261113\` confirmed that the
+runtime companion re-exports seven names from \`src/index.mjs\`, and
+that **all seven** exist as root runtime function exports and in the
+public \`src/ephemeris-provider.d.ts\` declaration surface:
+
+- \`calculateNatalWithProvider\`
+- \`resolveHouseSystem\`
+- \`resolveHousePlacementPolicy\`
+- \`locateLongitudeWithHousePolicy\`
+- \`validateHouseCuspSet\`
+- \`validateHouseCuspContext\`
+- \`placeNatalBodiesInHouses\`
+
+Pinned actual Git blob SHA-1 evidence:
+
+| PR #54 file | Git blob |
+| --- | --- |
+| \`package.json\` | \`9f638fd753c036c8addd9203aae59fb6fd20b181\` |
+| \`src/index.mjs\` | \`c5b600d3f18de2b5b8d4b533e894745b13d0c822\` |
+| \`src/ephemeris-provider.js\` | \`d3c88aa2c34fbfd56521391020d9a1d4e00c5590\` |
+| \`src/ephemeris-provider.d.ts\` | \`7852e21b1894e4968c148f5a7aec2d0ad3339703\` |
+
+This is **source-level declaration consistency only**, not native Node
+imports from the real PR #54 stacked checkout or TypeScript compilation
+of its authentic consumers. PR #54 remains dependent on PR #3. Neither
+draft branch was merged by this audit.
+
+### Native tests
+
+Six new regression tests in \`test/verify-esm-checkout.test.mjs\`
+cover named root and subpath imports, a missing symbol, an absent
+candidate subpath, invalid identifier/relative path arguments, positive
+CLI invocation and a failed CLI invocation with unchanged source files.
+
+The complete isolated local tooling workspace was tested using
+Node **22.16.0** and TypeScript **5.8.3**:
+
+\`\`\`sh
+node --check scripts/verify-esm-checkout.mjs
+node --check test/verify-esm-checkout.test.mjs
+node --test test/*.test.mjs
+\`\`\`
+
+Result: **72/72 tests passed, 0 failed, 0 skipped** (66 prior and six
+new). The exact tested bytes match the updated GitHub Git blobs:
+
+- \`scripts/verify-esm-checkout.mjs\`:
+  \`ebab9d8795dfd9ee9440e77bbb6f3929b239ff4f\`
+- \`test/verify-esm-checkout.test.mjs\`:
+  \`95a96fcb5ac55dd054a318f0295aff9cc0793259\`
+
+Remaining gates: full genuine PR #54 checkout imports (with PR #3),
+full consolidated \`npm test\`, strict consumer TS NodeNext/Bundler,
+downstream Desktop/Astrolabio integration, scientific Rust/WASM/JPL
+accuracy and rights/provenance review. Keep this tool-only PR **draft**;
+do not merge, deploy, publish to npm, change repo visibility or create
+GitHub Actions. Retain
+[VirgoStars Ephemeris attribution](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
