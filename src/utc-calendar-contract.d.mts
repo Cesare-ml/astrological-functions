@@ -24,7 +24,8 @@ export interface ParsedUtcGregorianInstant extends UtcGregorianInstantInput {
 export type UtcInputErrorCode =
   | 'INVALID_UTC_INPUT'
   | 'UNSUPPORTED_CALENDAR'
-  | 'UNSUPPORTED_TIME_SCALE';
+  | 'UNSUPPORTED_TIME_SCALE'
+  | 'INVALID_UTC_INTERVAL';
 
 export declare class UtcInputError extends Error {
   readonly code: UtcInputErrorCode;
