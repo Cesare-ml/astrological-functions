@@ -320,3 +320,75 @@ licensing and privacy gates remain open. The PR remains **draft**, with no
 changes to `main`, no GitHub Actions and no release/deployment.
 VirgoStars Ephemeris credit:
 https://github.com/Cesare-ml/VirgoStars-Ephemeris.
+
+
+## Native Node ESM and optional TypeScript consumer smoke — 14 November 2026
+
+Two additional tests exercise package consumers **rather than merely
+examining export-map JSON**. Both build a new disposable package directory
+under the operating system's temporary folder from the deterministic
+`planEsmExportUnion()` result. They do not modify the project
+`package.json`, merge branches, download packages or write production data.
+
+### Actual Node package self-imports
+
+`test/plan-esm-resolver-smoke.test.mjs` runs **eight real Node
+subprocesses** against synthetic fixture modules. It checks:
+
+- self-reference to `astrological-functions` and private subpaths;
+- `.mjs` and `.js` runtime resolution and the `import` condition
+  when a `types` condition is also present;
+- intentional aliases resolving to the same module namespace;
+- `ERR_PACKAGE_PATH_NOT_EXPORTED` for an unexported internal file
+  and for `require` of an import-only subpath;
+- `ERR_MODULE_NOT_FOUND` for a declared runtime that does not exist,
+  plus runtime syntax errors (both beyond the JSON planner's scope);
+- a real CLI export-plan to on-disk synthetic manifest to
+  self-import sequence, with unchanged baseline and candidate inputs.
+
+### Optional strict TypeScript consumers
+
+`test/plan-esm-typescript-consumer.test.mjs` builds and checks
+strict NodeNext (`module=NodeNext`, `moduleResolution=NodeNext`) and
+Bundler (`module=ESNext`, `moduleResolution=Bundler`) consumers.
+It resolves both `.d.mts` and `.d.ts` against generated ESM exports,
+and confirms the compiler rejects missing declarations and invalid type
+assignments.
+
+The TypeScript tests run **only when an existing `tsc` executable is
+available**; otherwise they report a test skip. They do not install
+TypeScript, and `npm test` needs no new project dependencies.
+A skipped compiler test is **not evidence** of TypeScript compatibility:
+the release gate requires executing these checks with an installed compiler.
+
+### Isolated validation performed
+
+Local environment: Node **22.16.0**, `tsc` **5.8.3**.
+
+```sh
+node --check test/plan-esm-resolver-smoke.test.mjs
+node --check test/plan-esm-typescript-consumer.test.mjs
+node --test test/*.test.mjs
+```
+
+Result: **56 passed, 0 failed, 0 skipped** in the isolated test workspace.
+Eight native Node tests and four strict TypeScript tests were added to
+the previously verified 44 planner tests.
+
+Exact locally tested Git blob SHA-1 values, verified on the PR branch:
+
+- Native resolver smoke:
+  `de9830d345fe5e5c1092fdee50e2491959746084`
+- Optional TypeScript consumer tests:
+  `a949a8d643437665e17c61af0417b3917e3413c2`
+
+**Scope:** these smoke tests use *synthetic* runtime modules and
+declarations. They verify actual Node and TypeScript resolver behavior
+for the planned contract but do **not** prove source files from draft
+PRs #25/#41/#54/#60/#65/#68 exist together or compile in a consolidated
+checkout. Real dependent modules, production integration, scientific
+Rust/WASM/JPL parity, provider provenance, licensing and downstream
+VirgoStars Desktop/Astrolabio behavior still require separate review.
+Remain draft; no main merge, GitHub Actions, release, deploy,
+repository visibility change or production modifications. Attribution:
+https://github.com/Cesare-ml/VirgoStars-Ephemeris.
