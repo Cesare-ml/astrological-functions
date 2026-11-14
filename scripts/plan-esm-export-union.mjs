@@ -29,6 +29,17 @@ function safeRelative(value, label) {
   }
 }
 
+/** Prevent a types-only or CommonJS path from being proposed as an ESM runtime entry. */
+function checkedTargetExtension(path, kind, label) {
+  const valid = kind === 'types'
+    ? /\.d\.(?:ts|mts)$/.test(path)
+    : /\.(?:js|mjs)$/.test(path);
+  if (!valid) {
+    throw new ExportUnionError('INVALID_EXPORT_TARGET',
+      `${label} must point to a ${kind === 'types' ? 'TypeScript declaration' : 'JavaScript ESM runtime'} file`);
+  }
+}
+
 function checkedExports(manifest, label, expectedName, expectedRoot) {
   if (!isObject(manifest) || manifest.private !== true || manifest.type !== 'module' ||
       typeof manifest.name !== 'string' || !manifest.name ||
@@ -39,6 +50,7 @@ function checkedExports(manifest, label, expectedName, expectedRoot) {
     throw new ExportUnionError('INVALID_EXPORT_MAP', `${label} requires a literal root export`);
   }
   safeRelative(manifest.exports['.'], `${label}: .`);
+  checkedTargetExtension(manifest.exports['.'], 'import', `${label}: .`);
   if (expectedRoot !== null && manifest.exports['.'] !== expectedRoot) {
     throw new ExportUnionError('CONFLICTING_ROOT', `${label} would replace the original root export`);
   }
@@ -53,6 +65,8 @@ function checkedExports(manifest, label, expectedName, expectedRoot) {
     }
     safeRelative(target.types, `${label}: ${subpath}.types`);
     safeRelative(target.import, `${label}: ${subpath}.import`);
+    checkedTargetExtension(target.types, 'types', `${label}: ${subpath}.types`);
+    checkedTargetExtension(target.import, 'import', `${label}: ${subpath}.import`);
     validated.set(subpath, Object.freeze({ types: target.types, import: target.import }));
   }
   return validated;
