@@ -1,4 +1,4 @@
-import type { UtcSearchChunkInput, UtcSearchChunk } from './utc-search-window-chunks.mjs';
+import type { UtcSearchChunkInput } from './utc-search-window-chunks.mjs';
 import type { ValidatedUtcSearchWindow } from './utc-search-window.mjs';
 
 /** Exact event identity is declared by the caller: stable key + UTC instant. */
