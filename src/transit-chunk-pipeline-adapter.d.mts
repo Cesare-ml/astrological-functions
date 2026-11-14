@@ -1,5 +1,5 @@
 import type { UtcSearchChunkInput } from './utc-search-window-chunks.mjs';
-import type { TransitChunkRequest, TransitCandidatePipelineReport } from './transit-chunk-candidate-reports.mjs';
+import type { TransitChunkRequest, TransitPinnedIdentity, TransitCandidatePipelineReport } from './transit-chunk-candidate-reports.mjs';
 
 export type F5ScanLimits = Readonly<{
   targetIntervalMs: number;
@@ -17,6 +17,7 @@ export type F5PipelineChunkInput<P> = Omit<TransitChunkRequest, 'chunkIndex'> &
   F5ScanLimits & Readonly<{provider:P; refinement:F5RefinementLimits}>;
 export declare function makeTransitChunkPipelineRunner<P>(input: Readonly<{
   windowInput: UtcSearchChunkInput;
+  identity: TransitPinnedIdentity;
   scan: F5ScanLimits;
   refinement: F5RefinementLimits;
   provider: P;
