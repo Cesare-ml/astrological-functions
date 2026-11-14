@@ -65,3 +65,44 @@ tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution noden
 ```
 
 **Verification (2026-11-14):** 5/5 Node 22.16.0 synthetic chunk tests passed; TypeScript 5.8.3 strict NodeNext check passed in a dependency-only local fixture. The four new source/test Git blobs matched local Git object hashes. The fixture substituted only the existing unchanged `AstrologyError` dependency from `src/index.mjs`, not the complete private checkout; consequently these results **do not certify** the full `npm test` suite or scientific ephemeris parity.
+
+
+## Reconcile event candidates from adjacent UTC chunks
+
+`reconcileUtcChunkEventHits` is a **post-processing contract** for results returned by a separate event solver. It accepts a complete set of chunk-indexed, candidate-hit arrays and makes the half-open ownership rule enforceable without computing planetary coordinates, roots, ingress directions or stations.
+
+```js
+import { reconcileUtcChunkEventHits } from './src/utc-chunk-event-reconciliation.mjs';
+
+const merged = reconcileUtcChunkEventHits({
+  windowInput: {
+    startUtc: '2026-11-14T00:00:00Z',
+    endUtc: '2026-11-14T01:00:00Z',
+    maxDurationMs: 3_600_000,
+    chunkDurationMs: 1_800_000,
+    maxChunks: 2,
+  },
+  chunkResults: [
+    { chunkIndex: 0, hits: [{ eventKey: 'SUN_INGRESS', instantUtc: '2026-11-14T00:30:00Z' }] },
+    { chunkIndex: 1, hits: [{ eventKey: 'SUN_INGRESS', instantUtc: '2026-11-14T00:30:00.000Z' }] },
+  ],
+  maxInputHits: 20,
+});
+// merged.rawHitCount === 2; merged.duplicateCount === 1;
+// merged.hits[0].ownerChunkIndex === 1;
+```
+
+- Each reported chunk may contain hits **at its own inclusive end** because a bracket/root solver can evaluate both ends. The reconciler assigns these boundary hits to the **next** half-open chunk, even when that next chunk reports no copy. A hit at the overall `endUtc` is **rejected**: the top-level interval remains half-open.
+- The only deduplication key is the caller's nonempty, trimmed `eventKey` plus **the exact UTC millisecond**. Different event keys at the same time are preserved (for example, an ingress and a station); timestamps with `.5Z` and `.500Z` are considered identical. No tolerance window merges near-but-distinct events, and no physical event identity is inferred.
+- A solver/consumer **must** assign stable event keys that distinguish event kind, participants, direction and other relevant identities. This module does not validate the meaning of those keys or prove the event actually occurred. It only accepts minimal `{eventKey,instantUtc}` candidate records; all extra properties are rejected so provenance or astronomical metadata cannot be silently discarded.
+- `chunkResults` must supply **one record per chunk**, including empty arrays; records can arrive in any order. Duplicate/missing/out-of-range indices, impossible event timestamps, or candidate hits outside their chunk's *closed* envelope raise typed `AstrologyError` codes. The result is sorted and frozen, with `chunkCount`, `rawHitCount`, `duplicateCount`, canonical hit timestamps and `ownerChunkIndex`.
+- The caller must declare `maxInputHits` between 1 and 16,384, and the reconciler rejects excess candidates before processing them. This prevents unbounded accumulation **inside the function**, but does not restrict a caller that has already allocated a large array. An actual solver must still bound CPU, memory, iteration, provider calls, convergence and error propagation.
+
+### Local isolated verification — 14 November 2026
+
+```sh
+node --test test/utc-search-window.test.mjs test/utc-search-window-chunks.test.mjs test/utc-chunk-event-reconciliation.test.mjs
+tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext test/types/utc-chunk-event-reconciliation.test.ts
+```
+
+**Results:** 18/18 focused Node 22.16.0 tests passed and the three TS 5.8.3 strict NodeNext consumer fixtures passed in a local **dependency-only fixture** that substitutes the existing main `AstrologyError` class. All new GitHub source/test blobs were matched with local `git hash-object`. No full private-repository checkout tests, real Rust/WASM astronomical integration, JPL validation, chart application or production integration was performed.
