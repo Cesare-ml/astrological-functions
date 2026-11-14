@@ -64,7 +64,7 @@ import { collectTransitChunkCandidateReports } from './src/transit-chunk-candida
 import { prepareTransitAspectEventCandidates } from './src/transit-event-pipeline.mjs';
 
 const runChunk = makeTransitChunkPipelineRunner({
-  windowInput,
+  windowInput, identity,
   scan: {targetIntervalMs:60000,maxDepth:10,maxProviderCalls:400},
   refinement: {timeToleranceMs:100,residualToleranceDeg:0.0001,
     maxIterations:40,maxCandidateRefinements:64,maxRefinementCalls:1000},
@@ -100,3 +100,12 @@ tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution noden
 ```
 
 `scripts/manual/transit-pr21-smoke.mjs` intentionally **fails to import** on standalone PR #72, because its required `transit-event-pipeline.mjs` exists only in the stacked PR #21. It uses synthetic linear-crossing and tangency enclosures; it is a contract-integration gate, **not astronomical verification**. There are no GitHub Actions and no automated merge or production deployment.
+
+
+### Pinned aspect identity and getter-free validation (2026-11-14)
+
+The adapter now requires `identity` **at construction time**, using the exact same `snapshotTransitPinnedIdentity` helper as the report collector. The helper snapshots each own data property without invoking getters, freezes the aspect and engine/kernel/time-model provenance, and validates explicit identities before any provider request.
+
+Every chunk submitted to `runChunk` must match the pinned `skyBodyName`, `natalBodyName`, `aspectId`, `exactAngleDeg`, `orientation`, `engineVersion`, `kernelSetId`, and `timeModel` in addition to its UTC coordinates/index. A direct adapter caller cannot silently switch planets, aspect orientation, or ephemeris provenance mid-search. Accessor-based requests and mismatched identities fail with typed `INVALID_TRANSIT_IDENTITY` or `INCOMPATIBLE_CHUNK_REQUEST` errors **without calling the pipeline**, and the pinned immutable values (not caller-mutable request fields) are forwarded to PR #21.
+
+Manual and typed examples now supply `identity` explicitly to `makeTransitChunkPipelineRunner`; this is a breaking change to the previously experimental draft adapter API. Synthetic regression checks cover forged later chunks, mutations during provider awaits, accessor/getter attempts, missing/invalid pinned identities and the shared collector gate. No astronomical correctness or event completeness is implied.
