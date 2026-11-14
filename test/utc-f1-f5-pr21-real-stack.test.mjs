@@ -102,3 +102,32 @@ test('F5 duration guard denies the true PR21 pipeline before an astronomical cal
     error=>error.code==='INTERVAL_TOO_LONG');
   assert.equal(count.calls,0);
 });
+
+
+test('real PR21 stack enforces a one-call provider budget across interval and point evaluations', async () => {
+  const input = civil('2026-11-14T00:00:00Z', '2026-11-14T01:00:00Z');
+  const windowInput = {...input, chunkDurationMs: 1_800_000, maxChunks: 2};
+  const observed = {calls: 0};
+  const linear = ms => (ms - epoch) / 3_600_000 - .37;
+  const provider = providerWith(linear, (a,b) => [linear(a), linear(b)], observed);
+  const runner = makeTransitChunkPipelineRunner({
+    windowInput, identity,
+    scan: {targetIntervalMs: 60_000, maxDepth: 10, maxProviderCalls: 400},
+    refinement: {
+      timeToleranceMs: 150, residualToleranceDeg: .0001,
+      maxIterations: 40, maxCandidateRefinements: 64, maxRefinementCalls: 1_000,
+    },
+    provider, maxTotalProviderCalls: 1,
+    prepareCandidates: prepareTransitAspectEventCandidates,
+  });
+  await assert.rejects(() => collectTransitChunkCandidateReports({
+    windowInput, identity, maxCandidateRecords: 128, runChunk: runner,
+  }), error => error?.code === 'GLOBAL_PIPELINE_BUDGET');
+  assert.equal(observed.calls, 1);
+  await assert.rejects(() => runner({
+    chunkIndex: 0, ...identity,
+    startUtc: '2026-11-14T00:00:00.000Z',
+    endUtc: '2026-11-14T00:30:00.000Z',
+  }), error => error?.code === 'PIPELINE_SEQUENCE_ERROR');
+  assert.equal(observed.calls, 1);
+});
