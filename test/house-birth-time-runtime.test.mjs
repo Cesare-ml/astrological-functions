@@ -1,0 +1,134 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { placeNatalBodiesInHouses } from '../src/index.mjs';
+
+// Synthetic chart and cusps: these tests validate the API gate, not astronomy.
+const provenance = Object.freeze({ engineVersion: 'synthetic', kernelSetId: 'synthetic', timeModel: 'synthetic' });
+const chart = {
+  datetimeUtc: '2026-01-01T00:00:00Z', latitudeDeg: 0, longitudeDegEast: 0,
+  ephemerisProvenance: provenance,
+  bodies: { Sun: { name: 'Sun', longitudeDeg: 15 } },
+};
+const cuspSet = {
+  houseSystem: 'VEHLOW', calculationProfile: 'CANONICAL_V1',
+  cusps: Array.from({ length: 12 }, (_, i) => i * 30),
+  metadata: {
+    houseSystem: 'VEHLOW', placementMethod: 'CUSP_INTERVAL',
+    datetimeUtc: chart.datetimeUtc, latitudeDeg: chart.latitudeDeg,
+    longitudeDegEast: chart.longitudeDegEast, ephemerisProvenance: provenance,
+  },
+};
+
+test('house placement rejects unknown or absent birth time before using cusps', () => {
+  for (const birthTimeKnown of [false, undefined, null, 0, 'true']) {
+    assert.throws(
+      () => placeNatalBodiesInHouses({ chart, cuspSet, birthTimeKnown }),
+      error => error.code === 'BIRTH_TIME_REQUIRED',
+    );
+  }
+  assert.throws(
+    () => placeNatalBodiesInHouses({ chart, cuspSet }),
+    error => error.code === 'BIRTH_TIME_REQUIRED',
+  );
+});
+
+test('explicitly known birth time permits context-matched geometric placement', () => {
+  const result = placeNatalBodiesInHouses({ chart, cuspSet, birthTimeKnown: true });
+  assert.equal(result.placements.Sun.house, 1);
+  assert.equal(result.placementMethod, 'CUSP_INTERVAL');
+  assert.equal(Object.isFrozen(result.placements), true);
+});
+
+test('matching coordinates cannot override a mismatched ephemeris kernel', () => {
+  const wrong = {
+    ...cuspSet,
+    metadata: {
+      ...cuspSet.metadata,
+      ephemerisProvenance: { ...provenance, kernelSetId: 'other-kernel' },
+    },
+  };
+  assert.throws(
+    () => placeNatalBodiesInHouses({ chart, cuspSet: wrong, birthTimeKnown: true }),
+    error => error.code === 'INCOMPATIBLE_HOUSE_CONTEXT',
+  );
+});
+
+test('known birth time still rejects malformed natal body positions', () => {
+  for (const longitudeDeg of [NaN, Infinity, -Infinity, '15', undefined]) {
+    const malformed = {
+      ...chart,
+      bodies: { Sun: { name: 'Sun', longitudeDeg } },
+    };
+    assert.throws(
+      () => placeNatalBodiesInHouses({ chart: malformed, cuspSet, birthTimeKnown: true }),
+      error => error.code === 'INVALID_POINT',
+    );
+  }
+});
+
+test('known birth time rejects body identifiers inconsistent with chart keys', () => {
+  const malformed = {
+    ...chart,
+    bodies: { Sun: { name: 'Moon', longitudeDeg: 15 } },
+  };
+  assert.throws(
+    () => placeNatalBodiesInHouses({ chart: malformed, cuspSet, birthTimeKnown: true }),
+    error => error.code === 'INVALID_POINT',
+  );
+});
+
+test('house placement rejects mismatched cusp UTC and observer coordinates', () => {
+  for (const metadataPatch of [
+    { datetimeUtc: '2026-01-02T00:00:00Z' },
+    { latitudeDeg: 1 },
+    { longitudeDegEast: 1 },
+  ]) {
+    const mismatched = {
+      ...cuspSet,
+      metadata: { ...cuspSet.metadata, ...metadataPatch },
+    };
+    assert.throws(
+      () => placeNatalBodiesInHouses({ chart, cuspSet: mismatched, birthTimeKnown: true }),
+      error => error.code === 'INCOMPATIBLE_HOUSE_CONTEXT',
+    );
+  }
+});
+
+test('house placement rejects mismatched ephemeris engine and time model', () => {
+  for (const provenancePatch of [
+    { engineVersion: 'other-engine' },
+    { timeModel: 'other-time-model' },
+  ]) {
+    const mismatched = {
+      ...cuspSet,
+      metadata: {
+        ...cuspSet.metadata,
+        ephemerisProvenance: { ...provenance, ...provenancePatch },
+      },
+    };
+    assert.throws(
+      () => placeNatalBodiesInHouses({ chart, cuspSet: mismatched, birthTimeKnown: true }),
+      error => error.code === 'INCOMPATIBLE_HOUSE_CONTEXT',
+    );
+  }
+});
+
+test('house placement fails closed on missing or incomplete provenance', () => {
+  for (const ephemerisProvenance of [
+    undefined, null, {}, { ...provenance, timeModel: '' },
+  ]) {
+    const malformedChart = { ...chart, ephemerisProvenance };
+    assert.throws(
+      () => placeNatalBodiesInHouses({ chart: malformedChart, cuspSet, birthTimeKnown: true }),
+      error => error.code === 'INVALID_HOUSE_METADATA',
+    );
+    const malformedCusps = {
+      ...cuspSet,
+      metadata: { ...cuspSet.metadata, ephemerisProvenance },
+    };
+    assert.throws(
+      () => placeNatalBodiesInHouses({ chart, cuspSet: malformedCusps, birthTimeKnown: true }),
+      error => error.code === 'INVALID_HOUSE_METADATA',
+    );
+  }
+});
