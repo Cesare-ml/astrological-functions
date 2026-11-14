@@ -15,3 +15,13 @@ New `test/house-cusp-caller-array-snapshot.test.mjs`: 11 synthetic adversarial a
 ## Verification and gates
 
 Pre-commit V8 source replay verifies the fixed 5° house 1 assignment with **one** getter read, zero map/iterator calls, rejection of invalid and inherited cusps. Added regression suite and existing tests must be executed against final GitHub blobs after commit. These synthetic checks are **not native Node `npm test`**, and astronomy is delegated to the pinned Rust/WASM/JPL provider. Native Node/TypeScript suite, licensing/security review, current-main drift and independent merge approval are mandatory. No GitHub Actions, npm publication, Swiss fallback or production deployment.
+
+## Post-commit exact-source regression replay
+
+The branch's exact GitHub `src/index.mjs` blob `3b8485020f3071365d3f3a8403a972752dfc59bf` and **21 actual GitHub test files** were loaded in two focused batches of strict JavaScript V8 callbacks with the Node `node:test`, `node:assert/strict`, and ESM import wrappers substituted:
+
+- First nine test files: **52/52 passed**, including the 11 new cusp-array tests, cusp context/provenance, sparse and frozen snapshots, plus original `test/house-cusp-preboundary-ulp.test.mjs` with its deterministic **90,000** cusp predecessor/exact/successor observations.
+- Next twelve files: **59/59 passed**, including house policy, birth-time refusal, external provider-to-house composition, numeric precision, body-identifier single-read and async body-list mutation regression.
+- Combined: **111/111 passed, zero load failures, zero callback failures**.
+
+The code bodies and test callbacks were fetched exactly from this GitHub commit; however, the sandbox directly invoked them rather than running the real `node --test` runner, and package self-import resolution was simulated. **These are not native Node `npm test` results.** The complete native JS test suite, strict NodeNext/Bundler TypeScript consumer fixtures, integration with current `main`, actual Rust/WASM JPL data and scientific parity remain release and merge blockers.
