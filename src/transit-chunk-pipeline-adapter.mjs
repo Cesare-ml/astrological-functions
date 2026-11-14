@@ -4,6 +4,7 @@
  */
 import { AstrologyError } from './index.mjs';
 import { splitUtcSearchWindow } from './utc-search-window-chunks.mjs';
+import { snapshotTransitPinnedIdentity } from './transit-chunk-candidate-reports.mjs';
 
 const MAX_F5_CHUNK_MS = 31 * 86400000;
 const F5_CAPABILITIES = Object.freeze({
@@ -23,6 +24,23 @@ function object(value, label) {
 function integer(value, low, high) {
   return Number.isSafeInteger(value) && value >= low && value <= high;
 }
+function ownRequestData(value, key) {
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  if (!descriptor || !Object.hasOwn(descriptor, 'value'))
+    reject('INCOMPATIBLE_CHUNK_REQUEST', `F5 chunk ${key} must be an own data property`);
+  return descriptor.value;
+}
+function verifyRequestIdentity(request, identity) {
+  for (const key of ['skyBodyName','natalBodyName','aspectId','exactAngleDeg','orientation'])
+    if (ownRequestData(request, key) !== identity[key])
+      reject('INCOMPATIBLE_CHUNK_REQUEST', `F5 chunk identity mismatch: ${key}`);
+  const provenance = ownRequestData(request, 'ephemerisProvenance');
+  if (!provenance || typeof provenance !== 'object' || Array.isArray(provenance))
+    reject('INCOMPATIBLE_CHUNK_REQUEST', 'F5 chunk provenance must be an object');
+  for (const key of ['engineVersion','kernelSetId','timeModel'])
+    if (ownRequestData(provenance, key) !== identity.ephemerisProvenance[key])
+      reject('INCOMPATIBLE_CHUNK_REQUEST', `F5 chunk provenance mismatch: ${key}`);
+}
 
 /**
  * Create a once-per-chunk runner compatible with collectTransitChunkCandidateReports.
@@ -38,6 +56,7 @@ export function makeTransitChunkPipelineRunner(input) {
     maxChunks: raw.maxChunks,
   });
   const plan = splitUtcSearchWindow(windowInput);
+  const identity = snapshotTransitPinnedIdentity(input.identity);
   const scan = object(input.scan, 'scan');
   const targetIntervalMs = scan.targetIntervalMs;
   const maxDepth = scan.maxDepth;
@@ -92,20 +111,17 @@ export function makeTransitChunkPipelineRunner(input) {
       reject('PIPELINE_SEQUENCE_ERROR', 'F5 chunks must run once, sequentially, without retry after failure');
     object(request, 'request');
     const expected = plan.chunks[nextIndex];
-    if (request.chunkIndex !== expected.index || request.startUtc !== expected.startUtc ||
-        request.endUtc !== expected.endUtc)
+    if (ownRequestData(request, 'chunkIndex') !== expected.index ||
+        ownRequestData(request, 'startUtc') !== expected.startUtc ||
+        ownRequestData(request, 'endUtc') !== expected.endUtc)
       reject('INCOMPATIBLE_CHUNK_REQUEST', 'F5 request does not match the prevalidated UTC chunk');
+    verifyRequestIdentity(request, identity);
     running = true;
     try {
       // No chunkIndex forwarded: it is not part of the PR #21 contract.
       const result = await prepareCandidates(Object.freeze({
         startUtc: expected.startUtc, endUtc: expected.endUtc,
-        skyBodyName: request.skyBodyName,
-        natalBodyName: request.natalBodyName,
-        aspectId: request.aspectId,
-        exactAngleDeg: request.exactAngleDeg,
-        orientation: request.orientation,
-        ephemerisProvenance: request.ephemerisProvenance,
+        ...identity,
         targetIntervalMs, maxDepth, maxProviderCalls,
         provider: fixedProvider, refinement: r,
       }));

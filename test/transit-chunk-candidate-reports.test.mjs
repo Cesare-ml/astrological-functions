@@ -139,3 +139,14 @@ test('underlying pipeline failure is propagated, not converted to empty reports'
 test('cumulative provider call counts must remain safe integers', async()=>{
   await assert.rejects(()=>collectTransitChunkCandidateReports(options(async request=>report(request,{scanProviderCalls:Number.MAX_SAFE_INTEGER}))),code('REPORT_COUNTER_OVERFLOW'));
 });
+
+test('collector rejects accessor-based pinned identity and provenance before provider work',async()=>{
+  for (const key of ['skyBodyName','ephemerisProvenance']) {
+    let getterCalls=0, providerCalls=0;
+    const pinned=identity();
+    Object.defineProperty(pinned,key,{enumerable:true,get(){getterCalls++;return key==='skyBodyName'?'Mars':identity().ephemerisProvenance;}});
+    await assert.rejects(()=>collectTransitChunkCandidateReports(options(async req=>{providerCalls++;return report(req);},{identity:pinned})),code('INVALID_TRANSIT_IDENTITY'));
+    assert.equal(getterCalls,0);
+    assert.equal(providerCalls,0);
+  }
+});

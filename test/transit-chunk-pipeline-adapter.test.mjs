@@ -34,7 +34,7 @@ function syntheticResult(req, change={}) {
     verification:'PROVIDER_ASSERTED_NOT_INDEPENDENTLY_VERIFIED',scientificallyValidated:false,
     ...change};
 }
-const options = (prepareCandidates, props={}) => ({windowInput:windowInput(),
+const options = (prepareCandidates, props={}) => ({windowInput:windowInput(),identity:identity(),
   scan:{targetIntervalMs:60000,maxDepth:10,maxProviderCalls:100},
   refinement:refinement(),provider:provider(),prepareCandidates,
   maxTotalProviderCalls:800,...props});
@@ -159,4 +159,69 @@ test('propagates failures and never silently retries a partially failed scan',as
   await assert.rejects(()=>runner(req),e=>e===err);
   await assert.rejects(()=>runner(req),code('PIPELINE_SEQUENCE_ERROR'));
   assert.equal(runs,1);
+});
+
+test('direct runner pins aspect and provenance; forged subsequent chunks cannot reach pipeline',async()=>{
+  const captured=[];
+  const opts=options(async request=>{captured.push(request);return syntheticResult(request);});
+  const runner=makeTransitChunkPipelineRunner(opts);
+  const pinned=identity();
+  const first={...pinned,chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+  const second={...pinned,chunkIndex:1,startUtc:'2026-11-14T00:30:00.000Z',endUtc:'2026-11-14T01:00:00.000Z'};
+  await runner(first);
+  for(const fake of [
+    {...second,skyBodyName:'Venus'},
+    {...second,aspectId:'conjunction'},
+    {...second,exactAngleDeg:0},
+    {...second,orientation:'NEGATIVE'},
+    {...second,ephemerisProvenance:{...pinned.ephemerisProvenance,kernelSetId:'forged'}},
+    {...second,ephemerisProvenance:{...pinned.ephemerisProvenance,timeModel:'forged'}},
+  ]) await assert.rejects(()=>runner(fake),code('INCOMPATIBLE_CHUNK_REQUEST'));
+  assert.equal(captured.length,1);
+  await runner(second);
+  assert.deepEqual(captured.map(r=>r.skyBodyName),['Mars','Mars']);
+  assert.deepEqual(captured.map(r=>r.ephemerisProvenance.kernelSetId),['synthetic','synthetic']);
+});
+
+test('runner snapshots source identity before first await, even if caller later mutates it',async()=>{
+  const config=options(async request=>{
+    if(request.startUtc==='2026-11-14T00:00:00.000Z') {
+      config.identity.skyBodyName='Jupiter';
+      config.identity.ephemerisProvenance.kernelSetId='mutated';
+    }
+    return syntheticResult(request);
+  });
+  const pinned=identity();
+  const runner=makeTransitChunkPipelineRunner(config);
+  for(const [chunkIndex,startUtc,endUtc] of [
+    [0,'2026-11-14T00:00:00.000Z','2026-11-14T00:30:00.000Z'],
+    [1,'2026-11-14T00:30:00.000Z','2026-11-14T01:00:00.000Z'],
+  ]) {
+    const report=await runner({...pinned,chunkIndex,startUtc,endUtc});
+    assert.equal(report.skyBodyName,'Mars');
+    assert.equal(report.ephemerisProvenance.kernelSetId,'synthetic');
+  }
+});
+
+test('direct runner rejects accessor request identities without invoking their getters',async()=>{
+  let getterCalls=0, calls=0;
+  const runner=makeTransitChunkPipelineRunner(options(async r=>{calls++;return syntheticResult(r);}));
+  for(const key of ['chunkIndex','skyBodyName','ephemerisProvenance']) {
+    const request={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+    Object.defineProperty(request,key,{enumerable:true,get(){getterCalls++;return key==='chunkIndex'?0:key==='skyBodyName'?'Mars':identity().ephemerisProvenance;}});
+    await assert.rejects(()=>runner(request),code('INCOMPATIBLE_CHUNK_REQUEST'));
+  }
+  assert.equal(getterCalls,0);
+  assert.equal(calls,0);
+});
+
+test('builder rejects missing or accessor-based pinned identity before any provider work',()=>{
+  const fn=async()=>({});
+  assert.throws(()=>makeTransitChunkPipelineRunner(options(fn,{identity:null})),code('INVALID_ARGUMENT'));
+  assert.throws(()=>makeTransitChunkPipelineRunner(options(fn,{identity:{...identity(),orientation:'INVALID'}})),code('INVALID_TRANSIT_IDENTITY'));
+  let getterCalls=0;
+  const malformed=identity();
+  Object.defineProperty(malformed,'skyBodyName',{get(){getterCalls++;return 'Mars';}});
+  assert.throws(()=>makeTransitChunkPipelineRunner(options(fn,{identity:malformed})),code('INVALID_TRANSIT_IDENTITY'));
+  assert.equal(getterCalls,0);
 });

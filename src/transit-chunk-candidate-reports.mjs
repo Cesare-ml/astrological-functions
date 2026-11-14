@@ -38,23 +38,33 @@ function nonempty(value, label) {
     invalid('INVALID_TRANSIT_IDENTITY', `${label} must be an explicit nonempty name`);
   return value;
 }
-function identitySnapshot(value) {
+function ownIdentityData(source, key) {
+  const descriptor = Object.getOwnPropertyDescriptor(source, key);
+  if (!descriptor || !Object.hasOwn(descriptor, 'value'))
+    invalid('INVALID_TRANSIT_IDENTITY', `Identity.${key} must be an own data property`);
+  return descriptor.value;
+}
+
+/** Share ONE immutable pinned aspect/provenance snapshot across the coordinator and adapter. */
+export function snapshotTransitPinnedIdentity(value) {
   const source = object(value, 'identity');
-  const skyBodyName = nonempty(source.skyBodyName, 'skyBodyName');
-  const natalBodyName = nonempty(source.natalBodyName, 'natalBodyName');
-  const aspectId = nonempty(source.aspectId, 'aspectId');
-  if (typeof source.exactAngleDeg !== 'number' || !Number.isFinite(source.exactAngleDeg) ||
-      source.exactAngleDeg < 0 || source.exactAngleDeg > 180 ||
-      !['POSITIVE', 'NEGATIVE'].includes(source.orientation))
+  const skyBodyName = nonempty(ownIdentityData(source, 'skyBodyName'), 'skyBodyName');
+  const natalBodyName = nonempty(ownIdentityData(source, 'natalBodyName'), 'natalBodyName');
+  const aspectId = nonempty(ownIdentityData(source, 'aspectId'), 'aspectId');
+  const exactAngleDeg = ownIdentityData(source, 'exactAngleDeg');
+  const orientation = ownIdentityData(source, 'orientation');
+  if (typeof exactAngleDeg !== 'number' || !Number.isFinite(exactAngleDeg) ||
+      exactAngleDeg < 0 || exactAngleDeg > 180 ||
+      !['POSITIVE', 'NEGATIVE'].includes(orientation))
     invalid('INVALID_TRANSIT_IDENTITY', 'Explicit aspect angle and orientation are required');
-  const p = object(source.ephemerisProvenance, 'ephemerisProvenance');
+  const p = object(ownIdentityData(source, 'ephemerisProvenance'), 'ephemerisProvenance');
   const ephemerisProvenance = Object.freeze({
-    engineVersion: nonempty(p.engineVersion, 'engineVersion'),
-    kernelSetId: nonempty(p.kernelSetId, 'kernelSetId'),
-    timeModel: nonempty(p.timeModel, 'timeModel'),
+    engineVersion: nonempty(ownIdentityData(p, 'engineVersion'), 'engineVersion'),
+    kernelSetId: nonempty(ownIdentityData(p, 'kernelSetId'), 'kernelSetId'),
+    timeModel: nonempty(ownIdentityData(p, 'timeModel'), 'timeModel'),
   });
   return Object.freeze({ skyBodyName, natalBodyName, aspectId,
-    exactAngleDeg: source.exactAngleDeg, orientation: source.orientation, ephemerisProvenance });
+    exactAngleDeg, orientation, ephemerisProvenance });
 }
 
 /**
@@ -68,7 +78,7 @@ export async function collectTransitChunkCandidateReports(input) {
   const windowInput = Object.freeze({startUtc:raw.startUtc, endUtc:raw.endUtc,
     maxDurationMs:raw.maxDurationMs, chunkDurationMs:raw.chunkDurationMs, maxChunks:raw.maxChunks});
   const plan = splitUtcSearchWindow(windowInput);
-  const identity = identitySnapshot(input.identity);
+  const identity = snapshotTransitPinnedIdentity(input.identity);
   const maxCandidateRecords = input.maxCandidateRecords;
   if (!Number.isSafeInteger(maxCandidateRecords) || maxCandidateRecords < 1 || maxCandidateRecords > 16384)
     invalid('INVALID_REPORT_LIMIT', 'maxCandidateRecords must be an explicit integer in 1..16384');
