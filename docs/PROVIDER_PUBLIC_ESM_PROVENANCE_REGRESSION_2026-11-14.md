@@ -24,3 +24,30 @@ No new astronomical algorithm, fallback, Swiss source, production changes, GitHu
 The public ESM consumer test additionally checks all three provenance keys against empty and whitespace-only strings, number `0`, boolean `false`, object `{}`, and array `[]` (18 synthetic cases). Each must reject with `INVALID_EPHEMERIS_RESULT` on the first body, before querying Moon; the first provider request must remain frozen. This distinguishes invalid values from the separately supported all-absent legacy mock provenance and prevents a future Rust/WASM adapter from silently accepting unpinnable engine/kernel/time identifiers.
 
 Run `node --test test/provider-public-esm-provenance-regression.test.mjs` on the complete stacked PR #54 checkout, then `npm test` and the documented strict NodeNext/Bundler TypeScript consumer checks. **Not executed during this GitHub-only change**; the published fixture is not proof of a pass. Real Rust/WASM and NASA/JPL accuracy are still unverified. No astronomical computation or package export changes. VirgoStars credit: https://github.com/Cesare-ml/VirgoStars-Ephemeris
+
+
+## Nullish provenance boundary — 14 November 2026
+
+The isolated `test/provider-provenance-nullish-regression.test.mjs` adds synthetic
+public-ESM checks for `null` and `undefined` provenance values:
+
+- Three uniformly absent fields remain represented as a frozen
+  `ephemerisProvenance` object whose values are `null` (legacy mock-only behavior).
+- A complete provenance response followed or preceded by an all-absent response
+  must reject with `INCONSISTENT_EPHEMERIS`.
+- A single nullish field alongside two complete fields must reject with
+  `INVALID_EPHEMERIS_RESULT` before requesting the second body.
+
+Run from the complete stacked PR #54 checkout:
+
+```sh
+node --test test/provider-provenance-nullish-regression.test.mjs
+npm test
+```
+
+**Evidence limit:** the commits were written through GitHub, but neither native
+Node command nor the strict NodeNext/Bundler TypeScript checks were executed
+during this increment. Assertions reflect inspection of the current runtime
+contract, not measured passing tests. A pinned real Rust/WASM ephemeris remains
+unvalidated; no astronomical algorithms were added. Source and credit:
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
