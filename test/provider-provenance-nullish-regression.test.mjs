@@ -71,3 +71,20 @@ test('a single null or undefined provenance field rejects before the second body
     }
   }
 });
+
+test('mixed nullish provenance fields count as wholly absent, not partial', async () => {
+  const mixed = {
+    ...base, engineVersion: null, kernelSetId: undefined, timeModel: null
+  };
+  const reversed = {
+    ...base, engineVersion: undefined, kernelSetId: null, timeModel: undefined
+  };
+  const { chart, calls } = await chartWith(mixed, reversed);
+  const result = await chart;
+  assert.deepEqual(result.ephemerisProvenance, {
+    engineVersion: null, kernelSetId: null, timeModel: null
+  });
+  assert.equal(Object.isFrozen(result.ephemerisProvenance), true);
+  assert.deepEqual(calls.map(call => call.bodyName), ['Sun', 'Moon']);
+  assert.equal(calls.every(Object.isFrozen), true);
+});
