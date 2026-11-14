@@ -16,12 +16,36 @@
     "./zodiac-decan-facts": {
       "types": "./src/zodiac-decan-facts.d.mts",
       "import": "./src/zodiac-decan-facts.mjs"
+    },
+    "./porphyry-houses": {
+      "types": "./src/porphyry-houses.d.mts",
+      "import": "./src/porphyry-houses.mjs"
+    },
+    "./placidus-houses": {
+      "types": "./src/placidus-houses.d.mts",
+      "import": "./src/placidus-houses.mjs"
+    },
+    "./regiomontanus-houses": {
+      "types": "./src/regiomontanus-houses.d.mts",
+      "import": "./src/regiomontanus-houses.mjs"
+    },
+    "./koch-houses": {
+      "types": "./src/koch-houses.d.mts",
+      "import": "./src/koch-houses.mjs"
+    },
+    "./house-set": {
+      "types": "./src/house-set.d.mts",
+      "import": "./src/house-set.mjs"
+    },
+    "./vehlow-houses": {
+      "types": "./src/vehlow-houses.d.mts",
+      "import": "./src/vehlow-houses.mjs"
     }
   },
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node scripts/run-tests.mjs"
   }
 }
