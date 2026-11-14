@@ -18,6 +18,8 @@ export interface DeclinationProviderRequest {
   readonly bodyId: string;
   readonly coordinates: Readonly<DeclinationProviderCoordinates & { readonly frameEpochUtc: string | null }>;
   readonly expectedProvenance: Readonly<DeclinationSourceProvenance>;
+  /** Optional cancellation token; the provider may cooperate or ignore it. */
+  readonly signal?: AbortSignal;
 }
 export interface DeclinationProviderResponse {
   readonly snapshotId: string;
@@ -41,6 +43,8 @@ export interface DeclinationWithProviderOptions {
   readonly expectedProvenance: DeclinationSourceProvenance;
   readonly contactDefinitions: readonly DeclinationContactDefinition[];
   readonly provider: ExperimentalDeclinationProvider;
+  /** Optional; no timeout or cancellation is inferred when omitted. */
+  readonly signal?: AbortSignal;
 }
 export declare function calculateDeclinationContactsWithProvider(
   options: DeclinationWithProviderOptions,
