@@ -1,6 +1,6 @@
-# Validation & compatibility gates (not yet executed)
+# Validation & compatibility gates
 
-Status: **DESIGNED**. An old output matching another old output does not establish astronomical correctness.
+Status: **LOCAL NODE TESTING COMPLETED FOR THE DRAFT F5 STACK; SCIENTIFIC AND PRODUCTION GATES STILL DESIGNED** (2026-11-14). An old output matching another old output does not establish astronomical correctness.
 
 ## Layers of testing
 
@@ -51,3 +51,21 @@ No production migration while: ephemeris accuracy unspecified; legacy critical m
 The exact GitHub `src/index.mjs` and `test/math.test.mjs` blobs from the active feature branch were executed in an isolated JavaScript V8 runtime, with `node:test` and `node:assert/strict` semantics adapted for that runtime. **4/4 existing test cases passed**, including the async mock `calculateNatalWithProvider` test that rejects geometric J2000 data for apparent-of-date natal requirements.
 
 Independently, the upstream public Ephemeris branch ran **33/33 test cases** in a similar V8 execution of the actual GitHub JavaScript source (including IAU 2000B full nutation), with binary/URL adapters where necessary. These are NOT full native Node.js `npm test` results, and neither group represents real NASA/JPL SPK/Horizons scientific validation. The strict `APPARENT/ECLIPTIC_OF_DATE` contract remains unchanged.
+
+
+## Verified Node/TypeScript integration execution — 14 November 2026
+
+The experimental F5 draft PR #79 was reconstructed into a local working tree using the connected private repository. Its 11 `.mjs` runtime source files, 11 `test/*.test.mjs` files and `package.json` all matched the exact GitHub Git-blob hashes; all 10 `.d.mts` declarations, 10 original TypeScript test fixtures and both integration manual scripts were also SHA-matched. **Direct Git clone/checkout was not possible due to blocked DNS**, so this is not evidence of a locally checked-out Git repository.
+
+| Executed command (Node v22.16.0, TS v5.8.3) | Result |
+| --- | --- |
+| `npm test` (repository-defined `node --test`) | **123/123 passed** |
+| `node scripts/manual/transit-pr21-smoke.mjs` | **11/11 passed**, original F5 pipeline code with synthetic enclosures |
+| `tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext test/types/*.ts scripts/manual/transit-pr21-typecheck.ts` | **Passed** |
+| `node scripts/manual/validate-f5-stack.mjs` | **Passed**; missing-checkout negative test fails as expected |
+
+**134/134 runtime tests passed.** The single-command script is an explicit manual tool, not a scheduled job or GitHub Action. It requires the complete combined F5 branch and a `tsc` executable on PATH; Windows execution was not independently tested.
+
+This confirms code-level behavior of the present private Node package, including strict report/identity validation, scanning and refinement with *caller-asserted synthetic* interval bounds, budgets, timeouts and cancellation. It does **not** validate astronomical provider science, all-time enclosure truth, time-scale conversion, JPL/Horizons parity, missing or tangent events, consumer integration, staging, or runtime cancellation of noncooperative operations. Do not interpret candidates as scientifically certified event times.
+
+For exact Git SHA details, change history and remaining gates see [F5 integration validation evidence](F5_INTEGRATION_VALIDATION_2026-11-14.md). A full release requires independent Rust/JPL reference comparisons and the review gates above.
