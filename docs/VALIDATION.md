@@ -168,3 +168,9 @@ versions, exit codes and failures before claiming local validation.
 The experimental ESM consumer smoke now independently changes only `engineVersion` or only `timeModel` on the second synthetic body while holding `kernelSetId`, frame, correction, and coordinates valid. Each case expects `INCONSISTENT_EPHEMERIS` and verifies that the two provider requests remain frozen. This complements the existing `kernelSetId` drift test and does not require or simulate astronomical calculations.
 
 Run from a full checkout of the draft branch: `node --test test/pilot-provider-consumer-smoke.test.mjs`, then `npm test` and the documented TypeScript NodeNext/Bundler consumer checks. **Not executed in this update:** these commands; GitHub file commits alone are not test evidence. No Rust/WASM or scientific accuracy claim is made.
+
+### Immutable natal consumer result and explicit birth-time proof — 14 November 2026
+
+The strict package-subpath TypeScript fixture now checks that external consumers cannot reassign a chart's UTC instant, its nested ephemeris kernel provenance, or an individual body's longitude. It also rejects a general `boolean` for `birthTimeKnown`: house placement requires the literal `true`, established by the caller after checking birth-time availability. These are compile-time contracts only, not runtime deep-freeze or astronomical accuracy tests.
+
+Run both NodeNext and Bundler `tsc --noEmit` commands shown above on the complete PR #54 branch. In particular, treat `TS2578` (unused `@ts-expect-error`) as a failure, and record diagnostics and exit codes. This change was committed through the GitHub contents interface; no native TypeScript compilation or full `npm test` was executed here. The future Rust/WASM astronomy backend remains [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris); do not substitute a JavaScript astronomical implementation.
