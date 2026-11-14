@@ -39,7 +39,10 @@ test('null and undefined provenance are absent, never stringified', async () => 
     };
     const { chart, calls } = await chartWith(metadata, metadata);
     const result = await chart;
-    assert.deepEqual(result.ephemerisProvenance, {\n      engineVersion: null, kernelSetId: null, timeModel: null\n    });\n    assert.equal(Object.isFrozen(result.ephemerisProvenance), true);
+    assert.deepEqual(result.ephemerisProvenance, {
+      engineVersion: null, kernelSetId: null, timeModel: null
+    });
+    assert.equal(Object.isFrozen(result.ephemerisProvenance), true);
     assert.deepEqual(calls.map(call => call.bodyName), ['Sun', 'Moon']);
     assert.equal(calls.every(Object.isFrozen), true);
   }
