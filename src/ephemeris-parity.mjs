@@ -110,7 +110,12 @@ export async function compareApparentEphemerisProviders({
 }) {
   if (typeof datetimeUtc !== 'string' ||
       !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(datetimeUtc) ||
-      Number.isNaN(Date.parse(datetimeUtc))) {
+      Number.isNaN(Date.parse(datetimeUtc)) ||
+      // Date.parse normalizes impossible civil dates (e.g. Feb 30) silently.
+      // Match the whole-second calendar portion after roundtrip; preserve
+      // higher-precision fractional seconds in the original provider request.
+      new Date(Date.parse(datetimeUtc)).toISOString().slice(0, 19) !==
+        datetimeUtc.slice(0, 19)) {
     throw new EphemerisParityError('INVALID_UTC', 'A valid ISO UTC instant ending Z is required');
   }
   const names = checkedBodyNames(bodyNames);
