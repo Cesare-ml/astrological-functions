@@ -57,6 +57,6 @@ void incompleteScan;
 const incompleteRefinement: F5RefinementLimits = {timeToleranceMs:100,maxIterations:40};
 void incompleteRefinement;
 
-// @ts-expect-error explicit aspect and ephemeris identity required at construction.
+// @ts-expect-error caller must pin identity explicitly at construction
 makeTransitChunkPipelineRunner({windowInput,scan,refinement,provider,maxTotalProviderCalls:2800,
   prepareCandidates:async()=>({} as TransitCandidatePipelineReport)});

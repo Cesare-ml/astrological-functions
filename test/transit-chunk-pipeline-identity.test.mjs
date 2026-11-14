@@ -86,7 +86,7 @@ test('invalid identity never reaches the injected pipeline', async () => {
   for (const bad of [
     {aspectId:'  '}, {orientation:'OTHER'}, {exactAngleDeg:NaN}, {skyBodyName:' Mars'},
     {ephemerisProvenance:{...identity().ephemerisProvenance, engineVersion:''}},
-  ]) await assert.rejects(() => runner(chunk(0,{...identity(), ...bad})), code('INVALID_TRANSIT_IDENTITY'));
+  ]) await assert.rejects(() => runner(chunk(0,{...identity(), ...bad})), code('INCOMPATIBLE_CHUNK_REQUEST'));
   assert.equal(calls, 0);
   await runner(chunk(0));
   assert.equal(calls, 1);
@@ -98,12 +98,12 @@ test('accessor-based identity cannot execute user getters', async () => {
   const runner = makeTransitChunkPipelineRunner(options(async () => { pipelineCalls++; return {}; }));
   const forged = chunk(0);
   Object.defineProperty(forged, 'aspectId', {enumerable: true, get() { getterCalls++; return 'square'; }});
-  await assert.rejects(() => runner(forged), code('INVALID_TRANSIT_IDENTITY'));
+  await assert.rejects(() => runner(forged), code('INCOMPATIBLE_CHUNK_REQUEST'));
   const nested = chunk(0);
   Object.defineProperty(nested.ephemerisProvenance, 'kernelSetId', {enumerable: true, get() {
     getterCalls++; return 'jpl-test';
   }});
-  await assert.rejects(() => runner(nested), code('INVALID_TRANSIT_IDENTITY'));
+  await assert.rejects(() => runner(nested), code('INCOMPATIBLE_CHUNK_REQUEST'));
   assert.equal(getterCalls, 0);
   assert.equal(pipelineCalls, 0);
 });

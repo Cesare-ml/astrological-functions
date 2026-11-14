@@ -17,7 +17,6 @@ export type F5PipelineChunkInput<P> = Omit<TransitChunkRequest, 'chunkIndex'> &
   F5ScanLimits & Readonly<{provider:P; refinement:F5RefinementLimits}>;
 export declare function makeTransitChunkPipelineRunner<P>(input: Readonly<{
   windowInput: UtcSearchChunkInput;
-  /** Required before construction; no identity inference from the first chunk. */
   identity: TransitPinnedIdentity;
   scan: F5ScanLimits;
   refinement: F5RefinementLimits;

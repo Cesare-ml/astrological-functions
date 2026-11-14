@@ -73,13 +73,15 @@ test('rejects chunks over PR21 31-day limit before calling producer',()=>{
   assert.throws(()=>makeTransitChunkPipelineRunner(config),code('INCOMPATIBLE_PIPELINE_LIMITS'));
 });
 
-test('checks worst-case global provider-call budget before any invocation',()=>{
+test('validates the global provider-call cap without requiring theoretical worst-case allocation',()=>{
   let calls=0;
   const make=async()=>{calls++;return {};};
-  assert.throws(()=>makeTransitChunkPipelineRunner(options(make, {maxTotalProviderCalls:799})),
-    code('GLOBAL_PIPELINE_BUDGET'));
-  assert.throws(()=>makeTransitChunkPipelineRunner(options(make, {maxTotalProviderCalls:0})),
-    code('GLOBAL_PIPELINE_BUDGET'));
+  for(const invalid of [0,-1,1.5,1_000_001,NaN,undefined])
+    assert.throws(()=>makeTransitChunkPipelineRunner(options(make, {maxTotalProviderCalls:invalid})),
+      code('GLOBAL_PIPELINE_BUDGET'));
+  // A caller may now choose an actual budget smaller than worst-case reserved
+  // scan/refinement caps: the enforced constraint is runtime calls, not a guess.
+  assert.equal(typeof makeTransitChunkPipelineRunner(options(make, {maxTotalProviderCalls:1})), 'function');
   assert.equal(calls,0);
 });
 
@@ -159,4 +161,149 @@ test('propagates failures and never silently retries a partially failed scan',as
   await assert.rejects(()=>runner(req),e=>e===err);
   await assert.rejects(()=>runner(req),code('PIPELINE_SEQUENCE_ERROR'));
   assert.equal(runs,1);
+});
+
+test('direct runner pins aspect and provenance; forged subsequent chunks cannot reach pipeline',async()=>{
+  const captured=[];
+  const opts=options(async request=>{captured.push(request);return syntheticResult(request);});
+  const runner=makeTransitChunkPipelineRunner(opts);
+  const pinned=identity();
+  const first={...pinned,chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+  const second={...pinned,chunkIndex:1,startUtc:'2026-11-14T00:30:00.000Z',endUtc:'2026-11-14T01:00:00.000Z'};
+  await runner(first);
+  for(const fake of [
+    {...second,skyBodyName:'Venus'},
+    {...second,aspectId:'conjunction'},
+    {...second,exactAngleDeg:0},
+    {...second,orientation:'NEGATIVE'},
+    {...second,ephemerisProvenance:{...pinned.ephemerisProvenance,kernelSetId:'forged'}},
+    {...second,ephemerisProvenance:{...pinned.ephemerisProvenance,timeModel:'forged'}},
+  ]) await assert.rejects(()=>runner(fake),code('INCOMPATIBLE_CHUNK_REQUEST'));
+  assert.equal(captured.length,1);
+  await runner(second);
+  assert.deepEqual(captured.map(r=>r.skyBodyName),['Mars','Mars']);
+  assert.deepEqual(captured.map(r=>r.ephemerisProvenance.kernelSetId),['synthetic','synthetic']);
+});
+
+test('runner snapshots source identity before first await, even if caller later mutates it',async()=>{
+  const config=options(async request=>{
+    if(request.startUtc==='2026-11-14T00:00:00.000Z') {
+      config.identity.skyBodyName='Jupiter';
+      config.identity.ephemerisProvenance.kernelSetId='mutated';
+    }
+    return syntheticResult(request);
+  });
+  const pinned=identity();
+  const runner=makeTransitChunkPipelineRunner(config);
+  for(const [chunkIndex,startUtc,endUtc] of [
+    [0,'2026-11-14T00:00:00.000Z','2026-11-14T00:30:00.000Z'],
+    [1,'2026-11-14T00:30:00.000Z','2026-11-14T01:00:00.000Z'],
+  ]) {
+    const report=await runner({...pinned,chunkIndex,startUtc,endUtc});
+    assert.equal(report.skyBodyName,'Mars');
+    assert.equal(report.ephemerisProvenance.kernelSetId,'synthetic');
+  }
+});
+
+test('direct runner rejects accessor request identities without invoking their getters',async()=>{
+  let getterCalls=0, calls=0;
+  const runner=makeTransitChunkPipelineRunner(options(async r=>{calls++;return syntheticResult(r);}));
+  for(const key of ['chunkIndex','skyBodyName','ephemerisProvenance']) {
+    const request={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+    Object.defineProperty(request,key,{enumerable:true,get(){getterCalls++;return key==='chunkIndex'?0:key==='skyBodyName'?'Mars':identity().ephemerisProvenance;}});
+    await assert.rejects(()=>runner(request),code('INCOMPATIBLE_CHUNK_REQUEST'));
+  }
+  assert.equal(getterCalls,0);
+  assert.equal(calls,0);
+});
+
+test('builder rejects missing or accessor-based pinned identity before any provider work',()=>{
+  const fn=async()=>({});
+  assert.throws(()=>makeTransitChunkPipelineRunner(options(fn,{identity:null})),code('INVALID_ARGUMENT'));
+  assert.throws(()=>makeTransitChunkPipelineRunner(options(fn,{identity:{...identity(),orientation:'INVALID'}})),code('INVALID_TRANSIT_IDENTITY'));
+  let getterCalls=0;
+  const malformed=identity();
+  Object.defineProperty(malformed,'skyBodyName',{get(){getterCalls++;return 'Mars';}});
+  assert.throws(()=>makeTransitChunkPipelineRunner(options(fn,{identity:malformed})),code('INVALID_TRANSIT_IDENTITY'));
+  assert.equal(getterCalls,0);
+});
+
+
+test('runtime global call cap counts both point and enclosure callbacks over multiple chunks',async()=>{
+  const counts={point:0,enclosure:0};
+  const p={...provider(),
+    async getUnwrappedAspectResidual(){counts.point++;return 1;},
+    async getUnwrappedResidualEnclosure(){counts.enclosure++;return {lowerDeg:-1,upperDeg:1};},
+  };
+  const prepare=async req=>{
+    await req.provider.getUnwrappedResidualEnclosure({startUtc:req.startUtc,endUtc:req.endUtc});
+    await req.provider.getUnwrappedAspectResidual({datetimeUtc:req.startUtc});
+    return syntheticResult(req);
+  };
+  const config=options(prepare,{provider:p,maxTotalProviderCalls:4});
+  const report=await collectTransitChunkCandidateReports({windowInput:config.windowInput,
+    identity:identity(),maxCandidateRecords:12,
+    runChunk:makeTransitChunkPipelineRunner(config)});
+  assert.equal(report.chunkCount,2);
+  assert.deepEqual(counts,{point:2,enclosure:2});
+});
+
+test('runtime global cap rejects the first excess point call before reaching underlying provider',async()=>{
+  const calls=[];
+  const p={...provider(),
+    async getUnwrappedAspectResidual(req){calls.push('point:'+req.datetimeUtc);return 1;},
+    async getUnwrappedResidualEnclosure(req){calls.push('range:'+req.startUtc);return {lowerDeg:-1,upperDeg:1};},
+  };
+  const prepare=async req=>{
+    await req.provider.getUnwrappedResidualEnclosure({startUtc:req.startUtc,endUtc:req.endUtc});
+    await req.provider.getUnwrappedAspectResidual({datetimeUtc:req.startUtc});
+    return syntheticResult(req);
+  };
+  const config=options(prepare,{provider:p,maxTotalProviderCalls:3});
+  const runner=makeTransitChunkPipelineRunner(config);
+  await assert.rejects(()=>collectTransitChunkCandidateReports({windowInput:config.windowInput,
+    identity:identity(),maxCandidateRecords:12,runChunk:runner}),code('GLOBAL_PIPELINE_BUDGET'));
+  assert.deepEqual(calls,[
+    'range:2026-11-14T00:00:00.000Z',
+    'point:2026-11-14T00:00:00.000Z',
+    'range:2026-11-14T00:30:00.000Z',
+  ]);
+  const next={...identity(),chunkIndex:1,startUtc:'2026-11-14T00:30:00.000Z',endUtc:'2026-11-14T01:00:00.000Z'};
+  await assert.rejects(()=>runner(next),code('PIPELINE_SEQUENCE_ERROR'));
+});
+
+test('a pipeline that swallows exhaustion cannot return a successful report',async()=>{
+  let underlyingCalls=0;
+  const p={...provider(),
+    async getUnwrappedAspectResidual(){underlyingCalls++;return 1;},
+  };
+  const prep=async req=>{
+    await req.provider.getUnwrappedAspectResidual({datetimeUtc:req.startUtc});
+    try {
+      await req.provider.getUnwrappedAspectResidual({datetimeUtc:req.endUtc});
+    }catch(err){assert.equal(err?.code,'GLOBAL_PIPELINE_BUDGET');}
+    // Malicious or broken pipeline attempts to convert a partial search into success.
+    return syntheticResult(req);
+  };
+  const config=options(prep,{provider:p,maxTotalProviderCalls:1});
+  const runner=makeTransitChunkPipelineRunner(config);
+  const first={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+  await assert.rejects(()=>runner(first),code('GLOBAL_PIPELINE_BUDGET'));
+  assert.equal(underlyingCalls,1);
+  await assert.rejects(()=>runner(first),code('PIPELINE_SEQUENCE_ERROR'));
+});
+
+test('saved provider references cannot be used after the chunk has completed',async()=>{
+  let retained;
+  let calls=0;
+  const p={...provider(),async getUnwrappedAspectResidual(){calls++;return 0;}};
+  const runner=makeTransitChunkPipelineRunner(options(async req=>{
+    retained=req.provider;
+    await retained.getUnwrappedAspectResidual({datetimeUtc:req.startUtc});
+    return syntheticResult(req);
+  },{provider:p,maxTotalProviderCalls:1}));
+  const first={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+  await runner(first);
+  await assert.rejects(()=>retained.getUnwrappedAspectResidual({datetimeUtc:first.endUtc}),code('PIPELINE_SEQUENCE_ERROR'));
+  assert.equal(calls,1);
 });

@@ -6,6 +6,7 @@ export type TransitPinnedIdentity = Readonly<{
   exactAngleDeg: number; orientation: TransitAspectOrientation;
   ephemerisProvenance: Readonly<{engineVersion:string;kernelSetId:string;timeModel:string}>;
 }>;
+export declare function snapshotTransitPinnedIdentity(identity:TransitPinnedIdentity):TransitPinnedIdentity;
 export type TransitChunkRequest = TransitPinnedIdentity & Readonly<{
   chunkIndex: number; startUtc: string; endUtc: string;
 }>;

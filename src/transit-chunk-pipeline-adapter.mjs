@@ -4,6 +4,7 @@
  */
 import { AstrologyError } from './index.mjs';
 import { splitUtcSearchWindow } from './utc-search-window-chunks.mjs';
+import { snapshotTransitPinnedIdentity } from './transit-chunk-candidate-reports.mjs';
 
 const MAX_F5_CHUNK_MS = 31 * 86400000;
 const F5_CAPABILITIES = Object.freeze({
@@ -23,49 +24,22 @@ function object(value, label) {
 function integer(value, low, high) {
   return Number.isSafeInteger(value) && value >= low && value <= high;
 }
-
-
-// Descriptor reads keep caller-owned accessors from executing during validation.
-// The collector supplies frozen plain data records; direct runner callers must
-// provide the same stable, explicitly versioned identity contract.
-function ownData(value, name, code) {
-  const descriptor = Object.getOwnPropertyDescriptor(value, name);
+function ownRequestData(value, key) {
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
   if (!descriptor || !Object.hasOwn(descriptor, 'value'))
-    reject(code, `Expected an own data property: ${name}`);
+    reject('INCOMPATIBLE_CHUNK_REQUEST', `F5 chunk ${key} must be an own data property`);
   return descriptor.value;
 }
-function named(value, label) {
-  if (typeof value !== 'string' || !value.trim() || value !== value.trim())
-    reject('INVALID_TRANSIT_IDENTITY', `${label} must be a nonempty trimmed identifier`);
-  return value;
-}
-function pinnedChunkIdentity(request) {
-  const provenance = ownData(request, 'ephemerisProvenance', 'INVALID_TRANSIT_IDENTITY');
+function verifyRequestIdentity(request, identity) {
+  for (const key of ['skyBodyName','natalBodyName','aspectId','exactAngleDeg','orientation'])
+    if (ownRequestData(request, key) !== identity[key])
+      reject('INCOMPATIBLE_CHUNK_REQUEST', `F5 chunk identity mismatch: ${key}`);
+  const provenance = ownRequestData(request, 'ephemerisProvenance');
   if (!provenance || typeof provenance !== 'object' || Array.isArray(provenance))
-    reject('INVALID_TRANSIT_IDENTITY', 'Explicit provenance object is required');
-  const ephemerisProvenance = Object.freeze({
-    engineVersion: named(ownData(provenance, 'engineVersion', 'INVALID_TRANSIT_IDENTITY'), 'engineVersion'),
-    kernelSetId: named(ownData(provenance, 'kernelSetId', 'INVALID_TRANSIT_IDENTITY'), 'kernelSetId'),
-    timeModel: named(ownData(provenance, 'timeModel', 'INVALID_TRANSIT_IDENTITY'), 'timeModel'),
-  });
-  const exactAngleDeg = ownData(request, 'exactAngleDeg', 'INVALID_TRANSIT_IDENTITY');
-  const orientation = ownData(request, 'orientation', 'INVALID_TRANSIT_IDENTITY');
-  if (typeof exactAngleDeg !== 'number' || !Number.isFinite(exactAngleDeg) ||
-      exactAngleDeg < 0 || exactAngleDeg > 180 ||
-      (orientation !== 'POSITIVE' && orientation !== 'NEGATIVE'))
-    reject('INVALID_TRANSIT_IDENTITY', 'Aspect angle and orientation must be explicit');
-  return Object.freeze({
-    skyBodyName: named(ownData(request, 'skyBodyName', 'INVALID_TRANSIT_IDENTITY'), 'skyBodyName'),
-    natalBodyName: named(ownData(request, 'natalBodyName', 'INVALID_TRANSIT_IDENTITY'), 'natalBodyName'),
-    aspectId: named(ownData(request, 'aspectId', 'INVALID_TRANSIT_IDENTITY'), 'aspectId'),
-    exactAngleDeg, orientation, ephemerisProvenance,
-  });
-}
-function sameIdentity(a, b) {
-  return ['skyBodyName', 'natalBodyName', 'aspectId', 'exactAngleDeg', 'orientation']
-    .every(key => a[key] === b[key]) &&
-    ['engineVersion', 'kernelSetId', 'timeModel']
-      .every(key => a.ephemerisProvenance[key] === b.ephemerisProvenance[key]);
+    reject('INCOMPATIBLE_CHUNK_REQUEST', 'F5 chunk provenance must be an object');
+  for (const key of ['engineVersion','kernelSetId','timeModel'])
+    if (ownRequestData(provenance, key) !== identity.ephemerisProvenance[key])
+      reject('INCOMPATIBLE_CHUNK_REQUEST', `F5 chunk provenance mismatch: ${key}`);
 }
 
 /**
@@ -82,8 +56,7 @@ export function makeTransitChunkPipelineRunner(input) {
     maxChunks: raw.maxChunks,
   });
   const plan = splitUtcSearchWindow(windowInput);
-  // Pin the exact aspect and ephemeris provenance before any async call.
-  const identity = pinnedChunkIdentity(object(input.identity, 'identity'));
+  const identity = snapshotTransitPinnedIdentity(input.identity);
   const scan = object(input.scan, 'scan');
   const targetIntervalMs = scan.targetIntervalMs;
   const maxDepth = scan.maxDepth;
@@ -108,12 +81,12 @@ export function makeTransitChunkPipelineRunner(input) {
       !integer(r.maxCandidateRefinements, 1, 128) ||
       !integer(r.maxRefinementCalls, 1, 16384))
     reject('INCOMPATIBLE_PIPELINE_LIMITS', 'F5 refinement tolerances and budgets must be explicit and finite');
-  // A worst-case cap must fit ALL planned chunks, rather than silently giving
-  // each chunk a new unlimited global budget. The F5 solver owns per-call caps.
+  // Unlike a worst-case estimate, the global cap is enforced on the actual
+  // provider invocations across every chunk (point samples AND enclosures).
+  // The F5 scan/refiner still enforce their independent per-chunk budgets.
   const maxTotalProviderCalls = input.maxTotalProviderCalls;
-  const worstCaseCalls = plan.chunks.length * (maxProviderCalls + r.maxRefinementCalls);
-  if (!integer(maxTotalProviderCalls, 1, 1000000) || worstCaseCalls > maxTotalProviderCalls)
-    reject('GLOBAL_PIPELINE_BUDGET', 'Worst-case F5 provider calls exceed explicit global budget');
+  if (!integer(maxTotalProviderCalls, 1, 1000000))
+    reject('GLOBAL_PIPELINE_BUDGET', 'Explicit global provider-call cap must be an integer in 1..1000000');
   const provider = object(input.provider, 'provider');
   const capabilities = object(provider.capabilities, 'provider.capabilities');
   if (Object.entries(F5_CAPABILITIES).some(([key, value]) => capabilities[key] !== value))
@@ -122,43 +95,59 @@ export function makeTransitChunkPipelineRunner(input) {
       typeof provider.getUnwrappedResidualEnclosure !== 'function')
     reject('UNSUPPORTED_COVERAGE', 'F5 provider must implement point and all-time interval methods');
   // Capture both methods and capability values before any asynchronous work.
+  // Wrap BOTH callback categories, so even an injected prepareCandidates cannot
+  // bypass the aggregate cap by misreporting scan/refinement call counts.
+  const pointMethod = provider.getUnwrappedAspectResidual.bind(provider);
+  const enclosureMethod = provider.getUnwrappedResidualEnclosure.bind(provider);
+  let nextIndex = 0;
+  let running = false;
+  let failed = false;
+  let providerCallCount = 0;
+  function budgeted(method) {
+    return async function providerCall(request) {
+      if (!running || failed)
+        reject('PIPELINE_SEQUENCE_ERROR', 'F5 provider call is outside an active search chunk');
+      if (providerCallCount >= maxTotalProviderCalls) {
+        failed = true;
+        reject('GLOBAL_PIPELINE_BUDGET', 'F5 aggregate provider-call cap exhausted');
+      }
+      // Reserve BEFORE invoking or awaiting the underlying method. Failed
+      // provider attempts also consume budget; a later chunk cannot reset it.
+      providerCallCount++;
+      return method(request);
+    };
+  }
   const fixedProvider = Object.freeze({
     capabilities: Object.freeze({ ...capabilities }),
-    getUnwrappedAspectResidual: provider.getUnwrappedAspectResidual.bind(provider),
-    getUnwrappedResidualEnclosure: provider.getUnwrappedResidualEnclosure.bind(provider),
+    getUnwrappedAspectResidual: budgeted(pointMethod),
+    getUnwrappedResidualEnclosure: budgeted(enclosureMethod),
   });
   if (typeof input.prepareCandidates !== 'function')
     reject('MISSING_PIPELINE', 'An explicitly injected F5 prepareCandidates function is required');
   const prepareCandidates = input.prepareCandidates;
-  let nextIndex = 0;
-  let running = false;
-  let failed = false;
   return async function runChunk(request) {
     if (running || failed || nextIndex >= plan.chunks.length)
       reject('PIPELINE_SEQUENCE_ERROR', 'F5 chunks must run once, sequentially, without retry after failure');
     object(request, 'request');
     const expected = plan.chunks[nextIndex];
-    if (ownData(request, 'chunkIndex', 'INCOMPATIBLE_CHUNK_REQUEST') !== expected.index ||
-        ownData(request, 'startUtc', 'INCOMPATIBLE_CHUNK_REQUEST') !== expected.startUtc ||
-        ownData(request, 'endUtc', 'INCOMPATIBLE_CHUNK_REQUEST') !== expected.endUtc)
+    if (ownRequestData(request, 'chunkIndex') !== expected.index ||
+        ownRequestData(request, 'startUtc') !== expected.startUtc ||
+        ownRequestData(request, 'endUtc') !== expected.endUtc)
       reject('INCOMPATIBLE_CHUNK_REQUEST', 'F5 request does not match the prevalidated UTC chunk');
-    const requestIdentity = pinnedChunkIdentity(request);
-    if (!sameIdentity(identity, requestIdentity))
-      reject('INCOMPATIBLE_CHUNK_REQUEST', 'F5 aspect identity or ephemeris provenance changed between chunks');
+    verifyRequestIdentity(request, identity);
     running = true;
     try {
       // No chunkIndex forwarded: it is not part of the PR #21 contract.
       const result = await prepareCandidates(Object.freeze({
         startUtc: expected.startUtc, endUtc: expected.endUtc,
-        skyBodyName: identity.skyBodyName,
-        natalBodyName: identity.natalBodyName,
-        aspectId: identity.aspectId,
-        exactAngleDeg: identity.exactAngleDeg,
-        orientation: identity.orientation,
-        ephemerisProvenance: identity.ephemerisProvenance,
+        ...identity,
         targetIntervalMs, maxDepth, maxProviderCalls,
         provider: fixedProvider, refinement: r,
       }));
+      // A hostile callback may catch and suppress a global budget error.
+      // Never return a successful report after the cap has been exceeded.
+      if (failed)
+        reject('GLOBAL_PIPELINE_BUDGET', 'F5 aggregate provider-call cap exhausted');
       nextIndex++;
       return result;
     } catch (error) {

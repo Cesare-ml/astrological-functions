@@ -107,3 +107,52 @@ conservative worst-case budget policy and independently hardened identity
 parser. Both are valid experimental arrangements, but must be consolidated
 under one documented contract and revalidated before merging. No production
 authorization or scientific ephemeris certification follows from these tests.
+
+## Completion: common F5 identity validator + real aggregate call budget (14 November 2026)
+
+This integration branch now **supersedes** earlier statements that the shared
+validator and live global-call budget are merely planned. The following
+independent, self-contained source and test modules were adopted **without
+changes** from pinned PR #72 snapshot
+`ed9b83614ddfd5a014657c6a0e7f206be35c3d2d`:
+
+- `src/transit-chunk-candidate-reports.mjs` / `.d.mts`
+- `src/transit-chunk-pipeline-adapter.mjs` / `.d.mts`
+- `test/transit-chunk-candidate-reports.test.mjs`
+- `test/transit-chunk-pipeline-adapter.test.mjs`
+- `test/types/transit-chunk-pipeline-adapter.test.ts`
+
+The collector and runner now share `snapshotTransitPinnedIdentity`, which
+snapshots the same own data properties with one frozen provenance record.
+The runner still verifies each incoming UTC chunk's identity and rejects
+mismatches; it no longer duplicates an independent identity validator.
+
+The runner checks a mandatory `maxTotalProviderCalls` in 1..1,000,000 and
+reserves each real point **or enclosure** provider invocation **before**
+starting it, across all chunks. Once exhausted, it fails closed with
+`GLOBAL_PIPELINE_BUDGET`. It rejects any later chunks and will not accept a
+successful-looking result from a callback that caught the budget failure.
+The caller can request a budget smaller than an extremely pessimistic
+worst-case preallocation. The per-chunk scanner/refiner retain separate
+limits. It remains **a count budget**, not a CPU/memory/time bound.
+
+A targeted PR #81 regression fixture now expects
+`INCOMPATIBLE_CHUNK_REQUEST` for malformed direct chunk requests, while
+constructor-time invalid identity retains `INVALID_TRANSIT_IDENTITY`.
+
+**Executed gate:** 47/47 synthetic V8 tests passed when running original
+GitHub module bodies for both F1/F2 and F5, including PR #21 source and
+the original PR #72 29 focused collector/runner tests plus PR #81
+identity, F1/F5 and PR21 end-to-end/manual smoke tests. The source/test
+blobs referenced above were read directly from GitHub and kept byte-identical.
+This is **not** a complete authenticated native `npm test`; the V8 test
+harness rebound ESM imports and adapted assertion helpers.
+
+**Still excluded:** PR #72's later opt-in cancellation and per-chunk wall-clock
+timeout work. Those introduce more state and must be integrated in a
+separate, independently validated increment. Do not infer that `AbortSignal`
+or `chunkTimeoutMs` are implemented in this PR #81 snapshot.
+
+Real Rust/WASM/JPL ephemeris accuracy, all-time enclosure provenance,
+reference kernel/time-model validation, native NodeNext/Bundler complete
+checkout, source licensing and release approval remain explicit blockers.

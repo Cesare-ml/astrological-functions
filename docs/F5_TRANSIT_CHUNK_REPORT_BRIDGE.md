@@ -110,3 +110,17 @@ chunks. The earlier demo above is updated accordingly. The independently
 moving PR #72 additionally implements actual runtime aggregate provider-call
 budgeting; PR #81 retains the earlier conservative preflight policy pending
 explicit reconciliation and complete native stack testing.
+
+
+## Integration update: actual provider call budget
+
+The private PR #81 integration now uses the **actual invocation** limit,
+not the earlier worst-case preflight reservation. The runner counts both
+`getUnwrappedAspectResidual` and `getUnwrappedResidualEnclosure` calls
+across all UTC chunks and fails before exceeding the explicit
+`maxTotalProviderCalls` cap. It also shares the
+`snapshotTransitPinnedIdentity` validator with the report coordinator.
+The earlier sections describe historical draft behavior; the pinned
+integration result is recorded in
+`docs/UTC_F5_PARALLEL_RECONCILIATION_2026-11-14.md`.
+Later PR #72 AbortSignal/timeout support is **not** in PR #81 yet.
