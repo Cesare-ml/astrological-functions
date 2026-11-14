@@ -60,7 +60,7 @@
     "test/provider-adapter-shape.test.mjs": "8208607fb97e7a74f2f740ac00da1294ad659e61",
     "test/provider-body-identifier-single-read.test.mjs": "23059420442a54c3f1bf67f25e23a1e6ec0928f6",
     "test/provider-coordinate-errors.test.mjs": "3d8ec99a6ab6c4431c96cb62624c47d21f7c2271",
-    "test/provider-fixture-inventory.test.mjs": "35ee51f4bcc109b6e55921ac9e4d8f4e32e6feed",
+    "test/provider-fixture-inventory.test.mjs": "820f67069a062512ea31f44f71c1391fb998e05a",
     "test/provider-house-ulp-bridge.test.mjs": "8cc3261cdc3389c1e9d85f319124c7e83bb89c80",
     "test/provider-integration-manual-gate.test.mjs": "ad8a82f9ec646cb9d710492114b276f6e3feedb1",
     "test/provider-method-pinning.test.mjs": "c102c82f3408d50040c17630f5ea96889af75380",
