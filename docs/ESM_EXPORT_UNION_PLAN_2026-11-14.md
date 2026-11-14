@@ -120,3 +120,49 @@ does **not** claim full-repository `npm test`, TypeScript consumer compilation,
 multi-branch integration, or real Rust/WASM/JPL astronomical parity. Those
 gates, along with provenance/licensing and human integration review, remain
 open. No GitHub Actions, merge, deployment, release or visibility change.
+
+
+## Incremental non-export manifest drift review — 14 November 2026
+
+The planner's JSON response now includes `nonExportDrift`: a sorted, read-only
+list of fields (for example `version`, `engines`, `scripts`,
+`dependencies`, `files` or `license`) that differ between the baseline
+manifest and one or more candidate manifests, with their candidate indices.
+The planner deliberately **does not print the changed field values**.
+Missing and newly added fields count as drift; nested object key order
+does not, while array order does. `name`, `private`, `type` and the root
+export remain separately enforced as compatibility constraints.
+
+`nonExportDrift: []` means the observed non-export manifest metadata matches,
+not that the PR source files or resolved package imports are compatible.
+A nonempty list is a **manual-review warning**, not an automatic merge
+blocker and never a patch to the baseline manifest.
+
+Manifests read from GitHub for `main` and the active draft heads of PRs
+#25, #41, #54, #60, #65 and #68 on 14 November 2026 matched for all
+non-export package fields. Their pinned package Git blob SHA-1 values
+still match the snapshot table above. This must be rechecked when heads move.
+
+Six focused regressions were added (zero drift on exports-only changes,
+field-level diagnostic, deep-equality order semantics, added/removed
+fields with multiple candidate origins, frozen input immutability and CLI
+redaction/read-only execution). Local **Node v22.16.0** verification:
+
+```sh
+node --check scripts/plan-esm-export-union.mjs
+node --check test/plan-esm-export-union.test.mjs
+node --test test/plan-esm-export-union.test.mjs
+```
+
+**21/21 tests passed, 0 failed** in the isolated local checkout.
+Exact tested file Git blob SHA-1 values match GitHub:
+
+- Planner: `ec38a996cc8db9807afc5da26db7b3de95799c85`
+- Tests: `5d9d4d90fa34ae38b2c187366b3ab5772b8fa5b5`
+
+This remains tooling-only evidence. No consolidated full-repository
+`npm test`, TypeScript NodeNext/Bundler consumer build, scientific
+Rust/WASM/JPL parity, licensing gate, or production migration has been
+validated. No GitHub Actions, main merge, deploy, npm publication or
+repository visibility change. Continue crediting
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
