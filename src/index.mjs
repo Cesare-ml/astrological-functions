@@ -326,7 +326,12 @@ export async function calculateNatalWithProvider(input) {
       Array.from(bodyNames).some(n => typeof n !== 'string' || !n.trim()) || new Set(bodyNames).size !== bodyNames.length)
     throw new AstrologyError('INVALID_BODIES', '1..32 unique named bodies required');
   if (!provider || (typeof provider !== 'object' && typeof provider !== 'function') ||
-      Array.isArray(provider) || typeof provider.getGeocentricEcliptic !== 'function')
+      Array.isArray(provider))
+    throw new AstrologyError('MISSING_PROVIDER', 'Explicit independent ephemeris provider required');
+  // Pin one callable before awaiting any body. Reentrant adapters and getters
+  // must not switch implementations between provider requests.
+  const getGeocentricEcliptic = provider.getGeocentricEcliptic;
+  if (typeof getGeocentricEcliptic !== 'function')
     throw new AstrologyError('MISSING_PROVIDER', 'Explicit independent ephemeris provider required');
   // Snapshot validated identifiers before awaiting a potentially reentrant provider.
   // The caller may mutate its array while an earlier body request is pending.
@@ -342,7 +347,7 @@ export async function calculateNatalWithProvider(input) {
     // Each call receives its own immutable request: adapters cannot rewrite the
     // requested frame, correction policy or body identifier by accident.
     const request = Object.freeze({ datetimeUtc, bodyName, corrections:'APPARENT', frame:'ECLIPTIC_OF_DATE' });
-    const state = await provider.getGeocentricEcliptic(request);
+    const state = await Reflect.apply(getGeocentricEcliptic, provider, [request]);
     if (!state || typeof state !== 'object' || Array.isArray(state))
       throw new AstrologyError('INCOMPATIBLE_EPHEMERIS', 'Provider must return apparent Earth-centered ecliptic-of-date coordinates');
     // Snapshot provider-controlled fields once: getters and reentrant adapters
