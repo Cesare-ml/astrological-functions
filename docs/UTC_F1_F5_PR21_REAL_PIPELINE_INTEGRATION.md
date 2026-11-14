@@ -122,3 +122,42 @@ are also **not** native full-suite proof. Run the entire combined checkout,
 including `scripts/manual/transit-pr21-smoke.mjs` and the TypeScript manual
 gate, before merging. There is no real Rust/WASM/JPL astronomical
 validation, provider assurance, license sign-off or production approval.
+
+## Constructor-time identity migration — committed 14 November 2026
+
+The earlier **unapplied** status in this document describes a previous review
+checkpoint. It is superseded by PR #81 integration commit
+`b5331230e0a919d9a439544e7995a8a599e4e9a6`.
+
+`makeTransitChunkPipelineRunner` on this integration branch now requires the
+explicit `identity` object **at construction**, before any provider work, and
+captures a frozen detached aspect/provenance snapshot. Subsequent chunk
+requests must exactly match all pinned bodies, aspect, orientation, engine,
+kernel and time-model fields. Missing constructor identity fails with
+`INVALID_ARGUMENT`; invalid/getter-backed fields with
+`INVALID_TRANSIT_IDENTITY`; valid but different later identities with
+`INCOMPATIBLE_CHUNK_REQUEST`.
+
+Ten runtime/type/test/manual consumer files were migrated **atomically**,
+including the PR #21 smoke script and its TypeScript gate. A new negative
+test checks constructor failure before callback execution.
+
+Executed locally on a reconstructed F1/F2+F5 checkout: native Node 22.16.0
+`npm test` **98/98 passed**; TypeScript 5.8.3 strict NodeNext and Bundler
+consumer compilation passed. The exact PR #81 committed runner source,
+declaration, three relevant integration/regression fixtures match local
+Git blob SHA-1 bytes. Additional upstream tests and scripts were migrated
+from their GitHub files.
+
+Separately, **22/22** focused runtime tests were evaluated against exact
+post-migration GitHub source and test bodies in V8 with ESM import bindings
+reconstructed: 10 runner tests, 6 direct identity tests, 4 end-to-end PR #21
+tests and 2 original manual smoke tests. **This was not native Node ESM**.
+
+**Not yet synchronized:** PR #72 has since added runtime *actual-call* global
+provider budgeting and a shared `snapshotTransitPinnedIdentity` implementation
+for collector/runner. This branch deliberately preserves its earlier
+conservative worst-case budget policy and independently hardened identity
+parser. Both are valid experimental arrangements, but must be consolidated
+under one documented contract and revalidated before merging. No production
+authorization or scientific ephemeris certification follows from these tests.
