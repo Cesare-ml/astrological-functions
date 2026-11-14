@@ -59,6 +59,9 @@ if (runtime.length < 64 || types.length < 14) {
 }
 // Pass explicit paths to include test/ and tests/ and the .mts fixtures;
 // implicit node --test discovery or shell globs may silently omit a directory.
+// Enforce byte-for-byte exact GitHub-reviewed runtime, TypeScript, and test blobs
+// before executing any native test or compiler; counts alone are insufficient.
+execute(process.execPath, ['scripts/verify-provider-fixture-inventory.mjs'], 'sha-pinned-inventory');
 execute(process.execPath, ['--test', ...runtime], 'node-test');
 const windows = process.platform === 'win32';
 execute(windows ? 'tsc.cmd' : 'tsc', [
