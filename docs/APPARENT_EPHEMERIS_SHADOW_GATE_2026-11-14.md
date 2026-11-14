@@ -4,9 +4,9 @@
 
 `src/ephemeris-parity.mjs` exports `compareApparentEphemerisProviders`. Two independently configured providers expose `getGeocentricEcliptic({ datetimeUtc, bodyName, frame: 'ECLIPTIC_OF_DATE', corrections: 'APPARENT' })`. This is the same injected boundary used by `calculateNatalWithProvider` in `src/index.mjs`.
 
-Both providers **must** return numeric `longitudeDeg`, `latitudeDeg`, `longitudeSpeedDegPerDay`, `distanceAu` and metadata `{center:'EARTH',frame:'ECLIPTIC_OF_DATE',corrections:'APPARENT',engineVersion,kernelSetId,timeModel}`. Every number must be finite, distance positive, longitude within `[0,360)` and latitude within `[-90,90]`. Missing or geometric J2000 data cause an error, never a fallback.
+Both providers **must** return **six** numeric values: `longitudeDeg`, `latitudeDeg`, `distanceAu`, `longitudeSpeedDegPerDay`, `latitudeSpeedDegPerDay`, `distanceSpeedAuPerDay`, plus metadata `{center:'EARTH',frame:'ECLIPTIC_OF_DATE',corrections:'APPARENT',engineVersion,kernelSetId,timeModel}`. Every number must be finite, distance positive, longitude within `[0,360)` and latitude within `[-90,90]`. Missing or geometric J2000 data cause an error, never a fallback.
 
-Caller supplies *explicit, justified* nonnegative tolerances: `longitudeArcsec`, `latitudeArcsec`, `longitudeSpeedArcsecPerDay`, `distanceAu`. The result contains signed circular longitude, latitude, speed and distance residuals per body plus PASS/FAIL. A PASS means **only that the two supplied providers agree within caller-chosen thresholds**; it is not scientific validation of either provider. The utility retains source metadata for audit and never reads databases, calls Swiss, downloads kernels or modifies production.
+Caller supplies *explicit, justified* nonnegative tolerances for **all six** output fields: `longitudeArcsec`, `latitudeArcsec`, `distanceAu`, `longitudeSpeedArcsecPerDay`, `latitudeSpeedArcsecPerDay`, `distanceSpeedAuPerDay`. The versioned result contract is `APPARENT_EPHEMERIS_PARITY_V2` and contains signed circular longitude and signed differences for the other five quantities, per-body PASS/FAIL. A PASS means **only that the two supplied providers agree within caller-chosen thresholds**; it is not scientific validation of either provider. The utility retains source metadata for audit and never reads databases, calls Swiss, downloads kernels or modifies production.
 
 Example, with externally supplied providers (no implementation assumed):
 
@@ -22,6 +22,8 @@ const report = await compareApparentEphemerisProviders({
 if (report.status !== 'PASS') throw new Error('Parity not established');
 ```
 
+Field mapping for an external legacy adapter: Swiss `longitude`, `latitude`, `distance`, `longitudeSpeed`, `latitudeSpeed`, `distanceSpeed` map to the six fields above, preserving degrees, AU, degrees/day and AU/day and the actual correction flags. **Important:** VirgoStars legacy `getPianetiCase` additionally computes a *separately sampled* latitude-speed estimate; matching raw Swiss six-field speeds does not by itself certify that application-specific derived value.
+
 The wrapper around the legacy backend remains **outside** this package; it must label actual Swiss settings honestly (no impersonation). The candidate may use VirgoStars-Ephemeris **only after** its apparent-of-date pipeline, stable Rust-backed JS/WASM bridge and independently verified kernel provenance exist. Current geometric SPK Type-2/3 states **cannot** satisfy this comparison. No public consumer or Astrolabio should be switched by this change.
 
 Local isolated regression command (from repository root):
@@ -31,4 +33,4 @@ node --test test/ephemeris-parity.test.mjs
 npm test
 ```
 
-These tests use synthetic positions and mock providers only. Separate release gates: official NASA/JPL/NAIF matching vector validation; independent apparent correction & rate comparisons; UTC/UT1/TT/TDB and ΔT; lunar special points/Chiron; Vehlow/Placidus/Koch/Regiomontanus/Porphyry houses; representative natal and current-sky outputs; backend shadow/staging with rollback and Astrolabio QA. No use of private birth records in committed fixtures. Keep VirgoStars attribution requirements when a real Rust-backed adapter becomes deployable.
+Eleven synthetic cases were executed against the fetched source/test logic in an isolated JavaScript V8 runtime on 2026-11-14 (11/11 passed). The V8 harness used local substitutes for Node test/assert; **this is not a native `node --test` or `npm test` execution**. These tests use synthetic positions and mock providers only. Separate release gates: official NASA/JPL/NAIF matching vector validation; independent apparent correction & rate comparisons; UTC/UT1/TT/TDB and ΔT; lunar special points/Chiron; Vehlow/Placidus/Koch/Regiomontanus/Porphyry houses; representative natal and current-sky outputs; backend shadow/staging with rollback and Astrolabio QA. No use of private birth records in committed fixtures. Keep VirgoStars attribution requirements when a real Rust-backed adapter becomes deployable.
