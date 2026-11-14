@@ -57,14 +57,26 @@ export function dodecatemoriaLongitude(longitude) {
  * A longitude exactly on a cusp belongs to the house starting there.
  * Nonmonotone systems/polar exceptions require a different documented method.
  */
+function snapshotHouseCusps(cusps) {
+  if (!Array.isArray(cusps) || cusps.length !== 12)
+    throw new AstrologyError('INVALID_CUSPS', 'Exactly twelve finite, dense house cusp longitudes are required');
+  const points = [];
+  // Treat the supplied array as data, never as an executable iterator/map.
+  // Read each indexed cusp exactly once and validate that same value.
+  for (let index = 0; index < 12; index++) {
+    if (!Object.hasOwn(cusps, index))
+      throw new AstrologyError('INVALID_CUSPS', 'Exactly twelve finite, dense house cusp longitudes are required');
+    const cusp = cusps[index];
+    if (typeof cusp !== 'number' || !Number.isFinite(cusp))
+      throw new AstrologyError('INVALID_CUSPS', 'Every house cusp must be a finite longitude');
+    points.push(normalize360(cusp));
+  }
+  return points;
+}
+
 export function locateLongitudeInHouses(longitude, cusps) {
   const lon=normalize360(longitude);
-  if (!Array.isArray(cusps) || cusps.length !== 12 ||
-      Array.from({length:12}, (_,i)=>i).some(i =>
-        !Object.hasOwn(cusps,i) || typeof cusps[i] !== 'number' ||
-        !Number.isFinite(cusps[i])))
-    throw new AstrologyError('INVALID_CUSPS', 'Exactly twelve finite, dense house cusp longitudes are required');
-  const points=cusps.map(normalize360);
+  const points=snapshotHouseCusps(cusps);
   const spans=points.map((v,i)=>normalize360(points[(i+1)%12]-v));
   if (spans.some(x=>x<=1e-10) || Math.abs(spans.reduce((a,b)=>a+b,0)-360)>1e-7)
     throw new AstrologyError('INVALID_CUSPS', 'House cusps must define one forward zodiac revolution');
@@ -165,13 +177,9 @@ export function validateHouseCuspSet(input) {
     throw new AstrologyError('INCOMPATIBLE_HOUSE_SYSTEM', 'Cusp system differs from requested house system');
   if (metadata.placementMethod !== 'CUSP_INTERVAL')
     throw new AstrologyError('UNSUPPORTED_HOUSE_PLACEMENT', 'Only validated cusp intervals are supported');
-  if (!Array.isArray(cusps) || cusps.length !== 12)
-    throw new AstrologyError('INVALID_CUSPS', 'Exactly twelve cusp longitudes required');
-  const snapshot = Object.freeze(Array.from(cusps, (cusp) => {
-    if (typeof cusp !== 'number' || !Number.isFinite(cusp))
-      throw new AstrologyError('INVALID_CUSPS', 'Every house cusp must be a finite longitude');
-    return normalize360(cusp);
-  }));
+  // Reuse the same single-read indexed validation as direct placement.
+  // Caller-controlled iterators cannot substitute different house intervals.
+  const snapshot = Object.freeze(snapshotHouseCusps(cusps));
   // Reuse the existing forward-order gate, including wrap-around and zero spans.
   locateLongitudeInHouses(snapshot[0], snapshot);
   return Object.freeze({
