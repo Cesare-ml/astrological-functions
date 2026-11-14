@@ -16,3 +16,13 @@ The code preserves the conditional **five-key private ESM export union**, the ex
 - No GitHub Actions, npm publish, changes to deployed VirgoStars, Swiss Ephemeris fallback, private data, or source license/visibility changes.
 
 Keep this candidate draft. Recompare future main updates and active parallel ESM staging PRs before merge. Do not merge or close the original stacked PRs until the complete native tests and independent review approve a consolidated path.
+
+## Post-integration targeted regression execution
+
+Confirmed via GitHub REST: PR #104 initially **mergeable=true, mergeable_state=clean**, with direct main base `7dd69398c81561274f46f39f396c7e5c6596aa57`, 74 changed paths, zero deleted main files and 119 total staged files.
+
+Fetched exact GitHub `src/index.mjs` blob `a89f4a50a2c1a159b905180abe0257b15163192d` and ran the exact real test source from `test/math.test.mjs`, `tests/utc-validation.test.mjs`, and `test/house-cusp-preboundary-ulp.test.mjs` with strict JavaScript V8 replacements for the `node:test` and `node:assert/strict` module interfaces: **14/14 test callbacks passed**, zero load or runtime failures. This includes the deterministic 90,000 binary64 cusp-neighbor stress assertions.
+
+Independently loaded all exact runtime modules (`src/index.mjs`, `src/dodecatemoria-methods.mjs`, `src/dodecatemoria-batch.mjs`, `src/zodiac-decan-facts.mjs`) with the exact manifest `2777e6b260cdd4cc64e8c285e366e17df8e12d9d`, then executed the three new `test/main-clean-provider-union.test.mjs` callbacks in strict V8 with only import/fs semantics substituted: **3/3 passed**. The exact test blob is `02f73948b459e98e9b57d168c74841dfe8e80c69`.
+
+These **17 passing synthetic checks do not replace native Node package resolution or `npm test` on an authenticated complete checkout**, nor any TypeScript or scientific accuracy release gate. Keep the PR draft until those real validations run.
