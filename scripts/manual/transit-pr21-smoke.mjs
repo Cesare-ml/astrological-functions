@@ -139,3 +139,50 @@ test('actual F5 stack: live cap interrupts an ongoing scan after one provider ca
   }),e=>e?.code==='GLOBAL_PIPELINE_BUDGET');
   assert.equal(providerCalls,1);
 });
+
+test('actual F5 pipeline: external AbortSignal cancels an unresolved enclosure request',async()=>{
+  let ready;
+  const started = new Promise(resolve=>{ready=resolve;});
+  const controller = new AbortController();
+  let seenSignal, calls=0;
+  const f=ms=>(ms-epoch)/3600000-.37;
+  const provider=providerWith(f,()=>[-1,1]);
+  provider.getUnwrappedResidualEnclosure=async (_req,signal)=>{
+    seenSignal=signal;calls++;ready();return new Promise(()=>{});
+  };
+  const runChunk=makeTransitChunkPipelineRunner({windowInput,identity,
+    scan:{targetIntervalMs:60000,maxDepth:10,maxProviderCalls:400},
+    refinement:{timeToleranceMs:150,residualToleranceDeg:.0001,
+      maxIterations:40,maxCandidateRefinements:64,maxRefinementCalls:1000},
+    maxTotalProviderCalls:2800,provider,signal:controller.signal,
+    prepareCandidates:prepareTransitAspectEventCandidates,
+  });
+  const pending=collectTransitChunkCandidateReports({windowInput,identity,maxCandidateRecords:128,runChunk});
+  await started;
+  assert.equal(seenSignal?.aborted,false);
+  controller.abort();
+  await assert.rejects(()=>pending,e=>e?.code==='SEARCH_CANCELLED');
+  assert.equal(seenSignal?.aborted,true);
+  assert.equal(calls,1);
+});
+
+test('actual F5 pipeline: chunk timeout rejects hung provider and signals cooperative abort',async()=>{
+  let seenSignal, calls=0;
+  const f=ms=>(ms-epoch)/3600000-.37;
+  const provider=providerWith(f,()=>[-1,1]);
+  provider.getUnwrappedResidualEnclosure=async (_req,signal)=>{
+    calls++;seenSignal=signal;return new Promise(()=>{});
+  };
+  const runChunk=makeTransitChunkPipelineRunner({windowInput,identity,
+    scan:{targetIntervalMs:60000,maxDepth:10,maxProviderCalls:400},
+    refinement:{timeToleranceMs:150,residualToleranceDeg:.0001,
+      maxIterations:40,maxCandidateRefinements:64,maxRefinementCalls:1000},
+    maxTotalProviderCalls:2800,provider,chunkTimeoutMs:15,
+    prepareCandidates:prepareTransitAspectEventCandidates,
+  });
+  await assert.rejects(()=>collectTransitChunkCandidateReports({
+    windowInput,identity,maxCandidateRecords:128,runChunk,
+  }),e=>e?.code==='CHUNK_TIMEOUT');
+  assert.equal(calls,1);
+  assert.equal(seenSignal?.aborted,true);
+});
