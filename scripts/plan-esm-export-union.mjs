@@ -20,7 +20,7 @@ const isObject = value => value !== null && typeof value === 'object' && !Array.
 function safeRelative(value, label) {
   if (typeof value !== 'string' || !value.startsWith('./') ||
       !/^\.\/[A-Za-z0-9._/-]+$/.test(value) ||
-      value.split('/').slice(1).some(part => !part || part === '.' || part === '..' || part === 'node_modules')) {
+      value.split('/').slice(1).some(part => !part || part.startsWith('.') || part.toLowerCase() === 'node_modules')) {
     throw new ExportUnionError('UNSAFE_EXPORT_PATH', `${label} must be a literal, safe package-relative path`);
   }
 }
