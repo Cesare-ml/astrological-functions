@@ -120,3 +120,7 @@ complete PR #54 branch. If a negative assertion reports TS2578 (unused directive
 investigate the declaration contract before treating the fixture as passing.
 No native compilation was executed for this change; Node.js/TypeScript versions
 alone are not evidence of a passing repository test.
+
+### ESM boundary regression (14 November 2026)
+
+The public `astrological-functions/ephemeris-provider` smoke now also injects a synthetic geometric J2000 response into the apparent-of-date natal entrypoint. It asserts that the call rejects rather than silently downgrading, and that the request sent to the provider is immutable and explicitly asks for `APPARENT` / `ECLIPTIC_OF_DATE`. This tests **contract enforcement only**, not Rust/WASM ephemeris accuracy. Run `node --test test/pilot-provider-consumer-smoke.test.mjs` and `npm test` on a complete checkout; neither command was executed as part of this GitHub-only change. Record native results before advancing validation status.
