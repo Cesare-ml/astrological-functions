@@ -186,3 +186,53 @@ test('actual F5 pipeline: chunk timeout rejects hung provider and signals cooper
   assert.equal(calls,1);
   assert.equal(seenSignal?.aborted,true);
 });
+
+
+test('actual F5 pipeline: a saved previous-chunk facade cannot run during the next chunk',async()=>{
+  let oldProvider;
+  let providerCalls=0;
+  const p=providerWith(()=>1,()=>{providerCalls++;return [.9,1.1];});
+  const prepared=async req=>{
+    if (oldProvider)
+      await assert.rejects(()=>oldProvider.getUnwrappedResidualEnclosure({startUtc:req.startUtc,endUtc:req.endUtc}),
+        error=>error?.code==='PIPELINE_SEQUENCE_ERROR');
+    oldProvider=req.provider;
+    return prepareTransitAspectEventCandidates(req);
+  };
+  const runChunk=makeTransitChunkPipelineRunner({windowInput,identity,
+    scan:{targetIntervalMs:60000,maxDepth:10,maxProviderCalls:400},
+    refinement:{timeToleranceMs:150,residualToleranceDeg:.0001,maxIterations:40,
+      maxCandidateRefinements:64,maxRefinementCalls:1000},
+    maxTotalProviderCalls:2,provider:p,prepareCandidates:prepared,
+  });
+  const result=await collectTransitChunkCandidateReports({windowInput,identity,
+    maxCandidateRecords:128,runChunk});
+  assert.equal(result.chunkCount,2);
+  assert.equal(providerCalls,2);
+});
+
+test('actual F5 pipeline: swallowed budget failure rejects without a chunk timeout',async()=>{
+  let providerCalls=0;
+  const f=ms=>(ms-epoch)/3600000-.37;
+  const p=providerWith(f,(a,b)=>{providerCalls++;return [f(a),f(b)];});
+  const prepared=async req=>{
+    try {await prepareTransitAspectEventCandidates(req);} catch(error){
+      if(error?.code!=='GLOBAL_PIPELINE_BUDGET')throw error;
+    }
+    return new Promise(()=>{});
+  };
+  const runChunk=makeTransitChunkPipelineRunner({windowInput,identity,
+    scan:{targetIntervalMs:60000,maxDepth:10,maxProviderCalls:400},
+    refinement:{timeToleranceMs:150,residualToleranceDeg:.0001,maxIterations:40,
+      maxCandidateRefinements:64,maxRefinementCalls:1000},
+    maxTotalProviderCalls:1,provider:p,prepareCandidates:prepared,
+  });
+  let watchdog;
+  try {
+    await assert.rejects(()=>Promise.race([
+      collectTransitChunkCandidateReports({windowInput,identity,maxCandidateRecords:128,runChunk}),
+      new Promise((_,reject)=>{watchdog=setTimeout(()=>reject(Error('hung after budget exhaustion')),500);}),
+    ]),error=>error?.code==='GLOBAL_PIPELINE_BUDGET');
+  }finally{clearTimeout(watchdog);}
+  assert.equal(providerCalls,1);
+});
