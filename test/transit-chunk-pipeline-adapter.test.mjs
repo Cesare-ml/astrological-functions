@@ -386,7 +386,7 @@ test('abort between completed chunks prevents later provider work',async()=>{
   assert.equal(called,1);
 });
 
-test('timeout still terminates if callback swallows global budget error then hangs',async()=>{
+test('global budget terminates immediately without timeout even when callback swallows then hangs',async()=>{
   let calls=0;
   const p={...provider(),async getUnwrappedAspectResidual(){calls++;return 1;}};
   const runner=makeTransitChunkPipelineRunner(options(async req=>{
@@ -394,8 +394,70 @@ test('timeout still terminates if callback swallows global budget error then han
     try { await req.provider.getUnwrappedAspectResidual({datetimeUtc:req.endUtc}); }
     catch(err){assert.equal(err.code,'GLOBAL_PIPELINE_BUDGET');}
     return new Promise(()=>{});
-  },{provider:p,maxTotalProviderCalls:1,chunkTimeoutMs:15}));
+  },{provider:p,maxTotalProviderCalls:1}));
   const req={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
-  await assert.rejects(()=>runner(req),code('CHUNK_TIMEOUT'));
+  let watchdog;
+  try {
+    await assert.rejects(()=>Promise.race([
+      runner(req),
+      new Promise((_, reject)=>{watchdog=setTimeout(()=>reject(Error('budget did not terminate hung pipeline')),500);}),
+    ]),code('GLOBAL_PIPELINE_BUDGET'));
+  } finally { clearTimeout(watchdog); }
   assert.equal(calls,1);
+  await assert.rejects(()=>runner(req),code('PIPELINE_SEQUENCE_ERROR'));
+});
+
+test('a stale provider callback cannot borrow the next chunk authority or budget',async()=>{
+  let stale;
+  const calls=[];
+  const signals=[];
+  const p={...provider(),async getUnwrappedAspectResidual(req,signal){
+    calls.push(req.datetimeUtc); signals.push(signal);
+    return 1;
+  }};
+  const runner=makeTransitChunkPipelineRunner(options(async req=>{
+    if (req.startUtc==='2026-11-14T00:00:00.000Z')
+      stale=req.provider.getUnwrappedAspectResidual;
+    await req.provider.getUnwrappedAspectResidual({datetimeUtc:req.startUtc});
+    if (req.startUtc==='2026-11-14T00:30:00.000Z') {
+      // Second chunk is active, but the first chunk's callback is revoked.
+      await assert.rejects(()=>stale({datetimeUtc:req.startUtc}),code('PIPELINE_SEQUENCE_ERROR'));
+      assert.equal(signals.length,2);
+      assert.notEqual(signals[0],signals[1]);
+    }
+    return syntheticResult(req);
+  },{provider:p,maxTotalProviderCalls:2}));
+  const i=identity();
+  await runner({...i,chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'});
+  await runner({...i,chunkIndex:1,startUtc:'2026-11-14T00:30:00.000Z',endUtc:'2026-11-14T01:00:00.000Z'});
+  assert.deepEqual(calls,['2026-11-14T00:00:00.000Z','2026-11-14T00:30:00.000Z']);
+});
+
+test('a late continuation from the previous chunk cannot invoke a provider in the next',async()=>{
+  let resumeLate;
+  const lateSignal=new Promise(resolve=>{resumeLate=resolve;});
+  let lateDone;
+  const lateResult=new Promise(resolve=>{lateDone=resolve;});
+  let calls=0;
+  const p={...provider(),async getUnwrappedResidualEnclosure(){calls++;return {};}};
+  const runner=makeTransitChunkPipelineRunner(options(async req=>{
+    if(req.startUtc==='2026-11-14T00:00:00.000Z'){
+      const oldProvider=req.provider;
+      void (async()=>{
+        await lateSignal;
+        try { await oldProvider.getUnwrappedResidualEnclosure({startUtc:req.startUtc,endUtc:req.endUtc});
+          lateDone('UNEXPECTED_ALLOWED');
+        } catch(err){lateDone(err?.code);}
+      })();
+    } else {
+      resumeLate();
+      assert.equal(await lateResult,'PIPELINE_SEQUENCE_ERROR');
+    }
+    await req.provider.getUnwrappedResidualEnclosure({startUtc:req.startUtc,endUtc:req.endUtc});
+    return syntheticResult(req);
+  },{provider:p,maxTotalProviderCalls:2}));
+  const i=identity();
+  await runner({...i,chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'});
+  await runner({...i,chunkIndex:1,startUtc:'2026-11-14T00:30:00.000Z',endUtc:'2026-11-14T01:00:00.000Z'});
+  assert.equal(calls,2);
 });
