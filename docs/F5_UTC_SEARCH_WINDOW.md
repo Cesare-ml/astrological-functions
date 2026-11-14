@@ -49,7 +49,7 @@ const plan = splitUtcSearchWindow({
   chunkDurationMs: 3_600_000,
   maxChunks: 24,
 });
-// plan.chunks.length === 24; all 24 chunks cover one hour.
+// plan.chunks.length === 24; each chunk covers one hour.
 ```
 
 - `chunkDurationMs` must be a positive safe integer; `maxChunks` must be an explicit positive integer at most **4,096**. A query needing more than its declared `maxChunks` raises `TOO_MANY_CHUNKS` **before allocating chunks**; invalid limits raise `INVALID_CHUNK_DURATION` or `INVALID_CHUNK_LIMIT`.
