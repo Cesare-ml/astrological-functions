@@ -16,7 +16,7 @@ import { calculateTransitFacts } from 'astrological-functions/transits';
 import { compareWholeSignAndEqualFromAscendant } from 'astrological-functions/whole-equal-house-comparison';
 import { classifyZodiacDecan } from 'astrological-functions/zodiac-decan-facts';
 
-const exportedFunctions: readonly ((...args: never[]) => unknown)[] = [
+const exportedFunctions = [
   calculateDeclinationContacts,
   calculateDeclinationContactsWithProvider,
   calculateDodecatemoriaFacts,
@@ -29,7 +29,7 @@ const exportedFunctions: readonly ((...args: never[]) => unknown)[] = [
   calculateTransitFacts,
   compareWholeSignAndEqualFromAscendant,
   classifyZodiacDecan,
-];
+] as const;
 void exportedFunctions;
 
 const typedCancellation: AbortSignal = new AbortController().signal;
