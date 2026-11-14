@@ -45,7 +45,7 @@ async function run(provider, scan={targetIntervalMs:60000,maxDepth:10,maxProvide
   return collectTransitChunkCandidateReports({
     windowInput,identity,maxCandidateRecords:128,
     runChunk:makeTransitChunkPipelineRunner({
-      windowInput,scan,provider,
+      windowInput,identity,scan,provider,
       refinement:{timeToleranceMs:150,residualToleranceDeg:0.0001,
         maxIterations:40,maxCandidateRefinements:64,maxRefinementCalls:1000},
       maxTotalProviderCalls:2800,
