@@ -313,6 +313,17 @@ export function placeNatalBodiesInHouses(input = {}) {
   });
 }
 
+function snapshotAspectInputs(items, parse, code) {
+  // Never invoke caller-controlled iterators, map, species or inherited slots.
+  const count = items.length;
+  const copy = [];
+  for (let index = 0; index < count; index++) {
+    if (!Object.hasOwn(items, index))
+      throw new AstrologyError(code, 'Aspect input arrays must contain own dense entries');
+    copy.push(parse(items[index]));
+  }
+  return copy;
+}
 function point(p) {
   if (!p || typeof p !== 'object' || Array.isArray(p))
     throw new AstrologyError('INVALID_POINT', 'Every point requires a nonempty name');
@@ -355,8 +366,10 @@ export function calculateCrossAspects(input) {
     throw new AstrologyError('INVALID_DIRECTION','Explicit A_TO_B/B_TO_A/SKY_TO_NATAL direction is required');
   if(!Array.isArray(sourcePoints)||!Array.isArray(targetPoints)||!Array.isArray(aspectDefinitions))
     throw new AstrologyError('INVALID_ARGUMENT','All points and aspectDefinitions must be arrays');
-  // Array.from visits sparse array holes; Array#map would silently skip them.
-  const src=Array.from(sourcePoints, point),dst=Array.from(targetPoints, point),defs=Array.from(aspectDefinitions, definition);
+  // Capture real indexed values exactly once; untrusted iterators cannot inject fake records.
+  const src=snapshotAspectInputs(sourcePoints, point, 'INVALID_POINT');
+  const dst=snapshotAspectInputs(targetPoints, point, 'INVALID_POINT');
+  const defs=snapshotAspectInputs(aspectDefinitions, definition, 'INVALID_ASPECT');
   // Aspect IDs identify configured rules in downstream charts; duplicates are ambiguous.
   if (new Set(defs.map(aspect => aspect.id)).size !== defs.length)
     throw new AstrologyError('INVALID_ASPECT', 'Aspect definition IDs must be unique');
