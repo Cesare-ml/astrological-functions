@@ -87,6 +87,14 @@ export function makeTransitChunkPipelineRunner(input) {
   const maxTotalProviderCalls = input.maxTotalProviderCalls;
   if (!integer(maxTotalProviderCalls, 1, 1000000))
     reject('GLOBAL_PIPELINE_BUDGET', 'Explicit global provider-call cap must be an integer in 1..1000000');
+  // Opt-in per-chunk timeout and caller cancellation. A timed-out caller
+  // stops waiting, but the underlying provider must cooperate to stop I/O.
+  const signal = input.signal;
+  if (signal !== undefined && !(signal instanceof AbortSignal))
+    reject('INVALID_CANCELLATION', 'signal must be an AbortSignal');
+  const chunkTimeoutMs = input.chunkTimeoutMs;
+  if (chunkTimeoutMs !== undefined && !integer(chunkTimeoutMs, 1, 86400000))
+    reject('INVALID_TIMEOUT', 'chunkTimeoutMs must be an integer between 1 and 86400000');
   const provider = object(input.provider, 'provider');
   const capabilities = object(provider.capabilities, 'provider.capabilities');
   if (Object.entries(F5_CAPABILITIES).some(([key, value]) => capabilities[key] !== value))
@@ -103,31 +111,17 @@ export function makeTransitChunkPipelineRunner(input) {
   let running = false;
   let failed = false;
   let providerCallCount = 0;
-  function budgeted(method) {
-    return async function providerCall(request) {
-      if (!running || failed)
-        reject('PIPELINE_SEQUENCE_ERROR', 'F5 provider call is outside an active search chunk');
-      if (providerCallCount >= maxTotalProviderCalls) {
-        failed = true;
-        reject('GLOBAL_PIPELINE_BUDGET', 'F5 aggregate provider-call cap exhausted');
-      }
-      // Reserve BEFORE invoking or awaiting the underlying method. Failed
-      // provider attempts also consume budget; a later chunk cannot reset it.
-      providerCallCount++;
-      return method(request);
-    };
-  }
-  const fixedProvider = Object.freeze({
-    capabilities: Object.freeze({ ...capabilities }),
-    getUnwrappedAspectResidual: budgeted(pointMethod),
-    getUnwrappedResidualEnclosure: budgeted(enclosureMethod),
-  });
+  const fixedCapabilities = Object.freeze({ ...capabilities });
   if (typeof input.prepareCandidates !== 'function')
     reject('MISSING_PIPELINE', 'An explicitly injected F5 prepareCandidates function is required');
   const prepareCandidates = input.prepareCandidates;
   return async function runChunk(request) {
     if (running || failed || nextIndex >= plan.chunks.length)
       reject('PIPELINE_SEQUENCE_ERROR', 'F5 chunks must run once, sequentially, without retry after failure');
+    if (signal?.aborted) {
+      failed = true;
+      reject('SEARCH_CANCELLED', 'F5 search cancelled before starting a chunk');
+    }
     object(request, 'request');
     const expected = plan.chunks[nextIndex];
     if (ownRequestData(request, 'chunkIndex') !== expected.index ||
@@ -136,24 +130,81 @@ export function makeTransitChunkPipelineRunner(input) {
       reject('INCOMPATIBLE_CHUNK_REQUEST', 'F5 request does not match the prevalidated UTC chunk');
     verifyRequestIdentity(request, identity);
     running = true;
+    // Each chunk owns a separate provider facade. Late calls retaining a
+    // previous facade must not acquire authority over the next chunk.
+    const chunkController = new AbortController();
+    let chunkOpen = true;
+    let timeoutId;
+    let onAbort;
+    let stopError = null;
+    let stopReject;
+    const stopped = new Promise((_, rejectPromise) => { stopReject = rejectPromise; });
+    function stop(code, message) {
+      if (stopError) return;
+      stopError = new AstrologyError(code, message);
+      failed = true;
+      chunkController.abort(stopError);
+      stopReject(stopError);
+    }
+    function budgeted(method) {
+      return async function providerCall(request) {
+        if (!chunkOpen || !running || failed || chunkController.signal.aborted)
+          reject('PIPELINE_SEQUENCE_ERROR', 'F5 provider call is outside its owning active search chunk');
+        if (providerCallCount >= maxTotalProviderCalls) {
+          // Reject the raced chunk immediately even if prepareCandidates catches
+          // the provider error and never settles. Never return partial results.
+          stop('GLOBAL_PIPELINE_BUDGET', 'F5 aggregate provider-call cap exhausted');
+          throw stopError;
+        }
+        // Reserve before each call; errors consume budget across chunks.
+        providerCallCount++;
+        // Optional second argument for cooperative interruption; the strict
+        // PR #21 astronomical request object remains unchanged.
+        return method(request, chunkController.signal);
+      };
+    }
+    const chunkProvider = Object.freeze({
+      capabilities: fixedCapabilities,
+      getUnwrappedAspectResidual: budgeted(pointMethod),
+      getUnwrappedResidualEnclosure: budgeted(enclosureMethod),
+    });
+    // Attach the cancellation listener before scheduling any pipeline work.
+    // Check the signal again after attachment to avoid missing a race.
+    if (signal) {
+      onAbort = () => stop('SEARCH_CANCELLED', 'F5 search cancelled');
+      signal.addEventListener('abort', onAbort, { once: true });
+      if (signal.aborted) onAbort();
+    }
+    if (!failed && chunkTimeoutMs !== undefined)
+      timeoutId = setTimeout(() => stop('CHUNK_TIMEOUT', 'F5 chunk exceeded its wall-clock deadline'), chunkTimeoutMs);
     try {
-      // No chunkIndex forwarded: it is not part of the PR #21 contract.
-      const result = await prepareCandidates(Object.freeze({
-        startUtc: expected.startUtc, endUtc: expected.endUtc,
-        ...identity,
-        targetIntervalMs, maxDepth, maxProviderCalls,
-        provider: fixedProvider, refinement: r,
-      }));
-      // A hostile callback may catch and suppress a global budget error.
-      // Never return a successful report after the cap has been exceeded.
+      const work = Promise.resolve().then(() => {
+        if (failed) throw stopError;
+        // No chunkIndex forwarded: it is not part of the PR #21 contract.
+        return prepareCandidates(Object.freeze({
+          startUtc: expected.startUtc, endUtc: expected.endUtc,
+          ...identity,
+          targetIntervalMs, maxDepth, maxProviderCalls,
+          provider: chunkProvider, refinement: r,
+        }));
+      });
+      // Promise.race rejects on timeout/abort even if a provider promise never
+      // settles. The losing work promise stays observed, preventing unhandled
+      // rejection; its underlying work is only stopped if the provider cooperates.
+      const result = await Promise.race([work, stopped]);
+      // A broken callback may swallow a global budget violation. Reject it.
       if (failed)
-        reject('GLOBAL_PIPELINE_BUDGET', 'F5 aggregate provider-call cap exhausted');
+        throw stopError ?? new AstrologyError('GLOBAL_PIPELINE_BUDGET', 'F5 aggregate provider-call cap exhausted');
       nextIndex++;
       return result;
     } catch (error) {
       failed = true;
+      chunkController.abort(error);
       throw error;
     } finally {
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
+      if (signal && onAbort) signal.removeEventListener('abort', onAbort);
+      chunkOpen = false;
       running = false;
     }
   };

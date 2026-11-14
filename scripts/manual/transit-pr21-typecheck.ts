@@ -16,7 +16,8 @@ const runChunk = makeTransitChunkPipelineRunner({windowInput,identity,
   scan:{targetIntervalMs:60_000,maxDepth:10,maxProviderCalls:400},
   refinement:{timeToleranceMs:100,residualToleranceDeg:.0001,
     maxIterations:40,maxCandidateRefinements:64,maxRefinementCalls:1000},
-  provider,maxTotalProviderCalls:2800,
+  provider,maxTotalProviderCalls:2800,chunkTimeoutMs:2500,
   prepareCandidates:prepareTransitAspectEventCandidates,
 });
+
 void collectTransitChunkCandidateReports({windowInput,identity,maxCandidateRecords:128,runChunk});
