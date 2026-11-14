@@ -78,3 +78,60 @@ source ownership, privacy, ephemeris accuracy and downstream migrations
 remain separate release gates. Do not merge, deploy, introduce GitHub
 Actions or publish to npm here. Project attribution:
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+
+## Compile-time house-profile correlation correction — 14 November 2026
+
+A concrete strict TypeScript contract issue was detected in
+`HouseCuspContextInput['cuspSet']`: constructing this field with
+`Omit<HouseCuspSetInput, 'metadata'>` erased the correlation between
+`houseSystem` and `calculationProfile` from the discriminated
+`HouseSystemSelection` union. As a result, a canonical-profile cusp
+context could be typed with the legacy-only `egizia` label.
+
+The declaration now composes **`HouseSystemSelection & { cusps, metadata }`**
+directly. This preserves the existing discriminated union, including
+the intentional acceptance of `egizia` only with the explicit
+`VIRGOSTARS_LEGACY_V1` profile. It does not alter any runtime
+algorithm, silently reinterpret legacy methods or compute astronomy.
+
+`test/types/provider-public-house-composition.test.mts` is a new
+compile-only ESM consumer regression. It covers both valid canonical
+and legacy cusp-set contracts, a deliberate canonical/legacy mismatch,
+the literal `birthTimeKnown: true` gate (including narrowing an
+unresolved boolean), required UTC and full provider provenance fields,
+required external cusps and immutable chart/provider/placement types.
+Ten `@ts-expect-error` assertions must all correspond to genuine
+compiler errors; TypeScript reports an unused directive as TS2578.
+
+### Reproduced before/after with real source
+
+A minimal isolated package was constructed from the authentic
+`src/ephemeris-provider.d.ts` GitHub contents. Prior to the correction,
+running the new fixture with TypeScript **5.8.3** and strict NodeNext
+produced **TS2578 (unused `@ts-expect-error`)** at the legacy-label
+case. With the corrected declaration, both strict NodeNext and Bundler
+compiled successfully, **exit code 0**:
+
+```sh
+tsc --noEmit --strict --target ES2022 --module NodeNext --moduleResolution NodeNext \
+  test/types/provider-public-house-composition.test.mts --pretty false
+tsc --noEmit --strict --target ES2022 --module ESNext --moduleResolution Bundler \
+  test/types/provider-public-house-composition.test.mts --pretty false
+```
+
+The exact Git blob SHA-1s of locally compiled bytes match the updated
+files on this PR branch:
+
+- `src/ephemeris-provider.d.ts`:
+  `ef2524155890d72fe8bea5c6abded5a401ea8186`.
+- `test/types/provider-public-house-composition.test.mts`:
+  `42f60e9f871ff4df50d4e1af63bc51ee434611d3`.
+
+These are **real local TypeScript compilations** of the authentic
+declaration contract plus the new consumer fixture. The runtime Node
+tests against the **full genuine PR #54 checkout** (and consolidated
+repository `npm test`) remain unexecuted and must not be inferred
+from the TypeScript results. PR #54 still depends on draft PR #3;
+no GitHub Actions, branch merge, deploy, npm publish or visibility change.
+Attribution: https://github.com/Cesare-ml/VirgoStars-Ephemeris.
