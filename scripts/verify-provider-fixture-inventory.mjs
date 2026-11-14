@@ -61,15 +61,30 @@ if (missing.length || extra.length) {
   for (const path of extra) console.error(`UNEXPECTED ${path}`);
   process.exit(1);
 }
-let mismatches = 0;
+let mismatches = 0, normalizedWorkingTreeEol = 0;
+const gitBlobSha = bytes => createHash('sha1')
+  .update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
 for (const [path, expected] of entries) {
   const bytes = readFileSync(join(root, path));
   // A Git blob is SHA1('blob ' + byteLength + NUL + fileBytes), not SHA1(fileBytes).
-  const actual = createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
-  if (actual !== expected) { console.error(`SHA_MISMATCH ${path}: expected ${expected}, found ${actual}`); mismatches++; }
+  const actual = gitBlobSha(bytes);
+  if (actual === expected) continue;
+  // On Windows, Git autocrlf may materialize LF Git blobs as CRLF text.
+  // Accept that exact reversible end-of-line conversion only, never a
+  // different code/test payload; Git's canonical blob remains pinned.
+  if (bytes.includes(13)) {
+    const canonical = Buffer.from(bytes.toString('utf8').replace(/\r\n/g, '\n'));
+    if (gitBlobSha(canonical) === expected) {
+      normalizedWorkingTreeEol++;
+      continue;
+    }
+  }
+  console.error(`SHA_MISMATCH ${path}: expected ${expected}, found ${actual}`);
+  mismatches++;
 }
 if (mismatches) {
   console.error(`F2/F3 inventory verification FAILED: ${mismatches} blob mismatch(es)`);
   process.exit(1);
 }
-console.log(`F2/F3 SHA-pinned inventory PASS: ${entries.length} exact Git blobs`);
+console.log(`F2/F3 SHA-pinned inventory PASS: ${entries.length} exact Git blobs` +
+  (normalizedWorkingTreeEol ? ` (${normalizedWorkingTreeEol} CRLF working-tree files normalized to Git LF)` : ''));
