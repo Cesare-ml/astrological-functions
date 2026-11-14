@@ -10,6 +10,7 @@ function indexSnapshot(snapshot, label) {
   if (!Array.isArray(snapshot)) throw new TypeError(`${label} must be an array of open pull requests`);
   const items = snapshot.flatMap(page => Array.isArray(page) ? page : [page]);
   const indexed = new Map();
+  let baseRepository = null;
   for (const [i, pr] of items.entries()) {
     const n = pr?.number;
     if (!Number.isSafeInteger(n) || n < 1 || pr.state !== 'open' || indexed.has(n))
@@ -23,6 +24,11 @@ function indexSnapshot(snapshot, label) {
     }
     if (typeof pr.draft !== 'boolean')
       throw new TypeError(`${label} PR #${n} requires explicit draft boolean`);
+    // GitHub PR numbers are only unique within one repository. A mixed-repository
+    // snapshot must never be mistaken for a valid one-repository integration plan.
+    if (baseRepository === null) baseRepository = pr.base.repo.full_name;
+    else if (baseRepository !== pr.base.repo.full_name)
+      throw new TypeError(`${label} mixes base repositories: ${baseRepository} and ${pr.base.repo.full_name}`);
     indexed.set(n, Object.freeze({
       number: n,
       headRepo: pr.head.repo.full_name, headRef: pr.head.ref, headSha: pr.head.sha.toLowerCase(),
@@ -30,6 +36,10 @@ function indexSnapshot(snapshot, label) {
       draft: pr.draft,
     }));
   }
+  // An empty snapshot may be legitimate for a different project, but for an
+  // integration gate it cannot establish which repository was audited.
+  if (indexed.size === 0)
+    throw new TypeError(`${label} has no open PRs; cannot establish repository identity`);
   return indexed;
 }
 
@@ -37,9 +47,13 @@ function indexSnapshot(snapshot, label) {
  * A stable result means only that relevant metadata in two saved PR snapshots agrees.
  * This does NOT prove the live GitHub heads still match, tests pass, or merging is safe.
  */
-export function comparePullRequestSnapshots(previous, current) {
+export function comparePullRequestSnapshots(previous, current, { repository } = {}) {
+  if (repository !== undefined && (typeof repository !== 'string' || !/^[^/\s]+\/[^/\s]+$/.test(repository)))
+    throw new TypeError('repository must be an explicit owner/name identifier');
   const old = indexSnapshot(previous, 'previous');
   const now = indexSnapshot(current, 'current');
+  if (repository && (old.values().next().value.baseRepo !== repository || now.values().next().value.baseRepo !== repository))
+    throw new TypeError(`Snapshot base repository does not match expected ${repository}`);
   const keys = [...new Set([...old.keys(), ...now.keys()])].sort((a, b) => a - b);
   const changes = [];
   for (const number of keys) {
@@ -65,10 +79,14 @@ export function comparePullRequestSnapshots(previous, current) {
 
 async function main(args) {
   const json = args.includes('--json');
-  const positional = args.filter(x => x !== '--json');
-  if (positional.length !== 2) throw new TypeError('Usage: node scripts/compare-pr-snapshots.mjs <previous.json> <current.json> [--json]');
+  const repoIndex = args.indexOf('--repo');
+  const repository = repoIndex < 0 ? undefined : args[repoIndex + 1];
+  const positional = args.filter((value, i) => value !== '--json' && value !== '--repo' && (repoIndex < 0 || i !== repoIndex + 1));
+  if (positional.length !== 2 || positional.some(value => value.startsWith('--')) ||
+      (repoIndex >= 0 && (!repository || repository.startsWith('--') || args.lastIndexOf('--repo') !== repoIndex)))
+    throw new TypeError('Usage: node scripts/compare-pr-snapshots.mjs <previous.json> <current.json> [--repo owner/name] [--json]');
   const [previous, current] = await Promise.all(positional.map(async path => JSON.parse(await readFile(path, 'utf8'))));
-  const report = comparePullRequestSnapshots(previous, current);
+  const report = comparePullRequestSnapshots(previous, current, { repository });
   if (json) console.log(JSON.stringify(report, null, 2));
   else {
     console.log(`PR snapshot drift: ${report.previousCount} -> ${report.currentCount} open PRs; ${report.stable ? 'stable' : `${report.changes.length} change(s)`}`);
