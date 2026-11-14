@@ -313,3 +313,27 @@ test('public ESM natal body map safely preserves prototype-like body identifiers
   assert.equal(requests.every(Object.isFrozen), true);
   assert.equal(Object.prototype.polluted, undefined);
 });
+
+
+test('provider failures propagate without retry or astronomical fallback', async () => {
+  const failure = new Error('synthetic Rust/WASM adapter unavailable');
+  const requests = [];
+  const provider = {
+    async getGeocentricEcliptic(request) {
+      requests.push(request);
+      throw failure;
+    }
+  };
+  await assert.rejects(
+    packageProvider.calculateNatalWithProvider({
+      datetimeUtc: '2026-11-14T00:00:00Z',
+      latitudeDeg: 45,
+      longitudeDegEast: 11,
+      bodyNames: ['Sun', 'Moon'],
+      provider
+    }),
+    error => error === failure
+  );
+  assert.deepEqual(requests.map(request => request.bodyName), ['Sun']);
+  assert.equal(Object.isFrozen(requests[0]), true);
+});
