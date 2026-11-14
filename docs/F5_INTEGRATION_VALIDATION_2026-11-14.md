@@ -79,3 +79,28 @@ tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution noden
 ```
 
 Total **59/59 focused runtime tests passed**. These are synthetic dependency-isolated checks, **not** an execution of the complete private-repository `npm test` command, scientific ephemeris parity, or production readiness. No changes were made to `main` or any production system.
+
+
+## Addendum — immutable transit identity across chunk boundaries (2026-11-14)
+
+Following the getter-free UTC event-hit fix, the experimental F5 chunk adapter was audited for **identity drift**: previously, a direct caller of `makeTransitChunkPipelineRunner` could change the requested sky/natal body, aspect orientation/angle, or pinned ephemeris identity between chunks, because it forwarded `request` fields into the underlying F5 pipeline. The report collector independently snapshotted identity, but the standalone runner did not.
+
+- PR #72 now exposes one **shared** `snapshotTransitPinnedIdentity` helper for the collector and adapter, rejecting accessor/inherited identity/provenance fields without invoking getters. The adapter requires explicit `identity` at construction and freezes its names, angle, orientation and three provenance identifiers.
+- Every direct `runChunk(request)` must match that pinned identity, in addition to UTC index/bounds. The adapter forwards the pinned snapshot, not mutable per-chunk fields, into the actual PR #21 pipeline. Direct forgery or request accessors fail with `INVALID_TRANSIT_IDENTITY`/`INCOMPATIBLE_CHUNK_REQUEST` without calling the pipeline.
+- Four new adapter regression tests cover forged second-chunk participants/aspect/provenance, input mutation across `await`, accessor request fields and malformed/accessor pinned identity. An extra collector test checks getter-free identity/provenance rejection before any provider calls.
+- Exact Git SHA-1 blobs from PR #72 were reused for the affected modules, declarations, TypeScript consumers, tests and documentation. Integration-only `scripts/manual/transit-pr21-smoke.mjs` preserved its original five test cases and was updated to pass the same required identity. A two-parent Git integration commit `6c13b01f3f480069c700c6221653f31d01a0dc16` combined the changes.
+
+**Executed focused local checks** using the exact module/test blobs from PR #72 and unchanged actual PR #21 runtime modules, with the previously documented minimal `AstrologyError` stand-in:
+
+```sh
+node --test test/*.test.mjs
+# 59/59 passed (previously 54/54)
+node scripts/manual/transit-pr21-smoke.mjs
+# 5/5 passed using actual PR #21 runtime with synthetic enclosure provider
+for f in test/types/*.ts scripts/manual/transit-pr21-typecheck.ts; do
+  tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext "$f"
+done
+# All strict TypeScript consumer checks passed
+```
+
+**Current evidence: 64/64 focused runtime tests passing.** This does not constitute a full native checkout `npm test` run or ephemeris/JPL scientific validation. The adapter's mandatory `identity` parameter is an intentional breaking change to an **unreleased experimental** contract. The repository remains private; PR #72 and integration PR #79 remain drafts. No production or `main` changes, automatic actions, or releases.
