@@ -17,3 +17,24 @@ After the integration branch was committed, the exact staged `package.json` byte
 `node --test test/native-export-resolution.test.mjs` with Node.js **22.16.0** produced **8/8 PASS**, zero failures: five real ESM self-import resolutions (root and all four typed subpaths), rejection of CommonJS `require` for all conditional subpaths, rejection of three undeclared internal/typo paths, and the `private`/five-key manifest gate.
 
 **Boundary of this evidence:** this verifies the exact GitHub manifest's package resolution semantics under real Node 22.16.0. Because stub source modules were used, it **does not** prove that actual repository modules load, that their functions behave as expected, that `npm test` passes, or that TypeScript declarations compile. The full merged GitHub tree and genuine consumer tests must still be replayed natively before the draft is merge-ready.
+
+## Native TypeScript 5.8.3 union-consumer verification (targeted)
+
+Reconstructed the **exact GitHub declaration and consumer test blobs** inside the same isolated private-package scratch folder. Independently checked every reconstructed file with `git hash-object`; all **five** hashes matched the integration branch:
+
+| Target | Git blob SHA |
+| --- | --- |
+| `src/ephemeris-provider.d.ts` | `ef2524155890d72fe8bea5c6abded5a401ea8186` |
+| `src/dodecatemoria-methods.d.mts` | `b2c7836a894ede56e41f1db988e92f436f972ee3` |
+| `src/dodecatemoria-batch.d.mts` | `62c87f0505f143fd38ad53a109380e3f34fcca44` |
+| `src/zodiac-decan-facts.d.mts` | `15f8c6377133d673d80a1ac8d7d98ceae6d66afc` |
+| `test/types/provider-zodiac-export-union.test.mts` | `76a19530e28d8d760c524c0edd8c3133b5adc026` |
+
+`tsc` **5.8.3** ran the exact integration consumer fixture with `--noEmit --strict --target ES2022 --noUncheckedIndexedAccess`, using these four full configurations:
+
+- `--module NodeNext --moduleResolution NodeNext`: exit code **0**.
+- The same with `--exactOptionalPropertyTypes`: exit code **0**.
+- `--module ESNext --moduleResolution Bundler`: exit code **0**.
+- The same with `--exactOptionalPropertyTypes`: exit code **0**.
+
+The package manifest remained byte-exact (`2777e6b260cdd4cc64e8c285e366e17df8e12d9d`), so this verifies actual TypeScript resolution of all four typed ESM subpaths through the staged export map, including the negative `@ts-expect-error` cases. The scratch *runtime modules* are placeholder files; TypeScript compilation is **types-only**, not implementation execution. It does **not** replace the full repository `npm test`, all inherited consumer fixtures, exact Node application modules, or scientific Rust/JPL validation. Keep the integration PR draft until those gates are satisfied.
