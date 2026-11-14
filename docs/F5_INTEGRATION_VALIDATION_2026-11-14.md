@@ -134,3 +134,42 @@ done
 ```
 
 **70/70 focused runtime tests passed.** The complete private repository was **not** cloned into this environment (direct network access to GitHub is unavailable); `npm test` on the full private checkout remains a separate outstanding gate. The fixture uses the previously documented minimal unchanged `AstrologyError` dependency. No Rust/WASM/JPL ephemeris reference comparison, scientific validation, production change, GitHub Actions or `main` merge occurred.
+
+
+## Addendum — opt-in F5 cancellation and per-chunk timeout (2026-11-14)
+
+Updated the F5 bridge's **unreleased experimental** `makeTransitChunkPipelineRunner` contract to accept optional `signal: AbortSignal` and `chunkTimeoutMs` (positive safe integer <= 86,400,000). The timer applies independently **per chunk**, not to total elapsed time across the search. The original F5 scan/refinement request object, engine/kernels, and scientific interpretation are unchanged.
+
+Semantics:
+
+- A signal aborted before the first chunk prevents any pipeline call; abort during a pending chunk rejects with typed `SEARCH_CANCELLED`, and abort between chunks prevents continuation.
+- A hung `prepareCandidates` or provider promise is raced against the per-chunk timer; the caller sees `CHUNK_TIMEOUT` and receives no partial report. A previously failed or timed-out runner cannot be reused.
+- The runner passes a per-chunk `AbortSignal` as an **optional second argument** to provider point and range methods to permit cooperative cancellation. Legacy one-argument callbacks still work; a provider that ignores this signal **may continue computing** after the caller has stopped waiting.
+- On expiry, abort or global provider-call budget exhaustion, outstanding cooperative callbacks receive an aborted internal signal. The result of underlying work is never silently substituted with an empty event list. Timer and listener cleanup occurs on completion.
+- These guards cannot interrupt CPU-bound synchronous tasks that block the event loop, kill a noncooperative network request, cancel already-running astronomy I/O by force, or prove a scientifically complete event search. Hard isolation and validated Rust/WASM providers remain open production gates.
+
+SHA-1 Git blob verification against the **exact local fixture used for testing**:
+
+| Path | Git blob SHA-1 |
+| --- | --- |
+| `src/transit-chunk-pipeline-adapter.mjs` | `66085af6703a67d24668e85a024ec4557eaa7450` |
+| `src/transit-chunk-pipeline-adapter.d.mts` | `76207aa12c690f09626533cdbbd14e0709cd5b90` |
+| `test/transit-chunk-pipeline-adapter.test.mjs` | `d98447d09948f44d0ab290eb0895c493bc9b0ba0` |
+| `test/types/transit-chunk-pipeline-adapter.test.ts` | `6f8f3e9d0c8d93dd117362d0433c01583736a21d` |
+| `scripts/manual/transit-pr21-smoke.mjs` | `460c5b391151172719807c5fc534181034a910de` |
+| `scripts/manual/transit-pr21-typecheck.ts` | `890544621429bc0ec7616daa56cf61ba534f8942` |
+
+**Actually executed locally** using Node v22.16.0 / TypeScript 5.8.3 in the isolated PR #72 + **actual PR #21 runtime** source fixture:
+
+```sh
+node --test test/*.test.mjs
+# 70/70 passed, 7 new cancellation/timeout unit tests
+node scripts/manual/transit-pr21-smoke.mjs
+# 9/9 passed, 2 new real-PR21 synthetic provider cancellation/timeout scenarios
+for f in test/types/*.ts scripts/manual/transit-pr21-typecheck.ts; do
+  tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext "$f"
+done
+# All strict TypeScript checks passed
+```
+
+Total: **79/79 focused runtime tests passing**. A complete private repository checkout was not available locally, so **full `npm test` was not executed**. No scientific Rust/WASM/JPL cross-check has been performed and no release, GitHub Actions, deployment or `main` merge occurred.
