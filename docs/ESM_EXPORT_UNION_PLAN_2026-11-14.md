@@ -84,3 +84,39 @@ those manifest SHA values were retrieved through the GitHub integration.
 
 No GitHub Actions, deployment, npm publication, license/visibility change,
 production modification or main merge. Preserve [VirgoStars attribution](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+
+## Incremental path-safety hardening — 14 November 2026
+
+The read-only planner now fails closed when **any** package-relative path
+segment begins with a dot (including `.env`, `.git`, and nested hidden paths),
+or case-insensitively equals `node_modules`. This applies consistently to the
+baseline root, candidate ESM subpaths and both `types` / `import` targets.
+Ordinary extensions such as `.js`, `.mjs`, `.d.ts` and `.d.mts` remain valid.
+This protects the manual packaging review from inadvertently suggesting
+exports of private/hidden files; it is **not** a complete publish-time
+filesystem or privacy audit.
+
+Six new native Node regression tests were added to the existing script test
+file, including a CLI subprocess asserting rejection without file mutation.
+
+Validation executed on **Node v22.16.0** in a local temporary workspace:
+
+```sh
+node --check scripts/plan-esm-export-union.mjs
+node --check test/plan-esm-export-union.test.mjs
+node --test test/plan-esm-export-union.test.mjs
+```
+
+Result: **15/15 passed, 0 failed** (nine existing + six new tests).
+The pre-change local copies of both files matched their original GitHub Git
+blob SHA-1 IDs; the tested updated files match the new GitHub blob SHA-1 IDs:
+
+- Planner: `2a67a3554b81a6abdbf56f1c8f86359da45f4b1e`
+- Tests: `511eeecbbbaf8901f26b351feda2a9c17f8a9a73`
+
+This verifies only the isolated export planner on synthetic manifests. It
+does **not** claim full-repository `npm test`, TypeScript consumer compilation,
+multi-branch integration, or real Rust/WASM/JPL astronomical parity. Those
+gates, along with provenance/licensing and human integration review, remain
+open. No GitHub Actions, merge, deployment, release or visibility change.
