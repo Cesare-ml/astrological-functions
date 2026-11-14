@@ -15,3 +15,9 @@ New `test/cross-aspect-input-snapshot.test.mjs` comprises 13 deterministic synth
 ## Validation and merge gates
 
 Patch development was guarded by a strict V8 exact-source preview. Neither V8 nor the mock adapter establishes native Node `npm test` or real JPL/Rust scientific accuracy. Require full native Node/TS checks, current-main and parent reconciliation, licensing/security review, and explicit integration approval. No GitHub Actions, package publication, live routes or production changes.
+
+## Post-commit regression execution
+
+The exact GitHub candidate source blob `84190e28551f8aacdabfcfee97fe4c1ccaae0f41` and **10 fetched cross-aspect test files** were replayed in strict isolated JavaScript V8, with native Node `node:test`, `node:assert/strict`, and ESM import loading substituted. **34/34 test callbacks passed**, zero load failures or callback failures: 13 newly added point/rule/array-adversarial tests plus 21 pre-existing cross-aspect regressions on shapes, bounds, directional ownership, duplicates, sparse arrays and wrap arithmetic.
+
+This does **not** verify real Node `npm test`, self-import resolution, complete TypeScript consumer compilation or upstream JPL/Rust astrometry. Main separately merged PR #108 (narrow direct cusp snapshot), which overlaps the older stacked #107 implementation; avoid overwriting it during future #104/#106/#107 integration. This PR itself only modifies cross-aspect input handling in the downstream draft chain.
