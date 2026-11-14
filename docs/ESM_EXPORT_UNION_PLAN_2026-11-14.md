@@ -264,3 +264,59 @@ visibility change. The required integration gate remains a real consolidated
 checkout followed by full native `npm test`, TypeScript NodeNext/Bundler
 consumer imports and the separate source/license review. Attribution:
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+
+## ESM target-case collision guard — 14 November 2026
+
+The read-only export-union planner now rejects filesystem **target paths**
+that differ only by letter case, including `types` declarations,
+`import` runtime modules, and aliases of the baseline root runtime.
+`TARGET_CASE_COLLISION` is distinct from the earlier `CASE_COLLISION`
+error for case-only **export keys**. Identical target paths may still be
+intentionally reused by multiple distinct exported subpaths.
+
+This catches a package that would contain e.g.
+`./src/Transit.mjs` and `./src/transit.mjs` when run on
+case-insensitive Windows filesystems. The pre-existing
+`CONFLICTING_EXPORT` error remains authoritative when an *identical*
+subpath is redefined with different targets; non-conflicting aliases and
+distinct casing of different filenames remain supported.
+
+### Evidence
+
+The existing GitHub planner/source and tests were verified against
+their local Git blob SHA-1s before editing, then the locally tested
+updated files were committed to the same draft branch:
+
+- Planner Git blob `5863cdb2f2a71408273e45ddc2020584087bcc41`.
+- New isolated eight-case regression file Git blob
+  `9f75b7a7f23f915ea3f42f2baa265331685b5532`.
+- Previous suites remain unchanged:
+  `test/plan-esm-export-union.test.mjs` (28 tests) and
+  `test/plan-esm-export-conditions.test.mjs` (8 tests).
+
+Manual native Node **v22.16.0** verification in an isolated local copy:
+
+```sh
+node --check scripts/plan-esm-export-union.mjs
+node --check test/plan-esm-target-case.test.mjs
+node --test test/plan-esm-export-union.test.mjs \
+  test/plan-esm-export-conditions.test.mjs \
+  test/plan-esm-target-case.test.mjs
+```
+
+Result **44 tests passed, 0 failed**. The suite checks candidate-local and
+cross-candidate target collisions, parent-directory capitalization, root
+aliasing, intentional identical targets, unchanged export-conflict error
+semantics and CLI failure without modifying either input manifest.
+
+### Integration limits
+
+This validates the offline read-only **manifest planner** only. It does
+not verify existence of files in a consolidated source tree, actual Node
+package imports, TypeScript NodeNext/Bundler compilation, whole-repo
+`npm test`, or Rust/WASM/JPL scientific parity. All prior integration,
+licensing and privacy gates remain open. The PR remains **draft**, with no
+changes to `main`, no GitHub Actions and no release/deployment.
+VirgoStars Ephemeris credit:
+https://github.com/Cesare-ml/VirgoStars-Ephemeris.
