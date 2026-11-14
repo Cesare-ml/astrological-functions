@@ -124,3 +124,7 @@ alone are not evidence of a passing repository test.
 ### ESM boundary regression (14 November 2026)
 
 The public `astrological-functions/ephemeris-provider` smoke now also injects a synthetic geometric J2000 response into the apparent-of-date natal entrypoint. It asserts that the call rejects rather than silently downgrading, and that the request sent to the provider is immutable and explicitly asks for `APPARENT` / `ECLIPTIC_OF_DATE`. This tests **contract enforcement only**, not Rust/WASM ephemeris accuracy. Run `node --test test/pilot-provider-consumer-smoke.test.mjs` and `npm test` on a complete checkout; neither command was executed as part of this GitHub-only change. Record native results before advancing validation status.
+
+### Exact public ESM incompatibility error (14 November 2026)
+
+The synthetic J2000/geometric rejection test now requires `INCOMPATIBLE_EPHEMERIS` specifically, rather than accepting any string-valued error code. This prevents unrelated argument or provider errors from producing a false-positive boundary test. The fixture still checks the single frozen `APPARENT`/`ECLIPTIC_OF_DATE` request. Commit `0b5cb41` updates the focused test. **Not natively executed in this GitHub-only change**: run `node --test test/pilot-provider-consumer-smoke.test.mjs`, `npm test`, and the NodeNext/Bundler `tsc` commands above on the full stacked branch. This is a synthetic fail-closed check, not astronomical parity or Rust/WASM validation.
