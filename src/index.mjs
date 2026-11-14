@@ -342,9 +342,10 @@ function definition(d) {
     throw new AstrologyError('INVALID_ASPECT','Aspect angle and maximum orb must each be within 0..180 degrees');
   return Object.freeze({id,angleDeg,maxOrbDeg});
 }
-function snapshotAspectInputs(items, parse, code) {
+function snapshotAspectInputs(items, count, parse, code) {
+  // Use the length captured by the preflight budget gate. Getters in an
+  // earlier collection must not expand a later collection after validation.
   // Never invoke caller-controlled iterators, map, species or inherited slots.
-  const count = items.length;
   const copy = [];
   for (let index = 0; index < count; index++) {
     if (!Object.hasOwn(items, index))
@@ -365,10 +366,18 @@ export function calculateCrossAspects(input) {
     throw new AstrologyError('INVALID_DIRECTION','Explicit A_TO_B/B_TO_A/SKY_TO_NATAL direction is required');
   if(!Array.isArray(sourcePoints)||!Array.isArray(targetPoints)||!Array.isArray(aspectDefinitions))
     throw new AstrologyError('INVALID_ARGUMENT','All points and aspectDefinitions must be arrays');
-  // Array.from visits sparse array holes; Array#map would silently skip them.
-  const src=snapshotAspectInputs(sourcePoints, point, 'INVALID_POINT');
-  const dst=snapshotAspectInputs(targetPoints, point, 'INVALID_POINT');
-  const defs=snapshotAspectInputs(aspectDefinitions, definition, 'INVALID_ASPECT');
+  // Bound both input parsing and the subsequent Cartesian match expansion.
+  // Lengths are captured before invoking any caller-defined accessors.
+  const sourceCount=sourcePoints.length, targetCount=targetPoints.length;
+  const definitionCount=aspectDefinitions.length;
+  if (sourceCount > 256 || targetCount > 256 || definitionCount > 32 ||
+      sourceCount * targetCount * definitionCount > 65_536)
+    throw new AstrologyError('INVALID_ARGUMENT',
+      'Maximum 256 points per side, 32 aspect rules, 65536 evaluations');
+  // Snapshot only own indexed elements; no custom iterator or species hook runs.
+  const src=snapshotAspectInputs(sourcePoints, sourceCount, point, 'INVALID_POINT');
+  const dst=snapshotAspectInputs(targetPoints, targetCount, point, 'INVALID_POINT');
+  const defs=snapshotAspectInputs(aspectDefinitions, definitionCount, definition, 'INVALID_ASPECT');
   // Aspect IDs identify configured rules in downstream charts; duplicates are ambiguous.
   if (new Set(defs.map(aspect => aspect.id)).size !== defs.length)
     throw new AstrologyError('INVALID_ASPECT', 'Aspect definition IDs must be unique');
