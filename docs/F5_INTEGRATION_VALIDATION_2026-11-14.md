@@ -173,3 +173,36 @@ done
 ```
 
 Total: **79/79 focused runtime tests passing**. A complete private repository checkout was not available locally, so **full `npm test` was not executed**. No scientific Rust/WASM/JPL cross-check has been performed and no release, GitHub Actions, deployment or `main` merge occurred.
+
+
+## Addendum — per-chunk provider authority and budget-fast failure (2026-11-14)
+
+Two independent asynchronous lifecycle bugs were reproduced and fixed in draft PR #72, then composed into integration draft PR #79 with a **two-parent merge commit `3ef4d9384f92b71eff7712957b33e03401111260`**.
+
+1. Previously, the `fixedProvider` facade was shared across chunks and checked only a global `running` flag and the current active `AbortController`. A saved callback from chunk N could therefore call the actual provider while chunk N+1 was active, incorrectly charging the later chunk's global budget and inheriting its signal. Each chunk now receives its **own frozen provider facade**, capturing its private controller and `chunkOpen` state. A stale or delayed callback is rejected with `PIPELINE_SEQUENCE_ERROR` without invoking the external provider.
+2. Previously `GLOBAL_PIPELINE_BUDGET` set a terminal `failed` flag but did not reject the active `Promise.race`. A `prepareCandidates` callback could swallow the budget error then await a never-settling promise, so callers could hang indefinitely unless they separately enabled a timeout. Budget exhaustion now invokes the chunk's terminal `stop(...)` gate immediately; the active search rejects with `GLOBAL_PIPELINE_BUDGET` and aborts the cooperative signal **without requiring a timeout**.
+
+The original F5 astronomical request shape, strict UTC bounds, report-only scientific uncertainty and global aggregate call counter are unchanged. **This is cooperative lifecycle control, not a guarantee that underlying noncooperative computation stops immediately.**
+
+### Exact checked-in Git blobs and executed scope
+
+| File | Git SHA-1 |
+| --- | --- |
+| `src/transit-chunk-pipeline-adapter.mjs` | `ff144a1fa15a276f2c9d9b6e25569accbde1a19b` |
+| `test/transit-chunk-pipeline-adapter.test.mjs` | `c522ed8f19d45462d8ebf892cca5435ac122171e` |
+| `scripts/manual/transit-pr21-smoke.mjs` | `fbe10d95b32c265b82337b40af1ae5219c0b5fbf` |
+
+**Executed locally** on Node 22.16.0 with the exact source/test blobs above and the previously documented actual PR #21 scan/refinement modules (plus the minimal `AstrologyError` dependency stand-in):
+
+```sh
+node --test test/*.test.mjs
+# 72/72 focused module tests passed
+node scripts/manual/transit-pr21-smoke.mjs
+# 11/11 real PR21 pipeline synthetic-provider smoke tests passed
+for f in test/types/*.ts scripts/manual/transit-pr21-typecheck.ts; do
+  tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext "$f"
+done
+# All eight TS 5.8.3 strict NodeNext checks passed
+```
+
+**83/83 focused runtime tests passed**, including regression scenarios for stale callbacks during later chunks and swallowed global-budget failures with **no chunk timeout**. `npm test` on a complete private repository checkout and independent Rust/WASM/JPL scientific verification are **still not executed**. This remains draft, no `main` merge, GitHub Actions, release or production deployment.
