@@ -86,10 +86,7 @@ const housePlacementRequest: Parameters<typeof placeNatalBodiesInHouses>[0] = {
 };
 void housePlacementRequest;
 // @ts-expect-error Unknown birth time cannot authorize precise natal house placement.
-const unknownBirthTimePlacement: Parameters<typeof placeNatalBodiesInHouses>[0] = {
-  ...housePlacementRequest,
-  birthTimeKnown: false
-};
+const unknownBirthTimePlacement: Parameters<typeof placeNatalBodiesInHouses>[0] = { ...housePlacementRequest, birthTimeKnown: false };
 void unknownBirthTimePlacement;
 // @ts-expect-error House placement requires a context-matched external cusp payload.
 const missingCuspSet: Parameters<typeof placeNatalBodiesInHouses>[0] = {
