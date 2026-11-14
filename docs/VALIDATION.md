@@ -161,3 +161,10 @@ been executed for this change.** On the complete PR #54 checkout run
 `node --test test/pilot-provider-consumer-smoke.test.mjs`, `npm test`,
 and both NodeNext/Bundler TypeScript commands documented above. Record
 versions, exit codes and failures before claiming local validation.
+
+
+### Provenance drift regression — 14 November 2026 (pending execution)
+
+The experimental ESM consumer smoke now independently changes only `engineVersion` or only `timeModel` on the second synthetic body while holding `kernelSetId`, frame, correction, and coordinates valid. Each case expects `INCONSISTENT_EPHEMERIS` and verifies that the two provider requests remain frozen. This complements the existing `kernelSetId` drift test and does not require or simulate astronomical calculations.
+
+Run from a full checkout of the draft branch: `node --test test/pilot-provider-consumer-smoke.test.mjs`, then `npm test` and the documented TypeScript NodeNext/Bundler consumer checks. **Not executed in this update:** these commands; GitHub file commits alone are not test evidence. No Rust/WASM or scientific accuracy claim is made.
