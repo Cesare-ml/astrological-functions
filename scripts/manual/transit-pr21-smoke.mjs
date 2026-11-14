@@ -73,7 +73,6 @@ test('actual F5 stack: a synthetic tangency remains unresolved, not absent',asyn
   assert.equal(report.scientificallyValidated,false);
 });
 
-
 test('actual F5 stack: repeated synthetic crossings across a chunk seam remain provisional',async()=>{
   const f=ms=>{const t=(ms-epoch)/3600000; return (t-1/6)*(t-.5)*(t-5/6)*100;};
   const report=await run(providerWith(f,()=>[-100,100]));
