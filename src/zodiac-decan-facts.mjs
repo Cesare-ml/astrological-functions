@@ -14,14 +14,18 @@ export function classifyZodiacDecan(input) {
   if (!zodiac || typeof zodiac !== 'object' || Array.isArray(zodiac)) {
     throw new AstrologyError('INVALID_ZODIAC', 'An explicit zodiac coordinate policy is required');
   }
-  if (zodiac.type !== 'TROPICAL' && zodiac.type !== 'SIDEREAL') {
+  // Capture accessor-backed policy fields once: validation and output must
+  // use the exact same primitive values even when the caller supplies getters.
+  const zodiacType = zodiac.type;
+  if (zodiacType !== 'TROPICAL' && zodiacType !== 'SIDEREAL') {
     throw new AstrologyError('INVALID_ZODIAC', 'Zodiac type must be TROPICAL or SIDEREAL');
   }
-  if (zodiac.type === 'SIDEREAL' &&
-      (typeof zodiac.ayanamsaId !== 'string' || !zodiac.ayanamsaId.trim())) {
+  const ayanamsaId = zodiac.ayanamsaId;
+  if (zodiacType === 'SIDEREAL' &&
+      (typeof ayanamsaId !== 'string' || !ayanamsaId.trim())) {
     throw new AstrologyError('INVALID_ZODIAC', 'Sidereal coordinates require an ayanamsaId');
   }
-  if (zodiac.type === 'TROPICAL' && zodiac.ayanamsaId !== undefined) {
+  if (zodiacType === 'TROPICAL' && ayanamsaId !== undefined) {
     throw new AstrologyError('INVALID_ZODIAC', 'Tropical coordinates must not declare an ayanamsaId');
   }
 
@@ -33,9 +37,9 @@ export function classifyZodiacDecan(input) {
   const startDeg = globalDecanIndex * 10;
   const endDeg = (startDeg + 10) % 360;
   const distanceFromStartDeg = normalizedLongitudeDeg - startDeg;
-  const coordinatePolicy = Object.freeze(zodiac.type === 'TROPICAL'
+  const coordinatePolicy = Object.freeze(zodiacType === 'TROPICAL'
     ? { type: 'TROPICAL' }
-    : { type: 'SIDEREAL', ayanamsaId: zodiac.ayanamsaId.trim() });
+    : { type: 'SIDEREAL', ayanamsaId: ayanamsaId.trim() });
 
   return Object.freeze({
     contract: 'ZodiacDecanFact',
