@@ -57,3 +57,15 @@ Node.js `v22.16.0` executed both `node --check` commands and `node --test test/p
 - `test/pr-snapshot-drift.test.mjs`: `be8734224103df1d2499ac113aa0004c2211208a`
 
 This focused test run is **not** the consolidated private repository `npm test` or scientific ephemeris validation. Before integration, reconcile any new commits on `main` and rerun all documented native checks; no GitHub Actions, release, astronomy calculation or production migration has been performed. The sole intended astronomical source remains Rust VirgoStars Ephemeris.
+
+
+## Consolidated native main integration gate — 14 November 2026
+
+After main integrated #98 (dodecatemoria batch check/use hardening), a local reconstructed checkout of the complete current `main` JavaScript source, typed declarations, nine baseline root `test/*.test.mjs` files and their package export map was augmented with the **exact two source/test GitHub blobs above**.
+
+- Node.js **v22.16.0**, `npm test`: **78/78 passed**, zero failed or skipped (**66 baseline + 12 drift checks**).
+- `node --check scripts/compare-pr-snapshots.mjs` and `node --check test/pr-snapshot-drift.test.mjs`: passed.
+- TypeScript **v5.8.3**, strict `NodeNext` compiler over all **five existing TS fixture files**: passed; this PR adds no types or changes to any package export.
+- The tested local script/test `git hash-object` values matched GitHub `da4eb78dda3b29bf7059cf371a17732c09fc1703` and `be8734224103df1d2499ac113aa0004c2211208a`. Current main core, private manifest and the original nine runtime regression files were preserved; `npm test` invoked the native `node --test` runner across the combined tree.
+
+**Scope of proof:** byte-verified reconstructed checkout (not a directly authenticated `git clone`). This is tooling for manual concurrent-PR coordination, not provider F2 scientific validation, downstream VirgoStars app integration, or assurance that GitHub state remains unchanged after the snapshots were saved. Continue to re-fetch live head/base SHAs before every merge, with no GitHub Actions or automatic release.
