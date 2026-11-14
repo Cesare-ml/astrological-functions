@@ -6,6 +6,7 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 
 export class ExportUnionError extends Error {
   constructor(code, message) {
@@ -67,9 +68,23 @@ export function planEsmExportUnion(manifests) {
   const root = baseline?.exports?.['.'];
   const definitions = new Map();
   const origins = new Map();
+  const drift = new Map();
   for (const [index, manifest] of manifests.entries()) {
     const label = index === 0 ? 'baseline' : `candidate ${index}`;
     const map = checkedExports(manifest, label, name ?? null, root ?? null);
+    if (index !== 0) {
+      // Do not silently overlook script, version or dependency changes when
+      // presenting an exports-only union. Never copy manifest values to output.
+      const keys = new Set([...Object.keys(baseline), ...Object.keys(manifest)]);
+      for (const key of [...keys].sort()) {
+        if (key === 'exports' || key === 'name' || key === 'private' || key === 'type') continue;
+        if (!Object.hasOwn(baseline, key) || !Object.hasOwn(manifest, key) ||
+            !isDeepStrictEqual(baseline[key], manifest[key])) {
+          if (!drift.has(key)) drift.set(key, []);
+          drift.get(key).push(label);
+        }
+      }
+    }
     for (const [key, entry] of map) {
       const existing = definitions.get(key);
       if (existing && (existing.types !== entry.types || existing.import !== entry.import)) {
@@ -89,8 +104,10 @@ export function planEsmExportUnion(manifests) {
     exports[key] = { types: value.types, import: value.import };
     entries.push({ subpath: key, sources: origins.get(key) });
   }
+  const nonExportDrift = [...drift].sort(([a], [b]) => a.localeCompare(b, 'en'))
+    .map(([field, sources]) => ({ field, sources }));
   return { packageName: name, candidateCount: candidates.length,
-    exportCount: Object.keys(exports).length, exports, entries };
+    exportCount: Object.keys(exports).length, exports, entries, nonExportDrift };
 }
 
 async function main(paths) {
