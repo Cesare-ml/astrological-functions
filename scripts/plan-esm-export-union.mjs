@@ -17,11 +17,14 @@ export class ExportUnionError extends Error {
 }
 
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+// Windows treats these device basenames as reserved, even when suffixed by an extension.
+const windowsDeviceName = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i;
 
 function safeRelative(value, label) {
   if (typeof value !== 'string' || !value.startsWith('./') ||
       !/^\.\/[A-Za-z0-9._/-]+$/.test(value) ||
-      value.split('/').slice(1).some(part => !part || part.startsWith('.') || part.toLowerCase() === 'node_modules')) {
+      value.split('/').slice(1).some(part => !part || part.startsWith('.') || part.endsWith('.') ||
+        part.toLowerCase() === 'node_modules' || windowsDeviceName.test(part))) {
     throw new ExportUnionError('UNSAFE_EXPORT_PATH', `${label} must be a literal, safe package-relative path`);
   }
 }
@@ -68,6 +71,9 @@ export function planEsmExportUnion(manifests) {
   const root = baseline?.exports?.['.'];
   const definitions = new Map();
   const origins = new Map();
+  // Case-only subpath differences can behave ambiguously on case-insensitive
+  // consumer filesystems, even though JS objects treat them as distinct keys.
+  const caseFoldedSubpaths = new Map();
   const drift = new Map();
   for (const [index, manifest] of manifests.entries()) {
     const label = index === 0 ? 'baseline' : `candidate ${index}`;
@@ -86,6 +92,13 @@ export function planEsmExportUnion(manifests) {
       }
     }
     for (const [key, entry] of map) {
+      const folded = key.toLowerCase();
+      const priorKey = caseFoldedSubpaths.get(folded);
+      if (priorKey !== undefined && priorKey !== key) {
+        throw new ExportUnionError('CASE_COLLISION',
+          `${label} introduces a case-only ESM export collision between ${priorKey} and ${key}`);
+      }
+      caseFoldedSubpaths.set(folded, key);
       const existing = definitions.get(key);
       if (existing && (existing.types !== entry.types || existing.import !== entry.import)) {
         throw new ExportUnionError('CONFLICTING_EXPORT', `${label} redefines ${key} with different targets`);
