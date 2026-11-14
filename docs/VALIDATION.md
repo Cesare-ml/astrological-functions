@@ -231,3 +231,27 @@ npm test
 Record the exact Node version, branch SHA, exit codes and diagnostics.
 These commands were **not executed** during this GitHub API-only edit.
 Do not mark the PR validated or merge on the strength of this test alone.
+
+
+### Second-body invalid latitude fails closed (14 November 2026)
+
+`test/provider-second-body-invalid-latitude.test.mjs` exercises the public ESM
+provider entry point with three requested synthetic bodies. The second response
+has ecliptic latitude +91 degrees and must reject with
+`INVALID_EPHEMERIS_RESULT` before requesting the third body. The test also
+checks frozen provider requests and explicit `APPARENT/ECLIPTIC_OF_DATE`
+semantics. No fallback or astronomical calculations are introduced.
+
+Validation required on the complete draft branch (not executed by this
+GitHub-connector-only change):
+
+```sh
+node --check test/provider-second-body-invalid-latitude.test.mjs
+node --test test/provider-second-body-invalid-latitude.test.mjs
+npm test
+```
+
+Record native Node version, exit codes and full diagnostics. This synthetic
+contract check does not establish Rust/WASM integration or JPL scientific
+accuracy. The intended sole astronomical backend remains
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
