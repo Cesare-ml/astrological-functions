@@ -323,21 +323,28 @@ export async function calculateNatalWithProvider(input) {
     // requested frame, correction policy or body identifier by accident.
     const request = Object.freeze({ datetimeUtc, bodyName, corrections:'APPARENT', frame:'ECLIPTIC_OF_DATE' });
     const state = await provider.getGeocentricEcliptic(request);
-    if (!state || typeof state !== 'object' || Array.isArray(state) ||
-        !state.metadata || typeof state.metadata !== 'object' || Array.isArray(state.metadata) ||
-        state.metadata.center !== 'EARTH' || state.metadata.frame !== 'ECLIPTIC_OF_DATE' ||
-        state.metadata?.corrections !== 'APPARENT')
+    if (!state || typeof state !== 'object' || Array.isArray(state))
       throw new AstrologyError('INCOMPATIBLE_EPHEMERIS', 'Provider must return apparent Earth-centered ecliptic-of-date coordinates');
-    if (typeof state.longitudeDeg !== 'number' || !Number.isFinite(state.longitudeDeg) ||
-        typeof state.latitudeDeg !== 'number' || !Number.isFinite(state.latitudeDeg))
+    // Snapshot provider-controlled fields once: getters and reentrant adapters
+    // must not change the payload after validation and before chart assembly.
+    const metadataSource = state.metadata;
+    if (!metadataSource || typeof metadataSource !== 'object' || Array.isArray(metadataSource))
+      throw new AstrologyError('INCOMPATIBLE_EPHEMERIS', 'Provider must return apparent Earth-centered ecliptic-of-date coordinates');
+    const metadata = Object.freeze({ ...metadataSource });
+    const { longitudeDeg, latitudeDeg, longitudeSpeedDegPerDay } = state;
+    if (metadata.center !== 'EARTH' || metadata.frame !== 'ECLIPTIC_OF_DATE' ||
+        metadata.corrections !== 'APPARENT')
+      throw new AstrologyError('INCOMPATIBLE_EPHEMERIS', 'Provider must return apparent Earth-centered ecliptic-of-date coordinates');
+    if (typeof longitudeDeg !== 'number' || !Number.isFinite(longitudeDeg) ||
+        typeof latitudeDeg !== 'number' || !Number.isFinite(latitudeDeg))
       throw new AstrologyError('INVALID_EPHEMERIS_RESULT', 'Provider longitude and latitude must be finite numbers');
-    if (state.latitudeDeg < -90 || state.latitudeDeg > 90)
+    if (latitudeDeg < -90 || latitudeDeg > 90)
       throw new AstrologyError('INVALID_EPHEMERIS_RESULT', 'Ecliptic latitude must be within -90..90 degrees');
-    if (state.longitudeSpeedDegPerDay !== undefined && state.longitudeSpeedDegPerDay !== null &&
-        (typeof state.longitudeSpeedDegPerDay !== 'number' || !Number.isFinite(state.longitudeSpeedDegPerDay)))
+    if (longitudeSpeedDegPerDay !== undefined && longitudeSpeedDegPerDay !== null &&
+        (typeof longitudeSpeedDegPerDay !== 'number' || !Number.isFinite(longitudeSpeedDegPerDay)))
       throw new AstrologyError('INVALID_EPHEMERIS_RESULT', 'Provider longitude speed must be a finite number when supplied');
     const provenance = provenanceKeys.map(key => {
-      const value = state.metadata[key];
+      const value = metadata[key];
       if (value === undefined || value === null) return null;
       if (typeof value !== 'string' || !value.trim())
         throw new AstrologyError('INVALID_EPHEMERIS_RESULT', `${key} must be a nonempty string when provided`);
@@ -353,12 +360,12 @@ export async function calculateNatalWithProvider(input) {
       throw new AstrologyError('INCONSISTENT_EPHEMERIS',
         'Chart bodies must use one ephemeris engine version, kernel set and time model');
     expectedProvenance ??= provenance;
-    const lon = normalize360(state.longitudeDeg);
-    bodies[bodyName] = Object.freeze({ name:bodyName, longitudeDeg:lon, latitudeDeg:state.latitudeDeg,
+    const lon = normalize360(longitudeDeg);
+    bodies[bodyName] = Object.freeze({ name:bodyName, longitudeDeg:lon, latitudeDeg,
       zodiacSignIndex:zodiacSignIndex(lon), longitudeSpeedDegPerDay:
-        typeof state.longitudeSpeedDegPerDay === 'number' && Number.isFinite(state.longitudeSpeedDegPerDay)
-          ? state.longitudeSpeedDegPerDay : null,
-      ephemerisMetadata:Object.freeze({ ...state.metadata }) });
+        typeof longitudeSpeedDegPerDay === 'number' && Number.isFinite(longitudeSpeedDegPerDay)
+          ? longitudeSpeedDegPerDay : null,
+      ephemerisMetadata:metadata });
   }
   return Object.freeze({ contract:'NatalChartResult', contractVersion:'0.1.0-experimental',
     datetimeUtc, latitudeDeg, longitudeDegEast, bodies:Object.freeze(bodies),
