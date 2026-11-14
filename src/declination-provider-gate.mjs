@@ -96,7 +96,11 @@ export async function calculateDeclinationContactsWithProvider(options) {
   const expectedProvenance = validateProvenance(options.expectedProvenance);
   if (coordinates.frame === 'TRUE_EQUATOR_OF_DATE' && source.datetimeUtc !== target.datetimeUtc)
     throw new AstrologyError('INCOMPATIBLE_DECLINATION_FRAMES', 'True-equator-of-date requires identical instants');
-  if (!options.provider || typeof options.provider.getGeocentricEquatorialDeclination !== 'function')
+  // Read the provider method exactly once before any await. Re-resolving a mutable
+  // method during the loop can silently mix ephemeris implementations.
+  const provider = options.provider;
+  const getGeocentricEquatorialDeclination = provider?.getGeocentricEquatorialDeclination;
+  if (typeof getGeocentricEquatorialDeclination !== 'function')
     throw new AstrologyError('MISSING_DECLINATION_PROVIDER', 'Injected declination provider required');
 
   // Validate the rest of the contract *before* requesting astronomy, too.
@@ -116,7 +120,6 @@ export async function calculateDeclinationContactsWithProvider(options) {
   const contactDefinitions = Object.freeze(options.contactDefinitions.map(d =>
     Object.freeze({ id: d.id, maxOrbDeg: d.maxOrbDeg })));
   const direction = options.direction;
-  const provider = options.provider;
   async function acquire(selection) {
     const frameCoordinates = snapshotCoordinates(coordinates, selection.datetimeUtc);
     const points = [];
@@ -129,7 +132,8 @@ export async function calculateDeclinationContactsWithProvider(options) {
         expectedProvenance,
       });
       // Provider failures deliberately propagate; no substitute value is used.
-      const result = await provider.getGeocentricEquatorialDeclination(request);
+      // Preserve the original receiver for stateful Rust/WASM adapters.
+      const result = await getGeocentricEquatorialDeclination.call(provider, request);
       points.push(assertResponse(result, request));
     }
     return Object.freeze({
