@@ -195,3 +195,24 @@ test('all six tolerances are mandatory and must be nonnegative finite', async ()
     }
   }
 });
+
+test('UTC calendar dates reject normalization rollover but preserve valid fractional epochs', async () => {
+  for (const invalid of [
+    '2026-02-30T00:00:00Z',
+    '2026-04-31T00:00:00Z',
+    '2026-13-01T00:00:00Z',
+    '2026-01-01T24:00:00Z',
+    '2026-01-01T00:00:60Z',
+  ]) {
+    await assert.rejects(
+      compareApparentEphemerisProviders(query(state(), state(), { datetimeUtc: invalid })),
+      rejectsCode('INVALID_UTC'),
+      invalid,
+    );
+  }
+  const valid = await compareApparentEphemerisProviders(
+    query(state(), state(), { datetimeUtc: '2024-02-29T00:00:00.123456Z' }),
+  );
+  assert.equal(valid.status, 'PASS');
+  assert.equal(valid.datetimeUtc, '2024-02-29T00:00:00.123456Z');
+});
