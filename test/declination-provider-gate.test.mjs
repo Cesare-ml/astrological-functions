@@ -185,3 +185,56 @@ test('invalid response on later body causes failure before target snapshot start
       ? { ...response(r), declinationDeg: Infinity } : response(r); })), 'INVALID_DECLINATION_PROVIDER_RESULT');
   assert.deepEqual(calls, ['Sun', 'Venus']);
 });
+
+
+test('provider method is pinned once before first await even if provider mutates it', async () => {
+  const requests = [];
+  const provider = {
+    async getGeocentricEquatorialDeclination(request) {
+      assert.equal(this, provider, 'preserve method receiver for stateful adapters');
+      requests.push(request.bodyId);
+      if (requests.length === 1) {
+        this.getGeocentricEquatorialDeclination = async secondRequest => ({
+          ...response(secondRequest), declinationDeg: 18.2,
+        });
+      }
+      return response(request);
+    },
+  };
+  const out = await calculate({}, provider);
+  assert.deepEqual(requests, ['Sun', 'Moon']);
+  assert.equal(out.facts.contacts.length, 1);
+  assert.equal(out.facts.contacts[0].contactId, 'CONTRA_PARALLEL');
+});
+
+test('provider accessor is read once, never re-evaluated for each celestial body', async () => {
+  let accesses = 0;
+  const calls = [];
+  const provider = {
+    get getGeocentricEquatorialDeclination() {
+      accesses += 1;
+      return async request => {
+        calls.push(request.bodyId);
+        return response(request);
+      };
+    },
+  };
+  const out = await calculate({}, provider);
+  assert.deepEqual(calls, ['Sun', 'Moon']);
+  assert.equal(accesses, 1);
+  assert.equal(out.facts.contacts.length, 1);
+});
+
+test('a provider that removes its public method after first await still completes with pinned callable', async () => {
+  const calls = [];
+  const provider = {
+    async getGeocentricEquatorialDeclination(request) {
+      calls.push(request.bodyId);
+      if (calls.length === 1) delete this.getGeocentricEquatorialDeclination;
+      return response(request);
+    },
+  };
+  const out = await calculate({}, provider);
+  assert.deepEqual(calls, ['Sun', 'Moon']);
+  assert.equal(out.facts.contacts.length, 1);
+});
