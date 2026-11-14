@@ -72,3 +72,32 @@ test('actual F5 stack: a synthetic tangency remains unresolved, not absent',asyn
   assert.ok(report.reports.some(part=>part.hasUnresolvedIntervals));
   assert.equal(report.scientificallyValidated,false);
 });
+
+
+test('actual F5 stack: repeated synthetic crossings across a chunk seam remain provisional',async()=>{
+  const f=ms=>{const t=(ms-epoch)/3600000; return (t-1/6)*(t-.5)*(t-5/6)*100;};
+  const report=await run(providerWith(f,()=>[-100,100]));
+  assert.equal(report.chunkCount,2);
+  assert.ok(report.totals.sampledZeroCount>=2);
+  assert.ok(report.totals.unresolvedIntervalCount>0);
+  assert.equal(report.scientificallyValidated,false);
+  assert.equal(Object.hasOwn(report,'hits'),false);
+});
+
+test('actual F5 stack: provider frame mismatch fails instead of returning a false no-event result',async()=>{
+  const point=ms=>(ms-epoch)/3600000-.37;
+  const provider=providerWith(point,(a,b)=>[point(a),point(b)]);
+  const original=provider.getUnwrappedAspectResidual.bind(provider);
+  provider.getUnwrappedAspectResidual=async request=>{
+    const result=await original(request);
+    return {...result,metadata:{...result.metadata,frame:'J2000'}};
+  };
+  await assert.rejects(()=>run(provider),error=>error?.code==='INCOMPATIBLE_EPHEMERIS');
+});
+
+test('actual F5 stack: scanner call budget exhaustion propagates without a partial report',async()=>{
+  const point=ms=>(ms-epoch)/3600000-.37;
+  await assert.rejects(()=>run(providerWith(point,(a,b)=>[point(a),point(b)]),
+    {targetIntervalMs:60000,maxDepth:10,maxProviderCalls:1}),
+    error=>error?.code==='SEARCH_BUDGET_EXHAUSTED');
+});
