@@ -105,3 +105,69 @@ test('CLI is read-only, returns a plan on valid JSON and fails for a conflict', 
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+
+test('hidden segments are refused in proposed ESM subpaths', () => {
+  for (const subpath of ['./.env', './.git/config', './safe/.secret', './a/..hidden']) {
+    expectCode(() => planEsmExportUnion([manifest(), manifest({ [subpath]: entry('safe') })]),
+      'UNSAFE_EXPORT_PATH');
+  }
+});
+
+test('hidden segments are refused in types and import targets', () => {
+  for (const path of ['./.env', './.git/config', './src/.private/file.js']) {
+    for (const key of ['types', 'import']) {
+      expectCode(() => planEsmExportUnion([manifest(),
+        manifest({ './safe': { ...entry('safe'), [key]: path } })]), 'UNSAFE_EXPORT_PATH');
+    }
+  }
+});
+
+test('node_modules segments are refused without case-sensitive bypass', () => {
+  for (const fragment of ['node_modules', 'Node_Modules', 'NODE_MODULES']) {
+    expectCode(() => planEsmExportUnion([manifest(),
+      manifest({ ['./' + fragment + '/a']: entry('safe') })]), 'UNSAFE_EXPORT_PATH');
+    for (const key of ['types', 'import']) {
+      expectCode(() => planEsmExportUnion([manifest(),
+        manifest({ './safe': { ...entry('safe'), [key]: './src/' + fragment + '/a.js' } })]),
+        'UNSAFE_EXPORT_PATH');
+    }
+  }
+});
+
+test('hidden baseline root export fails before planning a union', () => {
+  expectCode(() => planEsmExportUnion([
+    manifest({}, { exports: { '.': './.git/config' } }), manifest()
+  ]), 'UNSAFE_EXPORT_PATH');
+});
+
+test('normal dotted extensions stay valid and candidate inputs are unchanged', () => {
+  const candidate = manifest({ './safe-name': {
+    types: './src/safe-name.d.ts', import: './src/safe-name.js'
+  } });
+  const before = JSON.stringify(candidate);
+  const plan = planEsmExportUnion([manifest(), candidate]);
+  assert.equal(plan.exports['./safe-name'].types, './src/safe-name.d.ts');
+  assert.equal(plan.exports['./safe-name'].import, './src/safe-name.js');
+  assert.equal(JSON.stringify(candidate), before);
+});
+
+test('CLI rejects hidden targets and never rewrites manifest copies', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'virgostars-hidden-export-'));
+  try {
+    const base = join(directory, 'base.json'), candidatePath = join(directory, 'candidate.json');
+    const candidate = JSON.stringify(manifest({ './unsafe': {
+      types: './src/.env', import: './src/safe.js'
+    } }));
+    await writeFile(base, JSON.stringify(manifest()));
+    await writeFile(candidatePath, candidate);
+    const script = fileURLToPath(new URL('../scripts/plan-esm-export-union.mjs', import.meta.url));
+    const result = spawnSync(process.execPath, [script, base, candidatePath], { encoding: 'utf8' });
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.match(result.stderr, /UNSAFE_EXPORT_PATH/);
+    assert.equal(await readFile(candidatePath, 'utf8'), candidate);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
