@@ -78,3 +78,56 @@ test('CLI exits 0 for stable, 1 for drift, 2 for invalid snapshot', () => {
     assert.match(invalid.stderr, /unique positive/);
   } finally { rmSync(dir, {recursive:true, force:true}); }
 });
+
+test('mixed base repositories cannot masquerade as a stable integration snapshot', () => {
+  const mixed = [pr(1), pr(2, {baseRepo:'another/project'})];
+  assert.throws(() => comparePullRequestSnapshots(mixed, mixed), /mixes base repositories/);
+  assert.throws(() => comparePullRequestSnapshots([pr(1)], mixed), /mixes base repositories/);
+});
+
+test('empty and paginated-empty snapshots fail closed rather than reporting stable', () => {
+  assert.throws(() => comparePullRequestSnapshots([], []), /no open PRs/);
+  assert.throws(() => comparePullRequestSnapshots([[]], [[pr(1)]]), /no open PRs/);
+  assert.throws(() => comparePullRequestSnapshots([pr(1)], [[]]), /no open PRs/);
+});
+
+test('same-repository fork heads remain supported and comparable', () => {
+  const a = pr(1, {headRepo:'contributor/fork'});
+  const after = pr(1, {headRepo:'contributor/fork', headSha:'c'});
+  const delta = comparePullRequestSnapshots([a], [after]);
+  assert.equal(delta.stable, false);
+  assert.deepEqual(delta.changes.map(c => c.field), ['headSha']);
+});
+
+test('expected repository pins identity even when both snapshots agree on the wrong repository', () => {
+  const wrong = [pr(1, {baseRepo:'other/project'})];
+  assert.equal(comparePullRequestSnapshots(wrong, wrong).stable, true); // no expectation supplied
+  assert.throws(() => comparePullRequestSnapshots(wrong, wrong, {
+    repository:'Cesare-ml/astrological-functions',
+  }), /does not match expected/);
+  assert.equal(comparePullRequestSnapshots([pr(1)], [pr(1)], {
+    repository:'Cesare-ml/astrological-functions',
+  }).stable, true);
+  assert.throws(() => comparePullRequestSnapshots([pr(1)], [pr(1)], { repository:'bad' }), /owner\/name/);
+});
+
+test('CLI supports expected repo and rejects invalid repo flags', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'virgostars-pr-drift-repo-'));
+  const cli = fileURLToPath(new URL('../scripts/compare-pr-snapshots.mjs', import.meta.url));
+  const old = join(dir, 'old.json'), fresh = join(dir, 'fresh.json');
+  try {
+    writeFileSync(old, JSON.stringify([pr(1)]));
+    writeFileSync(fresh, JSON.stringify([pr(1)]));
+    const args = [cli, old, fresh, '--repo', 'Cesare-ml/astrological-functions', '--json'];
+    const ok = spawnSync(process.execPath, args, {encoding:'utf8'});
+    assert.equal(ok.status, 0, ok.stderr);
+    const wrong = spawnSync(process.execPath,
+      [cli, old, fresh, '--repo', 'other/project'], {encoding:'utf8'});
+    assert.equal(wrong.status, 2);
+    assert.match(wrong.stderr, /does not match expected/);
+    const missing = spawnSync(process.execPath,
+      [cli, old, fresh, '--repo'], {encoding:'utf8'});
+    assert.equal(missing.status, 2);
+    assert.match(missing.stderr, /Usage/);
+  } finally { rmSync(dir, {recursive:true, force:true}); }
+});
