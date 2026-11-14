@@ -22,7 +22,7 @@ const window = validateUtcSearchWindow({
 
 ## Isolation / verification
 
-This draft branch adds two independent, **isolated** civil-UTC primitives, their `.d.mts` contracts, two Node runtime test suites, two strict TS consumer fixtures and this note. The package stays `private`, with **no package export-map change** (future typed ESM entrypoint integration requires explicit coordination with parallel draft PRs).
+This draft branch adds four **isolated** civil-UTC modules, their `.d.mts` contracts, four Node runtime test suites, four strict TS consumer fixtures and this note. The package stays `private`, with **no package export-map change** (future typed ESM entrypoint integration requires explicit coordination with parallel draft PRs).
 
 Manual checks on a complete checkout:
 
@@ -106,3 +106,48 @@ tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution noden
 ```
 
 **Results:** 18/18 focused Node 22.16.0 tests passed and the three TS 5.8.3 strict NodeNext consumer fixtures passed in a local **dependency-only fixture** that substitutes the existing main `AstrologyError` class. All new GitHub source/test blobs were matched with local `git hash-object`. No full private-repository checkout tests, real Rust/WASM astronomical integration, JPL validation, chart application or production integration was performed.
+
+
+## Sequential injected-provider candidate scan (isolated F5)
+
+`scanUtcChunkCandidatesWithProvider` is a narrow integration boundary for a **caller-owned** asynchronous event candidate provider. It composes the previously reviewed UTC validation, bounded chunk planner and exact-millisecond boundary reconciliation. It does **not** provide astronomical event detection or import a real ephemeris.
+
+```js
+import { scanUtcChunkCandidatesWithProvider } from './src/utc-chunk-provider-runner.mjs';
+
+const result = await scanUtcChunkCandidatesWithProvider({
+  windowInput: {
+    startUtc: '2026-11-14T00:00:00Z',
+    endUtc: '2026-11-14T01:00:00Z',
+    maxDurationMs: 3_600_000,
+    chunkDurationMs: 1_800_000,
+    maxChunks: 2,
+  },
+  maxInputHits: 20,
+  provider: {
+    async scanChunk(request) {
+      // Synthetic fixture ONLY. Real events require an independently validated solver.
+      return request.chunkIndex === 0
+        ? [{ eventKey: 'MOCK_EVENT', instantUtc: '2026-11-14T00:30:00Z' }]
+        : [{ eventKey: 'MOCK_EVENT', instantUtc: '2026-11-14T00:30:00.000Z' }];
+    },
+  },
+});
+// result.providerCallCount === 2
+// result.rawHitCount === 2; result.duplicateCount === 1
+```
+
+The provider receives **one frozen request for each chunk**, sequentially and in chronological order: `{chunkIndex,startUtc,endUtc,startEpochMs,endEpochMs}`. Closed-right-edge candidate hits are allowed for each individual chunk, except the entire search's rightmost instant, which is excluded. Candidate identity is the caller's nonempty `eventKey` plus the UTC millisecond. Results include the existing immutable reconciliation facts and `providerCallCount`.
+
+The runner copies the five window fields **before the first await**. It snapshots each candidate's **own data properties** immediately after the corresponding provider call; it rejects additional properties, accessors, invalid or out-of-bounds UTC instants, and over-budget results **before calling the next chunk**. Missing/invalid providers, invalid bounds and absent caps fail before any provider call. A rejected provider call propagates its exception; it never silently becomes an empty event list.
+
+**Limits and scientific gates:** `maxChunks` bounds the number of sequential provider requests (hard ceiling 4,096), and `maxInputHits` bounds total accepted raw candidates (1–16,384). The runner has **no wall-clock timeout or cancellation**; these must be imposed externally before production use. The provider controls its own CPU, memory, kernel metadata, body selection, frame, time model and event completeness. The runner does not inspect or assert scientific provenance and does not prove roots, stations, ingresses or any physical events. The existing draft transit F5 pipelines (#14/#17/#21) are **not** integrated or modified here.
+
+### Isolated verification (2026-11-14)
+
+```sh
+node --test test/utc-chunk-provider-runner.test.mjs
+tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext test/types/utc-chunk-provider-runner.test.ts
+```
+
+On Node **22.16.0**, **11/11 synthetic runtime tests passed**. TypeScript **5.8.3** passed strict NodeNext checking against locally reconstructed declaration dependencies. All four new source/test GitHub file SHA-1 blob IDs were checked against the exact locally tested files. The private repository **was not cloned**; the isolated fixture used a matching standalone `AstrologyError` class and reconstructed dependent UTC modules. This is **not** a verified full-repository `npm test`, native Rust/WASM integration, JPL comparison or release acceptance.
