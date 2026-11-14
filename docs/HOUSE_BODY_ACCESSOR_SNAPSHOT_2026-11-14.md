@@ -26,3 +26,7 @@ Executed the exact GitHub runtime blob `7673ef5847122822a2a2145721c976d24a1f9e00
 ## Dependency and integration policy
 
 This branch must target **draft PR #94**, itself stacked on **draft PR #92**, because it touches their shared `src/index.mjs`. Merge only in dependency order after combined native tests and independent review. If any ancestor branch gets squash-merged or rewritten, reconstruct and revalidate ancestry rather than blindly retargeting. Do not modify the ancestor drafts, `main`, the published package or any deployment. No GitHub Actions.
+
+## Integrated parent-regression replay
+
+After committing the house snapshot fix, the exact staged runtime blob `7673ef5847122822a2a2145721c976d24a1f9e00` was tested with **ten** selected source files (the preceding #94 nine-file F1/F2 ESM/provider regression set plus the new six-case house snapshot suite). The strict V8 `node:test`/assert import approximation registered **52 callbacks; 52/52 passed** with no load errors. The runner substituted package imports and did **not** exercise native Node resolution, actual npm scripts or TypeScript; those remain blockers for review.
