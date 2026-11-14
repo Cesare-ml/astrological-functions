@@ -113,3 +113,47 @@ test('ESM package provider rejects geometric J2000 metadata without fallback', a
   });
   assert.equal(Object.isFrozen(requests[0]), true);
 });
+
+
+test('ESM package provider assembles a synthetic natal chart without inventing houses', async () => {
+  const seen = [];
+  const chart = await packageProvider.calculateNatalWithProvider({
+    datetimeUtc: '2026-11-14T00:00:00Z',
+    latitudeDeg: 45,
+    longitudeDegEast: 11,
+    bodyNames: ['Sun', 'Moon'],
+    provider: {
+      async getGeocentricEcliptic(request) {
+        seen.push(request);
+        return {
+          longitudeDeg: request.bodyName === 'Sun' ? 361 : -1,
+          latitudeDeg: 0,
+          metadata: {
+            center: 'EARTH',
+            frame: 'ECLIPTIC_OF_DATE',
+            corrections: 'APPARENT',
+            engineVersion: 'synthetic',
+            kernelSetId: 'synthetic',
+            timeModel: 'synthetic'
+          }
+        };
+      }
+    }
+  });
+  assert.deepEqual(seen.map(request => request.bodyName), ['Sun', 'Moon']);
+  assert.equal(seen.every(Object.isFrozen), true);
+  assert.equal(chart.bodies.Sun.longitudeDeg, 1);
+  assert.equal(chart.bodies.Moon.longitudeDeg, 359);
+  assert.equal(chart.bodies.Sun.zodiacSignIndex, 0);
+  assert.equal(chart.bodies.Moon.zodiacSignIndex, 11);
+  assert.deepEqual(chart.ephemerisProvenance, {
+    engineVersion: 'synthetic',
+    kernelSetId: 'synthetic',
+    timeModel: 'synthetic'
+  });
+  assert.equal(chart.houses, null);
+  assert.equal(chart.angles, null);
+  assert.equal(chart.warnings[0].code, 'houses_unavailable');
+  assert.equal(Object.isFrozen(chart), true);
+  assert.equal(Object.isFrozen(chart.bodies), true);
+});
