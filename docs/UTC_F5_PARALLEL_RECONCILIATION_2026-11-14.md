@@ -156,3 +156,47 @@ or `chunkTimeoutMs` are implemented in this PR #81 snapshot.
 Real Rust/WASM/JPL ephemeris accuracy, all-time enclosure provenance,
 reference kernel/time-model validation, native NodeNext/Bundler complete
 checkout, source licensing and release approval remain explicit blockers.
+
+
+## PR #81 live aggregate budget — true PR #21 scanner regression
+
+Post-migration integration commit
+`1b36ea6488708326771f2bfb497771ff06d59a4d` introduces the
+**shared `snapshotTransitPinnedIdentity`** and the F5 runner's
+**actual-call** global provider budget. It uses original immutable Git
+blobs from PR #72 commit
+`ed9b83614ddfd5a014657c6a0e7f206be35c3d2d`.
+The direct-runner regression fixture was updated to expect
+`INCOMPATIBLE_CHUNK_REQUEST` on invalid chunk identities while
+construction-time identity validation remains `INVALID_TRANSIT_IDENTITY`.
+
+The new integration test added at commit
+`b1791a851de04e4017a092c382054f9e81fc29e0`
+verifies the **actual PR #21 scanner/refiner**, not a replacement callback:
+a window with a synthetic continuous unwrapped aspect residual
+can be constructed with `maxTotalProviderCalls:1` despite much larger
+per-chunk theoretical caps; after exactly one physical provider invocation,
+the next point/enclosure call fails with `GLOBAL_PIPELINE_BUDGET`.
+The underlying provider is not called a second time; retrying the
+chunk fails with `PIPELINE_SEQUENCE_ERROR`.
+
+**Verification on the exact final GitHub code at this commit**:
+**48 of 48 focused synthetic V8 tests passed** across six original
+test/script sources: 18 upstream runner tests, 11 upstream report
+tests, 6 integration identity tests, 6 F1/F5 composition tests,
+5 genuine PR #21 scanner/refiner integration tests, and 2 manual
+PR #21 smoke tests. The runner, report and new test bytes were fetched
+from the integration commit and checked by their Git blob SHAs.
+The V8 harness rebounded ESM module imports and adapted Node assertions;
+**this is not native Node `npm test`**.
+
+Native full PR #81 `npm test`, the manual PR #21 test command and strict
+NodeNext/Bundler compilation on an authenticated combined checkout are
+still mandatory review gates. No actual astronomical validation, real
+Rust/WASM provider, JPL/SPK numerical comparison, or licensed release
+has been performed.
+
+**Important staging boundary:** PR #72's newer opt-in `AbortSignal`
+and `chunkTimeoutMs` API remain **unmerged** into PR #81. Future
+cherry-picks must reconcile those features and test cancellation
+before exposing them to production.
