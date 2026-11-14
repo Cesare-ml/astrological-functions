@@ -255,3 +255,28 @@ Record native Node version, exit codes and full diagnostics. This synthetic
 contract check does not establish Rust/WASM integration or JPL scientific
 accuracy. The intended sole astronomical backend remains
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+
+### Second-body kernel-set mismatch fails closed (14 November 2026)
+
+`test/provider-second-body-kernel-mismatch.test.mjs` checks the public ESM
+provider entry point with three synthetic bodies. The second response advertises
+a different `kernelSetId` while retaining the same engine version and time
+model. The chart must reject with `INCONSISTENT_EPHEMERIS` before requesting
+the third body. The test also verifies immutable requests and explicit
+`APPARENT/ECLIPTIC_OF_DATE` semantics. This prevents mixing independently
+computed positions from distinct kernel sets in one chart; it is not evidence
+of real Rust/WASM or NASA/JPL numerical accuracy.
+
+Required native validation on the complete draft branch:
+
+```sh
+node --check test/provider-second-body-kernel-mismatch.test.mjs
+node --test test/provider-second-body-kernel-mismatch.test.mjs
+npm test
+```
+
+These commands were **not executed** by this GitHub connector-only edit;
+record Node version, exit codes and diagnostics before claiming validation.
+The only intended astronomy engine remains
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
