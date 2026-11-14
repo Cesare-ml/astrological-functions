@@ -77,3 +77,48 @@ production. No release, dependency on Swiss code, GitHub Actions, publishing,
 public-license decision or merge to `main` is authorized.
 
 See [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+
+## Increment — pin direct F5 chunk identity and provenance (14 November 2026)
+
+The original `makeTransitChunkPipelineRunner` already pinned the UTC window,
+the provider's methods and the scanner/refinement settings. A consumer calling
+the runner directly (without the enclosing report collector) could still
+silently change `skyBodyName`, `natalBodyName`, `aspectId`, angle,
+orientation, or `engineVersion`/`kernelSetId`/`timeModel` between chunks.
+
+The integration branch now takes an **immutable detached identity snapshot**
+on the first valid request and requires all later chunk requests to match it
+exactly. Mismatches throw `INCOMPATIBLE_CHUNK_IDENTITY` *before* invoking the
+pipeline, without moving the expected chunk index. Malformed or missing fields
+throw `INVALID_TRANSIT_IDENTITY`. The validator reads property **data
+descriptors** rather than invoking a supplied JavaScript getter, and forwards
+only the validated frozen data to the pipeline.
+
+This is an **intentional hardening delta in PR #81**, not an upstream change
+to the independently active PR #72 branch. Coordinate the change explicitly
+before reconciling the two branches; do not silently overwrite newer upstream
+versions.
+
+**Native local evidence:** the five new
+`test/transit-chunk-pipeline-identity.test.mjs` cases failed 5/5 against
+the unmodified upstream adapter and passed 5/5 with the fix. Existing 10
+adapter tests also passed, then the local reconstructed F1/F2 and F5 Node.js
+fixture ran `npm test` **92/92 passes** on Node.js 22.16.0. Strict TypeScript
+5.8.3 consumer checks passed in both NodeNext and Bundler modes.
+
+The GitHub blob SHA-1 identities of the changed source and new regression test
+match **exactly** the locally tested files:
+- `src/transit-chunk-pipeline-adapter.mjs`:
+  `ee7cae1bfa1d8bcfc77329e49cd9959680597b52`
+- `test/transit-chunk-pipeline-identity.test.mjs`:
+  `fab4f346aed7f6a8492781bf12aa68461db8a3b8`
+
+This **92/92 subset is not the complete PR #81/PR #21 checkout**: the
+local fixture uses the earlier F1/F2/F5 sources, not the stacked PR #21
+source test suite or manual PR #21 smoke gate. The previously executed
+V8-bound original PR #21 sources (six isolated smoke/end-to-end tests)
+are also **not** native full-suite proof. Run the entire combined checkout,
+including `scripts/manual/transit-pr21-smoke.mjs` and the TypeScript manual
+gate, before merging. There is no real Rust/WASM/JPL astronomical
+validation, provider assurance, license sign-off or production approval.
