@@ -166,3 +166,48 @@ Rust/WASM/JPL parity, licensing gate, or production migration has been
 validated. No GitHub Actions, main merge, deploy, npm publication or
 repository visibility change. Continue crediting
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+
+## Incremental Windows-friendly export planning — 14 November 2026
+
+The planner now treats case-insensitively identical **ESM export subpath
+keys** as ambiguous, even if the literal JavaScript keys differ or their
+targets happen to be equal. It rejects such combinations with
+`CASE_COLLISION`, including two subpaths inside one candidate, separate
+candidate branches, and baseline-to-candidate collisions. Repeated
+**identical** subpath keys with identical target pairs remain supported.
+
+To avoid proposing package paths that fail on Windows (including VirgoStars
+Desktop development machines), the existing `UNSAFE_EXPORT_PATH` check
+also rejects Windows device-name path segments such as `CON`, `AUX`,
+`NUL`, `COM1`–`COM9`, and `LPT1`–`LPT9`, including names followed
+by a file extension. Path components ending in a dot are also rejected.
+Checks apply to the root target, ESM keys, and `types` / `import` targets.
+Non-reserved lookalikes (`console`, `auxiliary.d.ts`, `com10.js`)
+remain permitted. This validation is deliberately conservative and
+independent of the operating system used to run the planner.
+
+Seven deterministic native Node tests were added for intra-manifest,
+cross-manifest and baseline case collisions, unchanged exact-duplicate
+semantics, Windows reserved names, trailing dots and safe lookalikes.
+On the **isolated local copies** with Node **v22.16.0**:
+
+```sh
+node --check scripts/plan-esm-export-union.mjs
+node --check test/plan-esm-export-union.test.mjs
+node --test test/plan-esm-export-union.test.mjs
+```
+
+Result: **28 passed, 0 failed** (21 prior, 7 new). GitHub Git
+blob SHA-1s exactly match the locally executed files:
+
+- Planner: `16cf49ff4c384b1bc37900fbd2a6deb14b5829ae`
+- Tests: `6d2027b8774a4a5dbc3dfaed804fcf3bf15ad3a0`
+
+This is not an assertion that real candidate targets exist, that a
+consolidated `npm test` or TypeScript NodeNext/Bundler consumer import
+passed, or that Rust/WASM/JPL scientific validation is complete.
+Keep all existing integration, provenance, legal and downstream gates.
+No GitHub Actions, merge, deploy, npm release, production edit or
+visibility change. Credit
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
