@@ -12,6 +12,10 @@
     "./dodecatemoria-batch": {
       "types": "./src/dodecatemoria-batch.d.mts",
       "import": "./src/dodecatemoria-batch.mjs"
+    },
+    "./zodiac-decan-facts": {
+      "types": "./src/zodiac-decan-facts.d.mts",
+      "import": "./src/zodiac-decan-facts.mjs"
     }
   },
   "engines": {
