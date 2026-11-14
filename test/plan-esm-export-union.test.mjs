@@ -241,3 +241,63 @@ test('CLI reports drift without leaking candidate values or changing files', asy
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+
+test('case-only subpath collision within one candidate fails closed', () => {
+  expectCode(() => planEsmExportUnion([manifest(), manifest({
+    './Transits': entry('transits-upper'), './transits': entry('transits-lower')
+  })]), 'CASE_COLLISION');
+});
+
+test('case-only collision across independent candidate manifests fails closed', () => {
+  const list = [manifest(), manifest({ './House/Facts': entry('facts') }),
+    manifest({ './house/facts': entry('facts') })];
+  expectCode(() => planEsmExportUnion(list), 'CASE_COLLISION');
+});
+
+test('case-only collision against baseline exports fails closed', () => {
+  const baseline = manifest({ './Zodiac': entry('zodiac') });
+  expectCode(() => planEsmExportUnion([baseline, manifest({ './zodiac': entry('zodiac') })]),
+    'CASE_COLLISION');
+});
+
+test('identical subpaths from multiple candidates remain supported', () => {
+  const plan = planEsmExportUnion([manifest(), manifest({ './Transit': entry('transit') }),
+    manifest({ './Transit': entry('transit') })]);
+  assert.deepEqual(plan.entries, [{ subpath: './Transit', sources: ['candidate 1', 'candidate 2'] }]);
+});
+
+test('Windows device-name path segments are refused in subpaths and ESM targets', () => {
+  const segments = ['CON', 'con.txt', 'PrN', 'AUX.mjs', 'NuL', 'com1', 'COM9.js', 'lPt1', 'LPT9.d.ts'];
+  for (const segment of segments) {
+    expectCode(() => planEsmExportUnion([manifest(), manifest({
+      [`./nested/${segment}`]: entry('safe')
+    })]), 'UNSAFE_EXPORT_PATH');
+    for (const condition of ['types', 'import']) {
+      expectCode(() => planEsmExportUnion([manifest(), manifest({
+        './safe': { ...entry('safe'), [condition]: `./src/nested/${segment}` }
+      })]), 'UNSAFE_EXPORT_PATH');
+    }
+  }
+  expectCode(() => planEsmExportUnion([
+    manifest({}, { exports: { '.': './src/CON.mjs' } }), manifest()
+  ]), 'UNSAFE_EXPORT_PATH');
+});
+
+test('Windows-incompatible trailing dots in path segments are refused', () => {
+  for (const segment of ['name.', 'v1./index.mjs', 'src/file.']) {
+    expectCode(() => planEsmExportUnion([manifest(), manifest({
+      './safe': { ...entry('safe'), import: `./${segment}` }
+    })]), 'UNSAFE_EXPORT_PATH');
+  }
+});
+
+test('safe lookalike names and stable candidate output remain accepted', () => {
+  const value = manifest({ './console': { types: './src/auxiliary.d.ts', import: './src/com10.js' },
+    './transits': entry('transits') });
+  const before = JSON.stringify(value);
+  const plan = planEsmExportUnion([manifest(), value]);
+  assert.equal(plan.exportCount, 3);
+  assert.deepEqual(plan.nonExportDrift, []);
+  assert.equal(JSON.stringify(value), before);
+});
