@@ -63,3 +63,28 @@ Validation to run on a complete checkout: `node --check test/provider-provenance
 Commit `49839f7` adds a synthetic regression where the first provider result has `null`/`undefined`/`null` provenance and the second has `undefined`/`null`/`undefined`. Both should normalize to fully absent provenance (`null` fields) without false inconsistency, retaining frozen request and result metadata. This is distinct from a partially absent provenance field paired with valid strings, which must still fail closed.
 
 Run `node --check test/provider-provenance-nullish-regression.test.mjs` and `node --test test/provider-provenance-nullish-regression.test.mjs`, followed by `npm test` and strict consumer TypeScript checks on the complete stacked checkout. **These commands have not been executed for this increment.** This is synthetic provider behavior, not validation of Rust/WASM kernels or scientific parity. No publication, production, license or export-map change. VirgoStars Ephemeris credit: https://github.com/Cesare-ml/VirgoStars-Ephemeris
+
+### Invalid numeric payloads at public ESM boundary (14 November 2026)
+
+Commit `c3014e5` adds seven synthetic regression cases through the published
+`astrological-functions/ephemeris-provider` ESM subpath: nonfinite longitude,
+out-of-range or nonfinite ecliptic latitude, and nonfinite/non-numeric optional
+longitude speed. Every case expects `INVALID_EPHEMERIS_RESULT` after exactly
+one frozen provider request, without requesting the next body. These are
+contract validation tests, **not** astronomical calculations or JPL parity tests.
+
+To validate on a complete checkout of this stacked branch:
+
+```sh
+node --check test/provider-public-esm-provenance-regression.test.mjs
+node --test test/provider-public-esm-provenance-regression.test.mjs
+npm test
+```
+
+**Execution status:** GitHub commit confirmed; the above commands and strict
+NodeNext/Bundler TypeScript compilation have **not** been run in this
+connector-only increment. Existing PR #3 dependency and parallel ESM staging
+PRs #69/#83–#87 require reconciliation before merge. Keep draft. No GitHub
+Actions, release, deployment, production migration or license change. The
+only intended astronomy engine is Rust
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
