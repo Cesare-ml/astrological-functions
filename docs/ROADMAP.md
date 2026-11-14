@@ -1,6 +1,6 @@
 # Astrological Functions — roadmap
 
-Status: **planning only**, 2026-11-09. The library will extract **many useful components, not necessarily all backend functions**. No production migration from documentation alone. No GitHub Actions or automatic releases.
+Roadmap originally drafted **2026-11-09**. Selected F1/F4/F5 modules now exist as **isolated experimental code in draft PRs**; the full migration and scientific validation remain incomplete. The library will extract **many useful components, not necessarily all backend functions**. No production migration from documentation alone. No GitHub Actions or automatic releases.
 
 | Phase | Scope | Exit condition |
 |---|---|---|
@@ -33,3 +33,22 @@ A function consumes a deterministic fake `EphemerisProvider` and emits a 7-body 
 - Public MIT vs other permissive license decision after rights audit
 - Package name/version, CJS vs ESM support, and Node/Astrolabio compatibility targets
 - How to version and normalize special points when JPL data is insufficient
+
+
+## Integration checkpoint — 14 November 2026 (draft PR #79 only)
+
+| Scope | Current demonstrated state | Remaining exit gates |
+| --- | --- | --- |
+| F1 pure math | Node math tests executing with the original `src/index.mjs`; mock natal-provider gate rejects geometric J2000 | Method-specific house validation and full natal chart |
+| F4 SKY_TO_NATAL facts | Strict input/provenance checks, typed subpath, synthetic tests | Scientifically validated provider positions and consumer parity |
+| F5 event candidates | Bounded UTC chunks, adaptive provider-asserted enclosures, bracket refinement, pinned transit identity, global live call limits, cancellation, timeouts, and per-chunk callback isolation | Validated all-time interval enclosures from Rust, JPL reference parity, tangencies/multiple roots, hard isolation for noncooperative providers and end-to-end science |
+| Repository Node suite | **123/123** tests passed with all 11 source and 11 test JS Git blobs independently SHA-matched to PR #79 | Native Git checkout/staging consumer verification; no GitHub Actions |
+| Manual F5 integration | **11/11** actual-pipeline synthetic runtime smoke tests plus TypeScript strict NodeNext checks passed | Rust/WASM real provider and non-synthetic ephemeris test datasets |
+
+To reproduce runtime and type gates manually on the combined checkout (Node >=20 and TypeScript `tsc` on PATH):
+
+```sh
+node scripts/manual/validate-f5-stack.mjs
+```
+
+This is **not a release milestone**: the local test tree was SHA-reconstructed through the GitHub connector because direct Git clone was unavailable. All ephemeris tests remain synthetic; production VirgoStars and Astrolabio are unchanged. See [the execution evidence](F5_INTEGRATION_VALIDATION_2026-11-14.md) for SHA matching, environment and limitations. Keep PRs #13, #14, #17, #21, #72 and #79 draft until review and scientific accuracy gates pass.
