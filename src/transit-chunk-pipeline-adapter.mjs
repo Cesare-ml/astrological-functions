@@ -24,6 +24,50 @@ function integer(value, low, high) {
   return Number.isSafeInteger(value) && value >= low && value <= high;
 }
 
+
+// Descriptor reads keep caller-owned accessors from executing during validation.
+// The collector supplies frozen plain data records; direct runner callers must
+// provide the same stable, explicitly versioned identity contract.
+function ownData(value, name, code) {
+  const descriptor = Object.getOwnPropertyDescriptor(value, name);
+  if (!descriptor || !Object.hasOwn(descriptor, 'value'))
+    reject(code, `Expected an own data property: ${name}`);
+  return descriptor.value;
+}
+function named(value, label) {
+  if (typeof value !== 'string' || !value.trim() || value !== value.trim())
+    reject('INVALID_TRANSIT_IDENTITY', `${label} must be a nonempty trimmed identifier`);
+  return value;
+}
+function pinnedChunkIdentity(request) {
+  const provenance = ownData(request, 'ephemerisProvenance', 'INVALID_TRANSIT_IDENTITY');
+  if (!provenance || typeof provenance !== 'object' || Array.isArray(provenance))
+    reject('INVALID_TRANSIT_IDENTITY', 'Explicit provenance object is required');
+  const ephemerisProvenance = Object.freeze({
+    engineVersion: named(ownData(provenance, 'engineVersion', 'INVALID_TRANSIT_IDENTITY'), 'engineVersion'),
+    kernelSetId: named(ownData(provenance, 'kernelSetId', 'INVALID_TRANSIT_IDENTITY'), 'kernelSetId'),
+    timeModel: named(ownData(provenance, 'timeModel', 'INVALID_TRANSIT_IDENTITY'), 'timeModel'),
+  });
+  const exactAngleDeg = ownData(request, 'exactAngleDeg', 'INVALID_TRANSIT_IDENTITY');
+  const orientation = ownData(request, 'orientation', 'INVALID_TRANSIT_IDENTITY');
+  if (typeof exactAngleDeg !== 'number' || !Number.isFinite(exactAngleDeg) ||
+      exactAngleDeg < 0 || exactAngleDeg > 180 ||
+      (orientation !== 'POSITIVE' && orientation !== 'NEGATIVE'))
+    reject('INVALID_TRANSIT_IDENTITY', 'Aspect angle and orientation must be explicit');
+  return Object.freeze({
+    skyBodyName: named(ownData(request, 'skyBodyName', 'INVALID_TRANSIT_IDENTITY'), 'skyBodyName'),
+    natalBodyName: named(ownData(request, 'natalBodyName', 'INVALID_TRANSIT_IDENTITY'), 'natalBodyName'),
+    aspectId: named(ownData(request, 'aspectId', 'INVALID_TRANSIT_IDENTITY'), 'aspectId'),
+    exactAngleDeg, orientation, ephemerisProvenance,
+  });
+}
+function sameIdentity(a, b) {
+  return ['skyBodyName', 'natalBodyName', 'aspectId', 'exactAngleDeg', 'orientation']
+    .every(key => a[key] === b[key]) &&
+    ['engineVersion', 'kernelSetId', 'timeModel']
+      .every(key => a.ephemerisProvenance[key] === b.ephemerisProvenance[key]);
+}
+
 /**
  * Create a once-per-chunk runner compatible with collectTransitChunkCandidateReports.
  * Caller's prepareCandidates is PR #21's prepareTransitAspectEventCandidates once
@@ -87,25 +131,31 @@ export function makeTransitChunkPipelineRunner(input) {
   let nextIndex = 0;
   let running = false;
   let failed = false;
+  let firstIdentity = null;
   return async function runChunk(request) {
     if (running || failed || nextIndex >= plan.chunks.length)
       reject('PIPELINE_SEQUENCE_ERROR', 'F5 chunks must run once, sequentially, without retry after failure');
     object(request, 'request');
     const expected = plan.chunks[nextIndex];
-    if (request.chunkIndex !== expected.index || request.startUtc !== expected.startUtc ||
-        request.endUtc !== expected.endUtc)
+    if (ownData(request, 'chunkIndex', 'INCOMPATIBLE_CHUNK_REQUEST') !== expected.index ||
+        ownData(request, 'startUtc', 'INCOMPATIBLE_CHUNK_REQUEST') !== expected.startUtc ||
+        ownData(request, 'endUtc', 'INCOMPATIBLE_CHUNK_REQUEST') !== expected.endUtc)
       reject('INCOMPATIBLE_CHUNK_REQUEST', 'F5 request does not match the prevalidated UTC chunk');
+    const identity = pinnedChunkIdentity(request);
+    if (firstIdentity !== null && !sameIdentity(firstIdentity, identity))
+      reject('INCOMPATIBLE_CHUNK_IDENTITY', 'F5 aspect identity or ephemeris provenance changed between chunks');
+    if (firstIdentity === null) firstIdentity = identity;
     running = true;
     try {
       // No chunkIndex forwarded: it is not part of the PR #21 contract.
       const result = await prepareCandidates(Object.freeze({
         startUtc: expected.startUtc, endUtc: expected.endUtc,
-        skyBodyName: request.skyBodyName,
-        natalBodyName: request.natalBodyName,
-        aspectId: request.aspectId,
-        exactAngleDeg: request.exactAngleDeg,
-        orientation: request.orientation,
-        ephemerisProvenance: request.ephemerisProvenance,
+        skyBodyName: identity.skyBodyName,
+        natalBodyName: identity.natalBodyName,
+        aspectId: identity.aspectId,
+        exactAngleDeg: identity.exactAngleDeg,
+        orientation: identity.orientation,
+        ephemerisProvenance: identity.ephemerisProvenance,
         targetIntervalMs, maxDepth, maxProviderCalls,
         provider: fixedProvider, refinement: r,
       }));
