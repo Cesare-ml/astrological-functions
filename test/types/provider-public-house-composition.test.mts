@@ -69,7 +69,9 @@ async function consumer() {
 
   const hasBirthTime: true = true;
   const placed = placeNatalBodiesInHouses({chart, cuspSet, birthTimeKnown: hasBirthTime});
-  const house: number = placed.placements.Sun.house;
+  const sunPlacement = placed.placements.Sun;
+  if (sunPlacement === undefined) throw new Error("Sun placement is missing");
+  const house: number = sunPlacement.house;
   const readonlyMethod: 'CUSP_INTERVAL' = placed.placementMethod;
   const unchangedNatalHouses: null = chart.houses;
   void house;
@@ -100,7 +102,7 @@ async function consumer() {
   // @ts-expect-error The natal result is readonly.
   chart.ephemerisProvenance.kernelSetId = 'other';
   // @ts-expect-error Placement output is readonly.
-  placed.placements.Sun.house = 4;
+  sunPlacement.house = 4;
   // @ts-expect-error The provider output is readonly.
   state.metadata.kernelSetId = 'other';
 }
