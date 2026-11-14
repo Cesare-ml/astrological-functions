@@ -54,7 +54,7 @@ test('multi-epoch comparison reports totals and worst signed six-field differenc
   const referenceCalls = [], candidateCalls = [];
   const changed = {
     [`${UTC_B}/Moon`]: { latitudeSpeedDegPerDay: 0.102 },
-    [`${UTC_C}/Sun`]: { longitudeDeg: 359.9999 + (2 / 3600) },
+    [`${UTC_C}/Sun`]: { longitudeDeg: (359.9999 + (2 / 3600)) % 360 },
   };
   const result = await compareApparentEphemerisGrid(input({
     referenceProvider: makeProvider('reference-v1', {}, referenceCalls),
