@@ -157,3 +157,35 @@ test('ESM package provider assembles a synthetic natal chart without inventing h
   assert.equal(Object.isFrozen(chart), true);
   assert.equal(Object.isFrozen(chart.bodies), true);
 });
+
+test('public ESM provider rejects mixed provenance across synthetic bodies', async () => {
+  const requests = [];
+  await assert.rejects(
+    packageProvider.calculateNatalWithProvider({
+      datetimeUtc: '2026-11-14T00:00:00Z',
+      latitudeDeg: 45,
+      longitudeDegEast: 11,
+      bodyNames: ['Sun', 'Moon'],
+      provider: {
+        async getGeocentricEcliptic(request) {
+          requests.push(request);
+          return {
+            longitudeDeg: request.bodyName === 'Sun' ? 1 : 31,
+            latitudeDeg: 0,
+            metadata: {
+              center: 'EARTH',
+              frame: 'ECLIPTIC_OF_DATE',
+              corrections: 'APPARENT',
+              engineVersion: 'synthetic',
+              kernelSetId: request.bodyName === 'Sun' ? 'kernel-A' : 'kernel-B',
+              timeModel: 'synthetic'
+            }
+          };
+        }
+      }
+    }),
+    { code: 'INCONSISTENT_EPHEMERIS' }
+  );
+  assert.deepEqual(requests.map(request => request.bodyName), ['Sun', 'Moon']);
+  assert.equal(requests.every(Object.isFrozen), true);
+});
