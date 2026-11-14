@@ -4,7 +4,11 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.mjs"
+    ".": "./src/index.mjs",
+    "./dodecatemoria": {
+      "types": "./src/dodecatemoria-methods.d.mts",
+      "import": "./src/dodecatemoria-methods.mjs"
+    }
   },
   "engines": {
     "node": ">=20"
