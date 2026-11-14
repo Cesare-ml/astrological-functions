@@ -23,6 +23,13 @@ node --test test/math.test.mjs test/angle-normalization-precision.test.mjs test/
 # 19 tests passed, zero failed (4 existing math, 8 precision, 7 cusp regression)
 ```
 
-All four tested files (corrected source, main math, precision, and new regression) matched GitHub blob SHA-1s. This is **not** a claim of a complete full-repository `npm test`, a real chart comparison, scientific JPL parity or downstream VirgoStars Desktop regression. Integrating this patch requires review of conflicting house-method and source-provenance branches.
+All four math/regression files matched GitHub blob SHA-1s. The reconstructed test checkout was then completed with the current `main` package, the exact `scripts/audit-pr-dependencies.mjs`, the dodecatemoria methods/batch implementation and their existing test files, each independently checked against its original GitHub blob SHA-1.
+
+```sh
+npm test
+# Node.js 22.16.0: 46 passed, 0 failed, native node:test
+```
+
+This is the **full current `npm test` JavaScript suite** executed in a byte-verified reconstruction of the GitHub files; it is **not** an authenticated direct Git clone. It does not demonstrate real ephemeris/JPL accuracy, production parity or downstream VirgoStars Desktop regression. TypeScript declaration contracts were not modified. Integrating this patch requires review of conflicting house-method and source-provenance branches.
 
 No implicit house method, astronomical source data, package export or production status is changed. VirgoStars credits and licensed-source review remain required for later distribution.
