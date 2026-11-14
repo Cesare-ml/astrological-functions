@@ -51,3 +51,9 @@ during this increment. Assertions reflect inspection of the current runtime
 contract, not measured passing tests. A pinned real Rust/WASM ephemeris remains
 unvalidated; no astronomical algorithms were added. Source and credit:
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+## Syntax repair — 14 November 2026
+
+The nullish-provenance regression test previously contained three literal `\\n` sequences inside JavaScript source (in an `assert.deepEqual` object literal and before its following assertion). These are not valid JavaScript tokens outside strings. Commit `213f5fb` replaces them with actual line breaks without changing the test assertions or the runtime. This repairs a test parse blocker, **not** a confirmed passing test.
+
+Validation to run on a complete checkout: `node --check test/provider-provenance-nullish-regression.test.mjs`, `node --test test/provider-provenance-nullish-regression.test.mjs`, and `npm test`; then perform the documented strict TypeScript NodeNext/Bundler consumer checks. These commands were **not executed** in the GitHub-connector-only environment; no scientific accuracy claim. No astronomy algorithm, production route, license, package release or GitHub Actions changes. [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) remains the sole intended Rust astronomical backend.
