@@ -20,9 +20,26 @@ export class ESMClosureError extends Error {
 
 const nativeBuiltins = new Set(builtinModules.map(name => name.replace(/^node:/, '')));
 const lexicalImport = /(?:^|\n)\s*import\s+(?:[^;]*?\s+from\s+)?['"]([^'"\n]+)['"]/g;
-const lexicalReExport = /(?:^|\n)\s*export\s+(?:\*\s*(?:as\s+\w+\s*)?|\{[^}]*\}\s*)from\s*['"]([^'"\n]+)['"]/g;
+const lexicalReExport = /(?:^|\n)\s*export\s+(?:type\s+)?(?:\*\s*(?:as\s+\w+\s*)?|\{[^}]*\}\s*)from\s*['"]([^'"\n]+)['"]/g;
 const literalDynamicImport = /\bimport\s*\(\s*['"]([^'"\n]+)['"]\s*\)/g;
 const sourceExtensions = /\.(?:mjs|js)$/;
+const declarationExtensions = /\.d\.(?:mts|ts)$/;
+const tripleSlashPaths = /\/\/\/\s*<reference\s+path\s*=\s*['"]([^'"]+)['"][^>]*\/>/g;
+
+/** NodeNext resolves relative .mjs -> .d.mts and .js -> .d.ts. */
+function declarationSpecifierPath(specifier) {
+  if (declarationExtensions.test(specifier)) return specifier;
+  if (specifier.endsWith('.mjs')) return specifier.slice(0, -4) + '.d.mts';
+  if (specifier.endsWith('.js')) return specifier.slice(0, -3) + '.d.ts';
+  throw new ESMClosureError('UNSUPPORTED_DECLARATION_SPECIFIER',
+    `Declaration import requires an explicit .mjs, .js or .d.* path: ${specifier}`);
+}
+
+function referencedDeclarations(source) {
+  tripleSlashPaths.lastIndex = 0;
+  const tripleSlash = [...source.matchAll(tripleSlashPaths)].map(x => x[1]);
+  return [...new Set([...staticSpecifiers(source), ...tripleSlash])].sort();
+}
 
 function isWithin(root, target) {
   const rel = relative(root, target);
@@ -90,6 +107,52 @@ export async function verifyEsmSourceClosure(stagedRoot) {
     resolve(root, value.types.slice(2)));
   for (const path of typeTargets) await checkRegularFile(root, path);
 
+  // Runtime source closure and declaration closure are distinct graphs:
+  // declarations may import other declarations not reachable from any JS file.
+  const declarationQueue = [...typeTargets];
+  const declarationVisited = new Set();
+  const declarationEdges = [];
+  while (declarationQueue.length) {
+    const file = declarationQueue.shift();
+    if (declarationVisited.has(file)) continue;
+    if (!declarationExtensions.test(file))
+      throw new ESMClosureError('UNSUPPORTED_DECLARATION_SPECIFIER', 'Unexpected declaration target');
+    await checkRegularFile(root, file);
+    declarationVisited.add(file);
+    const content = await readFile(file, 'utf8');
+    for (const specifier of referencedDeclarations(content)) {
+      if (specifier.startsWith('node:')) {
+        if (!nativeBuiltins.has(specifier.slice(5)))
+          throw new ESMClosureError('UNKNOWN_NODE_BUILTIN', `Unknown node: type import: ${specifier}`);
+        continue;
+      }
+      let target;
+      if (specifier === manifest.name || specifier.startsWith(manifest.name + '/')) {
+        const subpath = specifier === manifest.name ? '.' : './' + specifier.slice(manifest.name.length + 1);
+        const entry = exports[subpath];
+        if (!entry || subpath === '.')
+          throw new ESMClosureError('UNPUBLISHED_DECLARATION_DEPENDENCY',
+            `Type import refers to an unavailable package subpath: ${specifier}`);
+        target = resolve(root, entry.types.slice(2));
+      } else {
+        if (!specifier.startsWith('./') && !specifier.startsWith('../'))
+          throw new ESMClosureError('UNPINNED_DECLARATION_DEPENDENCY',
+            `Unpinned type import: ${specifier}`);
+        if (specifier.includes('?') || specifier.includes('#'))
+          throw new ESMClosureError('UNSUPPORTED_DECLARATION_SPECIFIER',
+            `Ambiguous type import: ${specifier}`);
+        target = resolve(dirname(file), declarationSpecifierPath(specifier));
+      }
+      if (!isWithin(root, target))
+        throw new ESMClosureError('OUTSIDE_STAGING_ROOT',
+          `Type import escapes staging root: ${specifier}`);
+      await checkRegularFile(root, target);
+      declarationEdges.push({ from: relative(root, file).split(sep).join('/'),
+        to: relative(root, target).split(sep).join('/') });
+      declarationQueue.push(target);
+    }
+  }
+
   const queue = [...runtimeTargets.map(x => x.path)];
   const visited = new Set();
   const edges = [];
@@ -142,6 +205,10 @@ export async function verifyEsmSourceClosure(stagedRoot) {
     declarationCount: typeTargets.length,
     runtimeModuleCount: visited.size,
     dependencyEdgeCount: edges.length,
+    declarationModuleCount: declarationVisited.size,
+    declarationDependencyEdgeCount: declarationEdges.length,
+    declarationFiles: [...declarationVisited].map(p => relative(root, p).split(sep).join('/')).sort(),
+    declarationEdges: declarationEdges.sort((a, b) => (a.from + a.to).localeCompare(b.from + b.to, 'en')),
     runtimeFiles: [...visited].map(p => relative(root, p).split(sep).join('/')).sort(),
     edges: edges.sort((a, b) => (a.from + a.to).localeCompare(b.from + b.to, 'en')),
   };
