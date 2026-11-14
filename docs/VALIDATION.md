@@ -105,3 +105,18 @@ claiming success. This new regression has not been executed natively here.
 ### Isolated negative metadata fixture — 14 November 2026
 
 The `wrongCenter` compile-only fixture now spreads a fully populated, otherwise valid `ApparentGeocentricState` and overrides **only** `metadata.center` to `SUN`. This prevents a false-positive `@ts-expect-error` caused by missing unrelated required metadata fields. Run the strict NodeNext and Bundler `tsc` commands above; neither mode has been executed on the complete checkout in this change. The fixture does not validate astronomical positions or a real Rust/WASM provider.
+
+### House-placement type gates — 14 November 2026
+
+The strict package-subpath consumer fixture now checks that a separately supplied,
+context-matched external cusp set is required to request house placements, and that
+`birthTimeKnown` must be the literal `true`. A valid typed request is included
+alongside two negative `@ts-expect-error` cases (unknown birth time and missing
+cusp set). These are compile-time contract assertions, **not** a claim that the
+underlying cusp astronomy or Rust/WASM bridge is validated.
+
+Run the NodeNext and Bundler `tsc --noEmit` commands documented above on the
+complete PR #54 branch. If a negative assertion reports TS2578 (unused directive),
+investigate the declaration contract before treating the fixture as passing.
+No native compilation was executed for this change; Node.js/TypeScript versions
+alone are not evidence of a passing repository test.
