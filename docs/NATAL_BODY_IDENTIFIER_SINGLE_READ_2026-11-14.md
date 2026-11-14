@@ -31,3 +31,9 @@ The provider method pinning, apparent geocentric/ecliptic-of-date requirements, 
 This fix must be reviewed on top of draft #104, not merged straight to stale `main`. During review, `main` advanced with [#105](https://github.com/Cesare-ml/astrological-functions/pull/105), changing the **separate** 13-fold dodecatemoria root math. Reconcile that already-merged numeric change independently and re-run combined native tests before any final merge; do not let a provider-root update overwrite #105. Existing parallel ESM/UTC work also requires a current-main check.
 
 No GitHub Actions, npm publishing, deployment, production routes, Swiss fallback, sensitive data, or private repository visibility changes.
+
+## Concurrent main #105 reconciliation recorded
+
+While this patch was staged, its parent draft #104 advanced to commit `a0f426ff985bad1f2020e642ab49699d001d2ac6` and already incorporated the merged [main PR #105](https://github.com/Cesare-ml/astrological-functions/pull/105) 13-fold modular-precision fix. To avoid clobbering that independent root change, the final branch merges the current parent as an explicit **second Git parent**, carrying forward all parent files and replacing only the old three-pass `bodyNames` validation block with this audited single-indexed-pass implementation.
+
+The combined pre-commit source was replayed with the exact five test callbacks from `test/dodecatemoria-modular-precision.test.mjs` (blob `04eab3fe09aabf094efeb6d7e473cdac9f38a6c0`) and all eight new body identifier tests (blob `23059420442a54c3f1bf67f25e23a1e6ec0928f6`): **13/13 passed** in strict isolated V8. The last Pisces ULP maps to `359.99999999999926°` after Paulus's 13-fold transform. This remains **synthetic V8 with mocked Node imports**, not a full native Node/TypeScript test run.
