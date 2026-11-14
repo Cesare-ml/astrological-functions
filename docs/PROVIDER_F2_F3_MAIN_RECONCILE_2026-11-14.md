@@ -30,3 +30,29 @@ Separate baseline from main before F2 integration: native Node 22.16.0 `npm test
 The offline GitHub PR-dependency and SHA snapshot tools remain untouched. No GitHub Actions, npm publishing, production migration, public release, license or visibility change was performed.
 
 VirgoStars: https://github.com/Cesare-ml/VirgoStars-Ephemeris
+
+
+## Native verification command / guarded manual gate
+
+The branch now includes `scripts/verify-provider-integration.mjs` (exact GitHub blob `4f4c4e4ae2675ed6adc93b1c68ac7687877b647f`) and four native Node regression tests in `test/provider-integration-manual-gate.test.mjs` (exact GitHub blob `ad8a82f9ec646cb9d710492114b276f6e3feedb1`).
+
+After a full authenticated clone/checkout of **this PR branch**, with Node.js >=20 and a locally available TypeScript `tsc`, run:
+
+```sh
+node scripts/verify-provider-integration.mjs --help
+node scripts/verify-provider-integration.mjs --list
+node scripts/verify-provider-integration.mjs
+```
+
+The no-argument command searches **both `test/` and `tests/`**, invokes every `*.test.mjs` by explicit path (not implicit test discovery), then runs all `.ts` and `.mts` fixtures in **strict NodeNext and strict Bundler** modes with `noEmit`. It exits nonzero for any failed native Node test, unavailable `tsc`, TypeScript compilation error or a partial checkout with fewer than **64 JavaScript test files or 14 TypeScript fixtures**. It works without shell globs, network calls, GitHub Actions, publishing or production writes, and selects `tsc.cmd` under Windows. The `--list` option lets operators audit the exact inventory before running.
+
+### Actual local verification, not a full F2/F3 claim
+
+A byte-verified **earlier main-only** reconstruction with the exact two new script/test files ran on Node 22.16.0 and TypeScript 5.8.3:
+- `node --check` of both added files **PASS**;
+- `node --test test/provider-integration-manual-gate.test.mjs` **4/4 PASS** (help, inventory, rejected flags, partial-checkout fail closed);
+- local baseline `npm test`: **91/91 PASS** (87 prior main runtime tests + 4 tool tests);
+- five existing declaration fixtures: **strict NodeNext PASS; strict Bundler PASS**;
+- the CLI **correctly exited 2** on that incomplete baseline (15 runtime test files, 5 type fixtures). The branch's actual complete Git tree now has **65 runtime test files and 14 type fixtures**, but this is a GitHub inventory check, **not evidence that native tests on all of them pass**.
+
+These results **do not fulfill** the mandatory full-branch native Node + TypeScript gate. The combined provider/house source was previously tested on 43/43 adapted V8 assertions, which do not replace an actual Node package self-import test. Native results and a recorded checkout/ref SHA from a fully reconstructed 130+-file branch are still required before any merge into main. Keep PR **DRAFT**. Scientific apparent-of-date Rust/JPL parity, license/credits, privacy, downstream builds and staged release review remain separate.
