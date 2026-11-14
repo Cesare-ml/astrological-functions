@@ -189,3 +189,39 @@ test('public ESM provider rejects mixed provenance across synthetic bodies', asy
   assert.deepEqual(requests.map(request => request.bodyName), ['Sun', 'Moon']);
   assert.equal(requests.every(Object.isFrozen), true);
 });
+
+
+test('public ESM provider rejects engine-version and time-model drift independently', async () => {
+  for (const changedField of ['engineVersion', 'timeModel']) {
+    const requests = [];
+    await assert.rejects(
+      packageProvider.calculateNatalWithProvider({
+        datetimeUtc: '2026-11-14T00:00:00Z',
+        latitudeDeg: 45,
+        longitudeDegEast: 11,
+        bodyNames: ['Sun', 'Moon'],
+        provider: {
+          async getGeocentricEcliptic(request) {
+            requests.push(request);
+            return {
+              longitudeDeg: request.bodyName === 'Sun' ? 1 : 31,
+              latitudeDeg: 0,
+              metadata: {
+                center: 'EARTH',
+                frame: 'ECLIPTIC_OF_DATE',
+                corrections: 'APPARENT',
+                engineVersion: changedField === 'engineVersion' && request.bodyName === 'Moon' ? 'engine-B' : 'engine-A',
+                kernelSetId: 'kernel-A',
+                timeModel: changedField === 'timeModel' && request.bodyName === 'Moon' ? 'time-B' : 'time-A'
+              }
+            };
+          }
+        }
+      }),
+      { code: 'INCONSISTENT_EPHEMERIS' },
+      changedField
+    );
+    assert.deepEqual(requests.map(request => request.bodyName), ['Sun', 'Moon'], changedField);
+    assert.equal(requests.every(Object.isFrozen), true, changedField);
+  }
+});
