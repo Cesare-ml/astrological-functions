@@ -72,3 +72,28 @@ void legacyAliasInCanonical;
 // @ts-expect-error The Rust/WASM adapter must not accept a geometric frame as apparent-of-date.
 const wrongFrame: EphemerisRequest = { ...request, frame: 'MEAN_ECLIPTIC_OF_DATE' };
 void wrongFrame;
+
+
+/** House placement is a separate opt-in step; the natal result never invents houses. */
+import { placeNatalBodiesInHouses } from 'astrological-functions/ephemeris-provider';
+import type { HouseCuspContextInput } from 'astrological-functions/ephemeris-provider';
+declare const externallyValidatedCusps: HouseCuspContextInput['cuspSet'];
+declare const experimentalChart: ExperimentalNatalResult;
+const housePlacementRequest: Parameters<typeof placeNatalBodiesInHouses>[0] = {
+  chart: experimentalChart,
+  cuspSet: externallyValidatedCusps,
+  birthTimeKnown: true
+};
+void housePlacementRequest;
+// @ts-expect-error Unknown birth time cannot authorize precise natal house placement.
+const unknownBirthTimePlacement: Parameters<typeof placeNatalBodiesInHouses>[0] = {
+  ...housePlacementRequest,
+  birthTimeKnown: false
+};
+void unknownBirthTimePlacement;
+// @ts-expect-error House placement requires a context-matched external cusp payload.
+const missingCuspSet: Parameters<typeof placeNatalBodiesInHouses>[0] = {
+  chart: experimentalChart,
+  birthTimeKnown: true
+};
+void missingCuspSet;
