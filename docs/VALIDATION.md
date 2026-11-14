@@ -174,3 +174,17 @@ Run from a full checkout of the draft branch: `node --test test/pilot-provider-c
 The strict package-subpath TypeScript fixture now checks that external consumers cannot reassign a chart's UTC instant, its nested ephemeris kernel provenance, or an individual body's longitude. It also rejects a general `boolean` for `birthTimeKnown`: house placement requires the literal `true`, established by the caller after checking birth-time availability. These are compile-time contracts only, not runtime deep-freeze or astronomical accuracy tests.
 
 Run both NodeNext and Bundler `tsc --noEmit` commands shown above on the complete PR #54 branch. In particular, treat `TS2578` (unused `@ts-expect-error`) as a failure, and record diagnostics and exit codes. This change was committed through the GitHub contents interface; no native TypeScript compilation or full `npm test` was executed here. The future Rust/WASM astronomy backend remains [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris); do not substitute a JavaScript astronomical implementation.
+
+### Public ESM birth-time runtime gate — 14 November 2026
+
+The provider-subpath smoke now asserts that `placeNatalBodiesInHouses` rejects
+`false`, `undefined`, `null`, `0`, and `'true'` with the exact
+`BIRTH_TIME_REQUIRED` error. The intentionally absent chart and cusp payloads
+verify that the explicit birth-time gate runs before any external house data
+is consumed. This is a synthetic runtime contract regression, not evidence
+of astronomical house-system accuracy.
+
+Run `node --test test/pilot-provider-consumer-smoke.test.mjs`, `npm test`,
+and the strict NodeNext/Bundler TypeScript consumer commands above on a full
+checkout of draft PR #54. These commands have **not** been executed in this
+GitHub-only update. Do not advance the validation status without exit codes.
