@@ -145,3 +145,19 @@ Run `node --test test/pilot-provider-consumer-smoke.test.mjs` and `npm test`
 on the complete stacked branch and record versions, exit codes and diagnostics.
 This addition was committed through GitHub without a native Node checkout
 execution; it remains **IMPLEMENTED_ISOLATED**, not `VALIDATED_LOCAL`.
+
+### Public ESM mixed-kernel provenance gate — 14 November 2026
+
+The public `astrological-functions/ephemeris-provider` smoke now supplies two
+synthetic apparent-of-date bodies with matching engine/time model but **different
+kernelSetId** values. The assembly must reject with
+`INCONSISTENT_EPHEMERIS` after two immutable per-body requests; it must not
+return a chart mixing astronomical provenance. This isolates the kernel
+consistency rule from unrelated metadata validation. It does not test real
+Rust/WASM kernels or scientific accuracy.
+
+GitHub commit `0f9d202` records the new fixture. **Native tests have not
+been executed for this change.** On the complete PR #54 checkout run
+`node --test test/pilot-provider-consumer-smoke.test.mjs`, `npm test`,
+and both NodeNext/Bundler TypeScript commands documented above. Record
+versions, exit codes and failures before claiming local validation.
