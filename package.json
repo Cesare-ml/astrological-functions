@@ -4,7 +4,19 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.mjs"
+    ".": "./src/index.mjs",
+    "./declination-contacts": {
+      "types": "./src/declination-contacts.d.mts",
+      "import": "./src/declination-contacts.mjs"
+    },
+    "./sourced-declination-contacts": {
+      "types": "./src/sourced-declination-contacts.d.mts",
+      "import": "./src/sourced-declination-contacts.mjs"
+    },
+    "./declination-provider": {
+      "types": "./src/declination-provider-gate.d.mts",
+      "import": "./src/declination-provider-gate.mjs"
+    }
   },
   "engines": {
     "node": ">=20"
