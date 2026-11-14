@@ -230,19 +230,30 @@ export function placeNatalBodiesInHouses(input = {}) {
   const { chart, cuspSet, birthTimeKnown } = input;
   if (birthTimeKnown !== true)
     throw new AstrologyError('BIRTH_TIME_REQUIRED', 'House placement requires an explicitly known birth time');
-  if (!chart || typeof chart !== 'object' || Array.isArray(chart) ||
-      !chart.bodies || typeof chart.bodies !== 'object' ||
-      Array.isArray(chart.bodies) || Object.keys(chart.bodies).length === 0)
+  if (!chart || typeof chart !== 'object' || Array.isArray(chart))
+    throw new AstrologyError('INVALID_ARGUMENT', 'Chart must contain named body positions');
+  // Read the chart's body collection and enumerable entries once. Accessors
+  // must not swap the bodies between validation and house assignment.
+  const chartBodies = chart.bodies;
+  if (!chartBodies || typeof chartBodies !== 'object' || Array.isArray(chartBodies))
+    throw new AstrologyError('INVALID_ARGUMENT', 'Chart must contain named body positions');
+  const bodyEntries = Object.entries(chartBodies);
+  if (bodyEntries.length === 0)
     throw new AstrologyError('INVALID_ARGUMENT', 'Chart must contain named body positions');
   const validated = validateHouseCuspContext({ chart, cuspSet });
   const placements = Object.create(null);
-  for (const [name, body] of Object.entries(chart.bodies)) {
-    if (!body || typeof body !== 'object' || Array.isArray(body) || body.name !== name)
+  for (const [name, body] of bodyEntries) {
+    if (!body || typeof body !== 'object' || Array.isArray(body))
       throw new AstrologyError('INVALID_POINT', 'Body must be a non-array object whose identifier matches its chart key');
-    if (typeof body.longitudeDeg !== 'number' || !Number.isFinite(body.longitudeDeg))
+    // Snapshot each mutable body field exactly once. A getter cannot validate
+    // one longitude and silently publish a different house placement.
+    const { name: suppliedName, longitudeDeg } = body;
+    if (suppliedName !== name)
+      throw new AstrologyError('INVALID_POINT', 'Body must be a non-array object whose identifier matches its chart key');
+    if (typeof longitudeDeg !== 'number' || !Number.isFinite(longitudeDeg))
       throw new AstrologyError('INVALID_POINT', 'Body longitude must be a finite number');
     placements[name] = locateLongitudeWithHousePolicy({
-      longitudeDeg: body.longitudeDeg, cusps: validated.cusps,
+      longitudeDeg, cusps: validated.cusps,
       houseSystem: validated.houseSystem,
       calculationProfile: validated.calculationProfile,
       placementMethod: validated.placementMethod
