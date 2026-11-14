@@ -70,3 +70,39 @@ test('public ESM adapter rejects malformed provenance values before requesting a
     }
   }
 });
+
+test('public ESM rejects invalid physical coordinates and speed before a second body', async () => {
+  const invalidCases = [
+    { longitudeDeg: NaN },
+    { longitudeDeg: Infinity },
+    { latitudeDeg: 90.001 },
+    { latitudeDeg: -90.001 },
+    { latitudeDeg: NaN },
+    { longitudeSpeedDegPerDay: Infinity },
+    { longitudeSpeedDegPerDay: 'retrograde' }
+  ];
+  for (const overrides of invalidCases) {
+    const requests = [];
+    const provider = {
+      async getGeocentricEcliptic(request) {
+        requests.push(request);
+        return {
+          longitudeDeg: 15, latitudeDeg: 0,
+          metadata: { ...metadata }, ...overrides
+        };
+      }
+    };
+    await assert.rejects(
+      calculateNatalWithProvider({
+        datetimeUtc: '2026-11-14T00:00:00Z',
+        latitudeDeg: 45, longitudeDegEast: 11,
+        bodyNames: ['Sun', 'Moon'], provider
+      }),
+      { code: 'INVALID_EPHEMERIS_RESULT' },
+      JSON.stringify(overrides, (_key, value) =>
+        typeof value === 'number' && !Number.isFinite(value) ? String(value) : value)
+    );
+    assert.deepEqual(requests.map(request => request.bodyName), ['Sun']);
+    assert.equal(Object.isFrozen(requests[0]), true);
+  }
+});
