@@ -101,6 +101,14 @@ export async function verifyEsmSourceClosure(stagedRoot) {
     await checkRegularFile(root, file);
     visited.add(file);
     const content = await readFile(file, 'utf8');
+    // Computed import() expressions cannot be statically pinned to a file.
+    // Reject them rather than silently reporting an incomplete dependency graph.
+    literalDynamicImport.lastIndex = 0;
+    const literalDynamicCount = [...content.matchAll(literalDynamicImport)].length;
+    const allDynamicCount = [...content.matchAll(/\bimport\s*\(/g)].length;
+    if (literalDynamicCount !== allDynamicCount)
+      throw new ESMClosureError('DYNAMIC_IMPORT_UNVERIFIED',
+        `Computed import() is not auditable: ${relative(root, file)}`);
     const parsed = spawnSync(process.execPath, ['--check', file], {
       encoding: 'utf8', timeout: 15_000, windowsHide: true, env: { ...process.env, NODE_OPTIONS: '' },
     });
