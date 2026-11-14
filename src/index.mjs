@@ -314,23 +314,34 @@ export function placeNatalBodiesInHouses(input = {}) {
 }
 
 function point(p) {
-  if (!p || typeof p !== 'object' || Array.isArray(p) || typeof p.name!=='string' || !p.name.trim())
+  if (!p || typeof p !== 'object' || Array.isArray(p))
     throw new AstrologyError('INVALID_POINT', 'Every point requires a nonempty name');
-  if (p.type != null && (typeof p.type !== 'string' || !p.type.trim()))
+  // Capture each caller-controlled field once before validation and publication.
+  const name = p.name;
+  if (typeof name !== 'string' || !name.trim())
+    throw new AstrologyError('INVALID_POINT', 'Every point requires a nonempty name');
+  const type = p.type;
+  if (type != null && (typeof type !== 'string' || !type.trim()))
     throw new AstrologyError('INVALID_POINT', 'Point type must be a nonempty string when supplied');
-  if (typeof p.longitudeDeg !== 'number' || !Number.isFinite(p.longitudeDeg))
+  const longitudeDeg = p.longitudeDeg;
+  if (typeof longitudeDeg !== 'number' || !Number.isFinite(longitudeDeg))
     throw new AstrologyError('INVALID_POINT', 'Point longitude must be a finite number');
-  return Object.freeze({name:p.name,longitudeDeg:normalize360(p.longitudeDeg),type:p.type??'body'});
+  return Object.freeze({name,longitudeDeg:normalize360(longitudeDeg),type:type??'body'});
 }
 function definition(d) {
-  if (!d || typeof d !== 'object' || Array.isArray(d) || typeof d.id!=='string' || !d.id.trim())
+  if (!d || typeof d !== 'object' || Array.isArray(d))
     throw new AstrologyError('INVALID_ASPECT', 'Aspect requires an id');
-  if (typeof d.angleDeg !== 'number' || !Number.isFinite(d.angleDeg) ||
-      typeof d.maxOrbDeg !== 'number' || !Number.isFinite(d.maxOrbDeg))
+  const id = d.id;
+  if (typeof id !== 'string' || !id.trim())
+    throw new AstrologyError('INVALID_ASPECT', 'Aspect requires an id');
+  const angleDeg = d.angleDeg;
+  const maxOrbDeg = d.maxOrbDeg;
+  if (typeof angleDeg !== 'number' || !Number.isFinite(angleDeg) ||
+      typeof maxOrbDeg !== 'number' || !Number.isFinite(maxOrbDeg))
     throw new AstrologyError('INVALID_ASPECT', 'Aspect angle and maximum orb must be finite numbers');
-  if(d.angleDeg<0||d.angleDeg>180||d.maxOrbDeg<0||d.maxOrbDeg>180)
+  if(angleDeg<0||angleDeg>180||maxOrbDeg<0||maxOrbDeg>180)
     throw new AstrologyError('INVALID_ASPECT','Aspect angle and maximum orb must each be within 0..180 degrees');
-  return Object.freeze({id:d.id,angleDeg:d.angleDeg,maxOrbDeg:d.maxOrbDeg});
+  return Object.freeze({id,angleDeg,maxOrbDeg});
 }
 /**
  * Directional cross-aspect facts; zero symbolic interpretation claims.
