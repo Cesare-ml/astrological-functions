@@ -88,6 +88,18 @@ export function planEsmExportUnion(manifests) {
   // Case-only subpath differences can behave ambiguously on case-insensitive
   // consumer filesystems, even though JS objects treat them as distinct keys.
   const caseFoldedSubpaths = new Map();
+  // Export aliases may intentionally share one physical target. Case-only
+  // variants cannot reliably coexist on case-insensitive consumer filesystems.
+  const caseFoldedTargets = new Map([[root.toLowerCase(), root]]);
+  function checkTargetCase(path, label) {
+    const folded = path.toLowerCase();
+    const existing = caseFoldedTargets.get(folded);
+    if (existing !== undefined && existing !== path) {
+      throw new ExportUnionError('TARGET_CASE_COLLISION',
+        `${label} targets ${path}, which differs only in case from ${existing}`);
+    }
+    caseFoldedTargets.set(folded, path);
+  }
   const drift = new Map();
   for (const [index, manifest] of manifests.entries()) {
     const label = index === 0 ? 'baseline' : `candidate ${index}`;
@@ -117,6 +129,10 @@ export function planEsmExportUnion(manifests) {
       if (existing && (existing.types !== entry.types || existing.import !== entry.import)) {
         throw new ExportUnionError('CONFLICTING_EXPORT', `${label} redefines ${key} with different targets`);
       }
+      // Evaluate actual file targets only after the existing export-key
+      // collision check, preserving CONFLICTING_EXPORT for a rewritten key.
+      checkTargetCase(entry.types, `${label}: ${key}.types`);
+      checkTargetCase(entry.import, `${label}: ${key}.import`);
       if (!existing) {
         definitions.set(key, entry);
         origins.set(key, []);
