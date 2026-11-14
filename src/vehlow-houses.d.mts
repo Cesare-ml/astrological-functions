@@ -5,7 +5,7 @@ export interface VehlowAngleSource {
   readonly timeModel: string;
   readonly center: 'EARTH';
   readonly frame: 'ECLIPTIC_OF_DATE';
-  readonly corrections: 'APPARENT';
+  readonly corrections: 'APPARENT' | 'IAU2006_2000B_APPROXIMATE';
   readonly zodiac: 'TROPICAL';
   readonly observerType: 'TOPOCENTRIC';
   readonly observer: Readonly<{ latitudeDeg: number; longitudeDegEast: number }>;

@@ -27,7 +27,7 @@ function copySource(source) {
   if (!record(observer)) fail('INCOMPATIBLE_ANGLE_SOURCE', 'An observer object is required');
   const { latitudeDeg, longitudeDegEast } = observer;
   if (!identifier(engineVersion) || !identifier(kernelSetId) || !identifier(timeModel) ||
-      frame !== 'ECLIPTIC_OF_DATE' || corrections !== 'APPARENT' || center !== 'EARTH' ||
+      frame !== 'ECLIPTIC_OF_DATE' || !['APPARENT', 'IAU2006_2000B_APPROXIMATE'].includes(corrections) || center !== 'EARTH' ||
       zodiac !== 'TROPICAL' || observerType !== 'TOPOCENTRIC' ||
       !finite(latitudeDeg) || !finite(longitudeDegEast) ||
       Math.abs(latitudeDeg) >= 90 || Math.abs(longitudeDegEast) > 180) {
@@ -39,7 +39,7 @@ function copySource(source) {
     timeModel,
     center: 'EARTH',
     frame: 'ECLIPTIC_OF_DATE',
-    corrections: 'APPARENT',
+    corrections,
     zodiac: 'TROPICAL',
     observerType: 'TOPOCENTRIC',
     observer: Object.freeze({

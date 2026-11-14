@@ -31,7 +31,7 @@ Legacy `egizia` in VirgoStars refers to Swiss house code **V** (Vehlow), but the
 
 ## Astronomical and release boundary
 
-An external validated Rust/WASM VirgoStars Ephemeris provider must supply actual Ascendant coordinates. The input metadata is *caller-asserted*; `validation: 'CALLER_ASSERTED_ASCENDANT_NOT_INDEPENDENTLY_VERIFIED'` is mandatory. A real calendar instant, versioned engine/kernel/time model, apparent geocentric ecliptic-of-date convention and a topocentric observer are required by this experimental input contract; observer calculations themselves remain upstream. Geographic poles are rejected. The routine performs no Swiss call, star or sunrise calculations, private database access, interpretation, AI or production migration. Its private package subpath is `astrological-functions/vehlow-houses`.
+An external VirgoStars Ephemeris provider must supply Ascendant coordinates. The input metadata is *caller-asserted*; `validation: 'CALLER_ASSERTED_ASCENDANT_NOT_INDEPENDENTLY_VERIFIED'` is mandatory. A real calendar instant, versioned engine/kernel/time model, ecliptic-of-date convention and a topocentric observer are required. `corrections` explicitly distinguishes `APPARENT` from the experimental `IAU2006_2000B_APPROXIMATE` orientation model; the latter must not be presented as full apparent parity. Observer calculations themselves remain upstream. Geographic poles are rejected. The routine performs no Swiss call, star or sunrise calculations, private database access, interpretation, AI or production migration. Its private package subpath is `astrological-functions/vehlow-houses`.
 
 ## Repeatable checks
 
