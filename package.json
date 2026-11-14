@@ -4,7 +4,11 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.mjs"
+    ".": "./src/index.mjs",
+    "./ephemeris-provider": {
+      "types": "./src/ephemeris-provider.d.ts",
+      "import": "./src/ephemeris-provider.js"
+    }
   },
   "engines": {
     "node": ">=20"
