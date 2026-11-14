@@ -104,6 +104,13 @@ test('literal dynamic imports are checked too', async t => {
   await fails(verifyEsmSourceClosure(root), 'MISSING_SOURCE_MODULE');
 });
 
+test('computed dynamic imports are blocked because their targets cannot be audited', async t => {
+  const root = await fixture(t);
+  await writeFile(join(root, 'src', 'example.mjs'),
+    "const name = './facts.mjs'; export const example = () => import(name);\n");
+  await fails(verifyEsmSourceClosure(root), 'DYNAMIC_IMPORT_UNVERIFIED');
+});
+
 test('circular imports are visited once and reported without looping', async t => {
   const root = await fixture(t);
   await writeFile(join(root, 'src', 'facts.mjs'),
