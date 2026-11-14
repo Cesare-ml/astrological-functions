@@ -337,3 +337,38 @@ test('provider failures propagate without retry or astronomical fallback', async
   assert.deepEqual(requests.map(request => request.bodyName), ['Sun']);
   assert.equal(Object.isFrozen(requests[0]), true);
 });
+
+
+test('second-body provider failure preserves identity and stops without fallback', async () => {
+  const failure = new Error('synthetic second-body Rust adapter failure');
+  const requested = [];
+  await assert.rejects(
+    packageProvider.calculateNatalWithProvider({
+      datetimeUtc: '2026-11-14T00:00:00Z',
+      latitudeDeg: 45,
+      longitudeDegEast: 11,
+      bodyNames: ['Sun', 'Moon', 'Mars'],
+      provider: {
+        async getGeocentricEcliptic(request) {
+          requested.push(request);
+          if (request.bodyName === 'Moon') throw failure;
+          return {
+            longitudeDeg: 15,
+            latitudeDeg: 0,
+            metadata: {
+              center: 'EARTH',
+              frame: 'ECLIPTIC_OF_DATE',
+              corrections: 'APPARENT',
+              engineVersion: 'synthetic',
+              kernelSetId: 'synthetic',
+              timeModel: 'synthetic'
+            }
+          };
+        }
+      }
+    }),
+    error => error === failure
+  );
+  assert.deepEqual(requested.map(request => request.bodyName), ['Sun', 'Moon']);
+  assert.equal(requested.every(Object.isFrozen), true);
+});
