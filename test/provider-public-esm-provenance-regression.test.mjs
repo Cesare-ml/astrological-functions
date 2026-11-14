@@ -57,3 +57,16 @@ test('public ESM adapter preserves matching provenance as immutable chart metada
   assert.equal(Object.isFrozen(chart.ephemerisProvenance), true);
   assert.deepEqual(requests.map(r => r.bodyName), ['Sun', 'Moon']);
 });
+
+test('public ESM adapter rejects malformed provenance values before requesting another body', async () => {
+  for (const key of ['engineVersion', 'kernelSetId', 'timeModel']) {
+    for (const value of ['', '  ', 0, false, {}, []]) {
+      const malformed = { ...metadata, [key]: value };
+      const { promise, requests } = run(() => malformed);
+      await assert.rejects(promise, { code: 'INVALID_EPHEMERIS_RESULT' },
+        `${key}=${JSON.stringify(value)}`);
+      assert.deepEqual(requests.map(request => request.bodyName), ['Sun']);
+      assert.equal(Object.isFrozen(requests[0]), true);
+    }
+  }
+});
