@@ -43,9 +43,10 @@ test('rejects mixed versions, kernel sets and time models', async () => {
 });
 
 test('rejects mixing missing and present provenance in either order', async () => {
+  const complete = {engineVersion:'rust-0.1', kernelSetId:'kernel-A', timeModel:'TDB-1'};
   for (const [first, second] of [
-    [metadata(), metadata({engineVersion:'rust-0.1'})],
-    [metadata({kernelSetId:'kernel-A'}), metadata()],
+    [metadata(), metadata(complete)],
+    [metadata(complete), metadata()],
   ]) {
     await assert.rejects(
       calculateNatalWithProvider({...input, provider:providerWithMetadata(first, second)}),
