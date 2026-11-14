@@ -161,7 +161,8 @@ export function validateHouseCuspContext(input = {}) {
   if (!chart || !cuspSet || typeof chart !== 'object' || Array.isArray(chart) ||
       typeof cuspSet !== 'object' || Array.isArray(cuspSet))
     throw new AstrologyError('INVALID_ARGUMENT', 'Chart and cusp set are required');
-  const { datetimeUtc, latitudeDeg, longitudeDegEast, ephemerisProvenance } = chart;
+  const { datetimeUtc, latitudeDeg, longitudeDegEast,
+    ephemerisProvenance: chartProvenanceSource } = chart;
   if (typeof datetimeUtc !== 'string' || !Number.isFinite(Date.parse(datetimeUtc)) ||
       !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(datetimeUtc) || new Date(datetimeUtc).toISOString().slice(0,19) !== datetimeUtc.slice(0,19))
     throw new AstrologyError('INVALID_UTC', 'Valid explicit UTC instant required');
@@ -169,31 +170,38 @@ export function validateHouseCuspContext(input = {}) {
   finite(longitudeDegEast, 'longitudeDegEast');
   if (latitudeDeg < -90 || latitudeDeg > 90 || longitudeDegEast < -180 || longitudeDegEast > 180)
     throw new AstrologyError('INVALID_COORDINATES', 'Chart coordinates outside valid bounds');
-  const metadata = cuspSet.metadata;
-  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata))
+  // Snapshots must be the values we validate AND publish. Accessors on the
+  // chart or external cusp set must not change provenance between those steps.
+  const { houseSystem, calculationProfile, cusps, metadata: metadataSource } = cuspSet;
+  if (!metadataSource || typeof metadataSource !== 'object' || Array.isArray(metadataSource))
     throw new AstrologyError('INVALID_HOUSE_METADATA', 'House metadata required');
+  const metadata = Object.freeze({ ...metadataSource });
   if (metadata.datetimeUtc !== datetimeUtc ||
       metadata.latitudeDeg !== latitudeDeg ||
       metadata.longitudeDegEast !== longitudeDegEast)
     throw new AstrologyError('INCOMPATIBLE_HOUSE_CONTEXT', 'House cusp date or location differs from chart');
   const keys = ['engineVersion', 'kernelSetId', 'timeModel'];
-  if (!ephemerisProvenance || typeof ephemerisProvenance !== 'object' || Array.isArray(ephemerisProvenance) ||
-      !metadata.ephemerisProvenance || typeof metadata.ephemerisProvenance !== 'object' || Array.isArray(metadata.ephemerisProvenance))
+  const cuspProvenanceSource = metadata.ephemerisProvenance;
+  if (!chartProvenanceSource || typeof chartProvenanceSource !== 'object' || Array.isArray(chartProvenanceSource) ||
+      !cuspProvenanceSource || typeof cuspProvenanceSource !== 'object' || Array.isArray(cuspProvenanceSource))
     throw new AstrologyError('INVALID_HOUSE_METADATA', 'Explicit chart and house provenance required');
+  const chartProvenance = Object.freeze({ ...chartProvenanceSource });
+  const cuspProvenance = Object.freeze({ ...cuspProvenanceSource });
   for (const key of keys) {
-    const a = ephemerisProvenance[key], b = metadata.ephemerisProvenance[key];
+    const a = chartProvenance[key], b = cuspProvenance[key];
     if (typeof a !== 'string' || !a.trim() || typeof b !== 'string' || !b.trim())
       throw new AstrologyError('INVALID_HOUSE_METADATA', 'Complete nonempty provenance required');
     if (a !== b)
       throw new AstrologyError('INCOMPATIBLE_HOUSE_CONTEXT', 'House cusp provenance differs from chart');
   }
-  const validated = validateHouseCuspSet(cuspSet);
+  const validated = validateHouseCuspSet({ houseSystem, calculationProfile, cusps,
+    metadata: { ...metadata, ephemerisProvenance: cuspProvenance } });
   return Object.freeze({
     ...validated,
     metadata: Object.freeze({
       ...validated.metadata, datetimeUtc, latitudeDeg, longitudeDegEast,
       ephemerisProvenance: Object.freeze(Object.fromEntries(
-        keys.map(key => [key, ephemerisProvenance[key]])))
+        keys.map(key => [key, chartProvenance[key]])))
     })
   });
 }
