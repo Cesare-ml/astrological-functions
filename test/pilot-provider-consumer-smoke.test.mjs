@@ -275,3 +275,41 @@ test('provider reentrancy cannot alter the validated body sequence', async () =>
   assert.equal(chart.bodies.Mars, undefined);
   assert.equal(chart.bodies.Venus, undefined);
 });
+
+test('public ESM natal body map safely preserves prototype-like body identifiers', async () => {
+  const names = ['__proto__', 'constructor', 'toString'];
+  const requests = [];
+  const chart = await packageProvider.calculateNatalWithProvider({
+    datetimeUtc: '2026-11-14T00:00:00Z',
+    latitudeDeg: 45,
+    longitudeDegEast: 11,
+    bodyNames: names,
+    provider: {
+      async getGeocentricEcliptic(request) {
+        requests.push(request);
+        return {
+          longitudeDeg: 15,
+          latitudeDeg: 0,
+          metadata: {
+            center: 'EARTH',
+            frame: 'ECLIPTIC_OF_DATE',
+            corrections: 'APPARENT',
+            engineVersion: 'synthetic',
+            kernelSetId: 'synthetic',
+            timeModel: 'synthetic'
+          }
+        };
+      }
+    }
+  });
+  assert.equal(Object.getPrototypeOf(chart.bodies), null);
+  assert.deepEqual(Object.keys(chart.bodies), names);
+  for (const name of names) {
+    assert.equal(Object.hasOwn(chart.bodies, name), true);
+    assert.equal(chart.bodies[name].name, name);
+    assert.equal(Object.isFrozen(chart.bodies[name]), true);
+  }
+  assert.deepEqual(requests.map(request => request.bodyName), names);
+  assert.equal(requests.every(Object.isFrozen), true);
+  assert.equal(Object.prototype.polluted, undefined);
+});
