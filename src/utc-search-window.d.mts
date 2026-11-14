@@ -18,3 +18,6 @@ export type ValidatedUtcSearchWindow = Readonly<{
 export declare function validateUtcSearchWindow(
   input: UtcSearchWindowInput,
 ): ValidatedUtcSearchWindow;
+
+/** Strict UTC calendar parsing shared by event-hit consumers; returns UTC epoch milliseconds. */
+export declare function parseStrictUtcInstant(value: unknown, field: string): number;
