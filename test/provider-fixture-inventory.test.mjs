@@ -19,7 +19,7 @@ function createFixture(t) {
   copyFileSync(verifier, join(root, 'scripts/verify-provider-fixture-inventory.mjs'));
   const contents = {
     'package.json': '{"private":true}',
-    'src/index.mjs': 'export const x = 1;',
+    'src/index.mjs': 'export const x = 1;\nexport const y = 2;\n',
     'test/example.test.mjs': 'export const caseName = "fixture";',
     'test/types/example.ts': 'export type Example = true;',
   };
@@ -97,4 +97,13 @@ test('an incomplete checkout cannot pass simply by containing expected counts', 
   const result = x.run();
   assert.equal(result.status, 1);
   assert.match(result.stderr, /SHA_MISMATCH test\/example\.test\.mjs/);
+});
+
+test('Windows CRLF checkout is accepted only when Git LF blob is identical', t => {
+  const x = createFixture(t);
+  const path = join(x.root, 'src/index.mjs');
+  writeFileSync(path, readFileSync(path, 'utf8').replaceAll('\n', '\r\n'));
+  const result = x.run();
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /CRLF working-tree files normalized/);
 });
