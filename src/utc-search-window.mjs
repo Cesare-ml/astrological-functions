@@ -8,15 +8,15 @@ const UTC_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.(\d{1,3}))?Z$/;
 
 function parseStrictUtcInstant(value, field) {
   if (typeof value !== 'string')
-    throw new AstrologyError('INVALID_UTC', ${field} must be an explicit UTC ISO instant`);
+    throw new AstrologyError('INVALID_UTC', `${field} must be an explicit UTC ISO instant`);
   const match = UTC_INSTANT.exec(value);
   if (!match)
-    throw new AstrologyError('INVALID_UTC', ${field} must use YYYY-MM-DDTHH:mm:ss[.SSS]Z`);
+    throw new AstrologyError('INVALID_UTC', `${field} must use YYYY-MM-DDTHH:mm:ss[.SSS]Z`);
   const epochMs = Date.parse(value);
   // Date.parse may normalize impossible dates, so compare every civil-time field.
   const expected = `${value.slice(0, 19)}.${(match[1] ?? '').padEnd(3, '0')}Z`;
   if (!Number.isFinite(epochMs) || new Date(epochMs).toISOString() !== expected)
-    throw new AstrologyError('INVALID_UTC', ${field} is not a real UTC calendar instant`);
+    throw new AstrologyError('INVALID_UTC', `${field} is not a real UTC calendar instant`);
   return epochMs;
 }
 
