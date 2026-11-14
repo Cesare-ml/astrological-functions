@@ -90,7 +90,8 @@ export function planEsmExportUnion(manifests) {
   const caseFoldedSubpaths = new Map();
   // Export aliases may intentionally share one physical target. Case-only
   // variants cannot reliably coexist on case-insensitive consumer filesystems.
-  const caseFoldedTargets = new Map([[root.toLowerCase(), root]]);
+  // A missing root is rejected below with INVALID_EXPORT_MAP, not TypeError.
+  const caseFoldedTargets = new Map(typeof root === 'string' ? [[root.toLowerCase(), root]] : []);
   function checkTargetCase(path, label) {
     const folded = path.toLowerCase();
     const existing = caseFoldedTargets.get(folded);
