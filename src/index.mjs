@@ -59,14 +59,30 @@ export function dodecatemoriaLongitude(longitude) {
  */
 export function locateLongitudeInHouses(longitude, cusps) {
   const lon=normalize360(longitude);
-  if (!Array.isArray(cusps) || cusps.length !== 12 ||
-      Array.from({length:12}, (_,i)=>i).some(i =>
-        !Object.hasOwn(cusps,i) || typeof cusps[i] !== 'number' ||
-        !Number.isFinite(cusps[i])))
+  if (!Array.isArray(cusps) || cusps.length !== 12)
     throw new AstrologyError('INVALID_CUSPS', 'Exactly twelve finite, dense house cusp longitudes are required');
-  const points=cusps.map(normalize360);
-  const spans=points.map((v,i)=>normalize360(points[(i+1)%12]-v));
-  if (spans.some(x=>x<=1e-10) || Math.abs(spans.reduce((a,b)=>a+b,0)-360)>1e-7)
+  // Snapshot every caller-controlled cusp exactly once. An accessor must not
+  // validate one coordinate and then publish a different value during .map().
+  // Also avoid invoking caller-owned Array#map or Symbol.species hooks.
+  const points=[];
+  for(let i=0;i<12;i++){
+    if (!Object.hasOwn(cusps,i))
+      throw new AstrologyError('INVALID_CUSPS', 'Exactly twelve finite, dense house cusp longitudes are required');
+    const cusp=cusps[i];
+    if (typeof cusp !== 'number' || !Number.isFinite(cusp))
+      throw new AstrologyError('INVALID_CUSPS', 'Exactly twelve finite, dense house cusp longitudes are required');
+    points.push(normalize360(cusp));
+  }
+  const spans=[];
+  let totalSpan=0;
+  for(let i=0;i<12;i++){
+    const span=normalize360(points[(i+1)%12]-points[i]);
+    if (span<=1e-10)
+      throw new AstrologyError('INVALID_CUSPS', 'House cusps must define one forward zodiac revolution');
+    spans.push(span);
+    totalSpan+=span;
+  }
+  if (Math.abs(totalSpan-360)>1e-7)
     throw new AstrologyError('INVALID_CUSPS', 'House cusps must define one forward zodiac revolution');
   for(let i=0;i<12;i++){
     const start = points[i], end = points[(i+1)%12];
