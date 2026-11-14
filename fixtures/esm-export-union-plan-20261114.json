@@ -1,0 +1,131 @@
+{
+  "packageName": "astrological-functions",
+  "candidateCount": 7,
+  "exportCount": 13,
+  "exports": {
+    ".": "./src/index.mjs",
+    "./declination-contacts": {
+      "types": "./src/declination-contacts.d.mts",
+      "import": "./src/declination-contacts.mjs"
+    },
+    "./declination-provider": {
+      "types": "./src/declination-provider-gate.d.mts",
+      "import": "./src/declination-provider-gate.mjs"
+    },
+    "./dodecatemoria": {
+      "types": "./src/dodecatemoria-methods.d.mts",
+      "import": "./src/dodecatemoria-methods.mjs"
+    },
+    "./ephemeris-provider": {
+      "types": "./src/ephemeris-provider.d.ts",
+      "import": "./src/ephemeris-provider.js"
+    },
+    "./house-method-comparison": {
+      "types": "./src/house-method-comparison.d.mts",
+      "import": "./src/house-method-comparison.mjs"
+    },
+    "./pinned-whole-equal-comparison": {
+      "types": "./src/pinned-whole-equal-comparison.d.mts",
+      "import": "./src/pinned-whole-equal-comparison.mjs"
+    },
+    "./sourced-declination-contacts": {
+      "types": "./src/sourced-declination-contacts.d.mts",
+      "import": "./src/sourced-declination-contacts.mjs"
+    },
+    "./sourced-house-placement-matrix": {
+      "types": "./src/sourced-house-placement-matrix.d.mts",
+      "import": "./src/sourced-house-placement-matrix.mjs"
+    },
+    "./transit-events": {
+      "types": "./src/transit-event-pipeline.d.mts",
+      "import": "./src/transit-event-pipeline.mjs"
+    },
+    "./transits": {
+      "types": "./src/transit-facts.d.mts",
+      "import": "./src/transit-facts.mjs"
+    },
+    "./whole-equal-house-comparison": {
+      "types": "./src/whole-equal-house-comparison.d.mts",
+      "import": "./src/whole-equal-house-comparison.mjs"
+    },
+    "./zodiac-decan-facts": {
+      "types": "./src/zodiac-decan-facts.d.mts",
+      "import": "./src/zodiac-decan-facts.mjs"
+    }
+  },
+  "entries": [
+    {
+      "subpath": "./declination-contacts",
+      "sources": [
+        "candidate 7"
+      ]
+    },
+    {
+      "subpath": "./declination-provider",
+      "sources": [
+        "candidate 7"
+      ]
+    },
+    {
+      "subpath": "./dodecatemoria",
+      "sources": [
+        "candidate 2"
+      ]
+    },
+    {
+      "subpath": "./ephemeris-provider",
+      "sources": [
+        "candidate 3"
+      ]
+    },
+    {
+      "subpath": "./house-method-comparison",
+      "sources": [
+        "candidate 4"
+      ]
+    },
+    {
+      "subpath": "./pinned-whole-equal-comparison",
+      "sources": [
+        "candidate 4"
+      ]
+    },
+    {
+      "subpath": "./sourced-declination-contacts",
+      "sources": [
+        "candidate 7"
+      ]
+    },
+    {
+      "subpath": "./sourced-house-placement-matrix",
+      "sources": [
+        "candidate 5"
+      ]
+    },
+    {
+      "subpath": "./transit-events",
+      "sources": [
+        "candidate 1"
+      ]
+    },
+    {
+      "subpath": "./transits",
+      "sources": [
+        "candidate 1"
+      ]
+    },
+    {
+      "subpath": "./whole-equal-house-comparison",
+      "sources": [
+        "candidate 4"
+      ]
+    },
+    {
+      "subpath": "./zodiac-decan-facts",
+      "sources": [
+        "candidate 6"
+      ]
+    }
+  ],
+  "nonExportDrift": []
+}
