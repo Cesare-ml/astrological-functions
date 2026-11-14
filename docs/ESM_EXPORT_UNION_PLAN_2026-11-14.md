@@ -392,3 +392,96 @@ VirgoStars Desktop/Astrolabio behavior still require separate review.
 Remain draft; no main merge, GitHub Actions, release, deploy,
 repository visibility change or production modifications. Attribution:
 https://github.com/Cesare-ml/VirgoStars-Ephemeris.
+
+
+## Authentic candidate checkout verification — 14 November 2026
+
+The earlier Node and TypeScript smoke tests used synthetic modules. This
+increment adds `scripts/verify-esm-checkout.mjs` as a **read-only, offline**
+gate for a **trusted existing local checkout**. Unlike a JSON-only manifest
+review, it checks that each declared runtime and declaration target exists
+as a regular file inside the checkout, refuses symlinked targets outside the
+checkout, and runs a fresh Node ESM subprocess resolving and importing
+**every** root/subpath export. It can require specifically named subpaths
+so that a candidate missing from a checkout does not silently pass.
+
+Usage after manually obtaining a **trusted** worktree (no GitHub Actions
+or automatic checkout/merge):
+
+```sh
+node scripts/verify-esm-checkout.mjs /path/to/candidate-checkout \
+  --expect ./dodecatemoria
+```
+
+When the required file is absent, a path escapes the checkout, the export
+is missing or its runtime import fails, the command exits nonzero.
+Successful output lists imported specifiers and the number of exports.
+It does not edit the checkout or require network access. **Warning:**
+importing source code executes its top-level statements, so point it only at
+trusted local source, not unreviewed third-party packages. It does not
+typecheck declarations on its own; run a separate strict TypeScript
+consumer test when applicable.
+
+### Real GitHub branch proof: stacked draft PR #41
+
+The file contents from the *actual* GitHub branch
+`feat/dodecatemoria-consumer-export-20261112` were manually reconstructed
+in an isolated temporary local package, then verified **byte-for-byte**
+against these GitHub Git blob SHA-1 values:
+
+| Real source file | Verified Git blob SHA-1 |
+| --- | --- |
+| `package.json` | `104afd423f22fb6fcfe6a7f8ff25824b4b03f684` |
+| `src/index.mjs` | `89390790fa83a0ab76c570186020f6a658ee73b5` |
+| `src/dodecatemoria-methods.mjs` | `aed7a82a9cfe3201072d88e81122b30f4321970a` |
+| `src/dodecatemoria-methods.d.mts` | `b2c7836a894ede56e41f1db988e92f436f972ee3` |
+
+```sh
+node scripts/verify-esm-checkout.mjs /tmp/af-dodeca-real-41 \
+  --expect ./dodecatemoria
+```
+
+The actual PR #41 source resolved and imported both
+`astrological-functions` and
+`astrological-functions/dodecatemoria` without errors. An independent
+real runtime consumer checked both explicitly selected methods at
+longitude 11°: `PAULUS_13_V1` projected **143°**, and
+`TWELVE_EQUAL_PARTS_V1` projected **132°**. Strict TypeScript
+**5.8.3** consumers against the actual `.d.mts` declaration compiled
+successfully under both NodeNext and Bundler resolutions.
+
+These results validate the checked PR #41 source snapshot **in isolation**,
+not the future combined checkout or all upstream stacked PRs.
+
+### Regression suite
+
+`test/verify-esm-checkout.test.mjs` adds ten tests: positive real Node
+self-import; read-only CLI; missing declaration/runtime targets; absent
+required subpath; syntactically invalid runtime; broken module reexports;
+out-of-checkout symlink rejection; malformed manifest; invalid CLI flags.
+The symlink-specific test skips on Windows, where creating symlinks can
+require extra privileges. Test runs do not contact GitHub or other networks.
+
+```sh
+node --check scripts/verify-esm-checkout.mjs
+node --check test/verify-esm-checkout.test.mjs
+node --test test/*.test.mjs
+```
+
+In the isolated local tooling workspace (Node **22.16.0**, TypeScript
+**5.8.3**) **66/66 tests passed, 0 failed, 0 skipped**: 56 earlier tests
+plus 10 verifier regressions. Exact GitHub blobs of the new files match
+locally executed bytes:
+
+- `scripts/verify-esm-checkout.mjs`:
+  `1ceb1722917e9a2cce04e09f2ef15b13e113db30`.
+- `test/verify-esm-checkout.test.mjs`:
+  `e758f7af70b70e88b9b61c885d39ae3dcfca441d`.
+
+**Open gates:** this is not the full consolidated repository
+`npm test`, does not establish cross-PR runtime dependency compatibility
+or real downstream VirgoStars Desktop integration, and does not certify
+Rust/WASM/JPL astronomy, provenance or licensing. Keep PR #69 draft;
+no main merge, automatic GitHub Actions, npm publication, deployment
+or visibility change. Keep
+[VirgoStars Ephemeris attribution](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
