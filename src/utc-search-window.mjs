@@ -6,7 +6,7 @@ import { AstrologyError } from './index.mjs';
 
 const UTC_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.(\d{1,3}))?Z$/;
 
-function parseStrictUtcInstant(value, field) {
+export function parseStrictUtcInstant(value, field) {
   if (typeof value !== 'string')
     throw new AstrologyError('INVALID_UTC', `${field} must be an explicit UTC ISO instant`);
   const match = UTC_INSTANT.exec(value);
