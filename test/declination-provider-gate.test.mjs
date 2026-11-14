@@ -238,3 +238,76 @@ test('a provider that removes its public method after first await still complete
   assert.deepEqual(calls, ['Sun', 'Moon']);
   assert.equal(out.facts.contacts.length, 1);
 });
+
+test('provider result declination is sampled once before validation and use', async () => {
+  let reads = 0;
+  const provider = fake(request => {
+    if (request.bodyId !== 'Sun') return response(request);
+    const data = response(request);
+    Object.defineProperty(data, 'declinationDeg', {
+      enumerable: true,
+      get() { return ++reads === 1 ? 18 : -18; },
+    });
+    return data;
+  });
+  const out = await calculate({}, provider);
+  assert.equal(out.facts.contacts.length, 1);
+  assert.equal(out.facts.contacts[0].contactId, 'CONTRA_PARALLEL');
+  assert.equal(out.facts.contacts[0].source.declinationDeg, 18);
+  assert.equal(reads, 1);
+});
+
+test('caller provenance identifiers are validated and snapshotted in one read', async () => {
+  let reads = 0;
+  const provenance = { ...expectedProvenance };
+  Object.defineProperty(provenance, 'engineVersion', {
+    enumerable: true,
+    get() { return ++reads === 1 ? 'rust-synthetic' : 'unvalidated-engine'; },
+  });
+  const out = await calculate({ expectedProvenance: provenance });
+  assert.equal(out.sourceContext.provenance.engineVersion, 'rust-synthetic');
+  assert.equal(reads, 1);
+});
+
+test('coordinate frame getter cannot switch basis after its validation', async () => {
+  let reads = 0;
+  const coord = { ...coordinates };
+  Object.defineProperty(coord, 'frame', {
+    enumerable: true,
+    get() { return ++reads === 1 ? 'ICRS' : 'TRUE_EQUATOR_OF_DATE'; },
+  });
+  const out = await calculate({ coordinates: coord });
+  assert.equal(out.sourceContext.coordinates.frame, 'ICRS');
+  assert.equal(out.targetContext.coordinates.frameEpochUtc, null);
+  assert.equal(reads, 1);
+});
+
+test('source body ID list getter cannot swap the requested bodies after validation', async () => {
+  let reads = 0;
+  const sourceSelection = { ...source };
+  Object.defineProperty(sourceSelection, 'bodyIds', {
+    enumerable: true,
+    get() { return ++reads === 1 ? ['Sun'] : ['Venus']; },
+  });
+  const calls = [];
+  const out = await calculate({ source: sourceSelection }, fake(r => {
+    calls.push(r.bodyId);
+    return response(r);
+  }));
+  assert.deepEqual(calls, ['Sun', 'Moon']);
+  assert.equal(out.facts.contacts.length, 1);
+  assert.equal(reads, 1);
+});
+
+test('orb getter cannot loosen or tighten a definition after validation', async () => {
+  let reads = 0;
+  const definition = { id: 'CONTRA_PARALLEL' };
+  Object.defineProperty(definition, 'maxOrbDeg', {
+    enumerable: true,
+    get() { return ++reads === 1 ? 0.5 : 0.01; },
+  });
+  const out = await calculate({ contactDefinitions: [definition] });
+  assert.equal(out.facts.contacts.length, 1);
+  assert.equal(out.facts.contacts[0].configuredMaxOrbDeg, 0.5);
+  assert.equal(reads, 1);
+});
