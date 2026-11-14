@@ -403,7 +403,6 @@ test('abort event listeners are removed on success and provider rejection', asyn
   assert.equal(removes, 3);
 });
 
-
 test('provider callable with a non-call own .call property works without AbortSignal', async () => {
   const requests = [];
   const provider = {
