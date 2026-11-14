@@ -48,6 +48,13 @@ test('exact live PR manifest snapshots preserve 12 distinct subpaths and the roo
   });
 });
 
+test('checked-in union plan remains byte-for-byte consistent with inspected PR manifests', () => {
+  const expected = JSON.parse(readFileSync(new URL('../fixtures/esm-export-union-plan-20261114.json', import.meta.url)));
+  assert.deepEqual(planEsmExportUnion(realManifests), expected);
+  assert.equal(expected.entries.length, 12);
+  assert.equal(expected.nonExportDrift.length, 0);
+});
+
 test('full synthetic staging tree can pass all 25 literal target checks', async t => {
   const root = await workspace(t);
   const plan = planEsmExportUnion(realManifests);
