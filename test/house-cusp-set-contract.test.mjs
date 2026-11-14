@@ -29,6 +29,6 @@ test('rejects mismatched declared house method or system',()=>{
 });
 test('rejects malformed metadata and invalid cusp geometry',()=>{
   assert.throws(()=>validateHouseCuspSet({...input,metadata:null}),e=>e.code==='INVALID_HOUSE_METADATA');
-  assert.throws(()=>validateHouseCuspSet({...input,cusps:[...cusps.slice(0,11),NaN]}),e=>e.code==='INVALID_ANGLE');
+  assert.throws(()=>validateHouseCuspSet({...input,cusps:[...cusps.slice(0,11),NaN]}),e=>e.code==='INVALID_CUSPS');
   assert.throws(()=>validateHouseCuspSet({...input,cusps:Array(12).fill(0)}),e=>e.code==='INVALID_CUSPS');
 });
