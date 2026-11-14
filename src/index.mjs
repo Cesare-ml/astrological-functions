@@ -38,7 +38,18 @@ export function zodiacSignIndex(longitude) {
   return Math.floor(normalize360(longitude) / 30);
 }
 export function dodecatemoriaLongitude(longitude) {
-  return normalize360(longitude * 13);
+  // Reduce before the 13-fold multiplication. Multiplying a full-circle
+  // longitude can lose the last binary64 steps before 360 (or overflow for
+  // otherwise finite inputs). Since 13 * (30 * sign) = 30 * sign (mod 360),
+  // only the within-sign offset needs scaling.
+  const source = normalize360(longitude);
+  const signStart = Math.floor(source / 30) * 30;
+  const withinSign = source - signStart;
+  // Near the next sign cusp, subtract the 13-fold *gap* from that cusp
+  // rather than rounding (signStart + 13*withinSign) up to its boundary.
+  return withinSign > 15
+    ? normalize360((signStart + 30) - 13 * (30 - withinSign))
+    : normalize360(signStart + 13 * withinSign);
 }
 
 /**
