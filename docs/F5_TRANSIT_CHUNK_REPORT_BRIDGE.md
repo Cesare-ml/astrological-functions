@@ -64,7 +64,7 @@ import { collectTransitChunkCandidateReports } from './src/transit-chunk-candida
 import { prepareTransitAspectEventCandidates } from './src/transit-event-pipeline.mjs';
 
 const runChunk = makeTransitChunkPipelineRunner({
-  windowInput,
+  windowInput, identity, // explicit pinned sky/natal/aspect and ephemeris provenance
   scan: {targetIntervalMs:60000,maxDepth:10,maxProviderCalls:400},
   refinement: {timeToleranceMs:100,residualToleranceDeg:0.0001,
     maxIterations:40,maxCandidateRefinements:64,maxRefinementCalls:1000},
@@ -100,3 +100,27 @@ tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution noden
 ```
 
 `scripts/manual/transit-pr21-smoke.mjs` intentionally **fails to import** on standalone PR #72, because its required `transit-event-pipeline.mjs` exists only in the stacked PR #21. It uses synthetic linear-crossing and tangency enclosures; it is a contract-integration gate, **not astronomical verification**. There are no GitHub Actions and no automated merge or production deployment.
+
+
+### PR #81 integration contract update
+
+The PR #81 test branch now requires `identity` at runner construction and
+rejects changes to the requested sky/natal aspect or provenance on later
+chunks. The earlier demo above is updated accordingly. The independently
+moving PR #72 additionally implements actual runtime aggregate provider-call
+budgeting; PR #81 retains the earlier conservative preflight policy pending
+explicit reconciliation and complete native stack testing.
+
+
+## Integration update: actual provider call budget
+
+The private PR #81 integration now uses the **actual invocation** limit,
+not the earlier worst-case preflight reservation. The runner counts both
+`getUnwrappedAspectResidual` and `getUnwrappedResidualEnclosure` calls
+across all UTC chunks and fails before exceeding the explicit
+`maxTotalProviderCalls` cap. It also shares the
+`snapshotTransitPinnedIdentity` validator with the report coordinator.
+The earlier sections describe historical draft behavior; the pinned
+integration result is recorded in
+`docs/UTC_F5_PARALLEL_RECONCILIATION_2026-11-14.md`.
+Later PR #72 AbortSignal/timeout support is **not** in PR #81 yet.

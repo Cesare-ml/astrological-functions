@@ -19,7 +19,7 @@ const provider = {
   async getUnwrappedResidualEnclosure() {return null;},
 };
 const runChunk = makeTransitChunkPipelineRunner({
-  windowInput,provider,
+  windowInput,identity,provider,
   scan:{targetIntervalMs:1,maxDepth:8,maxProviderCalls:20},
   refinement:{timeToleranceMs:1,residualToleranceDeg:0.001,maxIterations:16,
     maxCandidateRefinements:8,maxRefinementCalls:12},

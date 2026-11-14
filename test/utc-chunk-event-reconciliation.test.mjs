@@ -107,3 +107,64 @@ test('no events is valid and never implies an astronomical search', () => {
   assert.equal(result.rawHitCount, 0);
   assert.equal(result.duplicateCount, 0);
 });
+
+test('accessor eventKey is rejected without running the getter', () => {
+  let calls = 0;
+  const candidate = { instantUtc: windowInput.startUtc };
+  Object.defineProperty(candidate, 'eventKey', {
+    enumerable: true,
+    get() { calls++; return 'INGRESS'; },
+  });
+  assert.throws(() => reconcileUtcChunkEventHits(options([candidate], [])), hasCode('INVALID_EVENT_HIT'));
+  assert.equal(calls, 0);
+});
+
+test('accessor instantUtc is rejected without reading the getter', () => {
+  let calls = 0;
+  const candidate = { eventKey: 'INGRESS' };
+  Object.defineProperty(candidate, 'instantUtc', {
+    enumerable: true,
+    get() { calls++; return windowInput.startUtc; },
+  });
+  assert.throws(() => reconcileUtcChunkEventHits(options([candidate], [])), hasCode('INVALID_EVENT_HIT'));
+  assert.equal(calls, 0);
+});
+
+test('symbol and nonenumerable candidate extras are rejected, not silently ignored', () => {
+  const symbolExtra = hit('INGRESS', windowInput.startUtc);
+  symbolExtra[Symbol('private')] = 'hidden';
+  const invisibleExtra = hit('INGRESS', windowInput.startUtc);
+  Object.defineProperty(invisibleExtra, 'secret', { value: 'hidden', enumerable: false });
+  const invisibleEventKey = { instantUtc: windowInput.startUtc };
+  Object.defineProperty(invisibleEventKey, 'eventKey', { value: 'INGRESS', enumerable: false });
+  for (const candidate of [symbolExtra, invisibleExtra, invisibleEventKey])
+    assert.throws(() => reconcileUtcChunkEventHits(options([candidate], [])), hasCode('INVALID_EVENT_HIT'));
+});
+
+test('accessor chunkIndex or hits is rejected without invoking getters', () => {
+  for (const field of ['chunkIndex', 'hits']) {
+    let calls = 0;
+    const result = { chunkIndex: 0, hits: [hit('INGRESS', windowInput.startUtc)] };
+    Object.defineProperty(result, field, {
+      enumerable: true,
+      get() { calls++; return field === 'chunkIndex' ? 0 : []; },
+    });
+    assert.throws(() => reconcileUtcChunkEventHits({
+      windowInput, maxInputHits: 10,
+      chunkResults: [result, { chunkIndex: 1, hits: [] }],
+    }), hasCode('INVALID_CHUNK_RESULTS'));
+    assert.equal(calls, 0);
+  }
+});
+
+test('dedup still snapshots stable event keys across a canonical millisecond seam', () => {
+  const instant = '2024-02-29T23:59:59.500Z';
+  const first = Object.freeze(hit('INGRESS', '2024-02-29T23:59:59.5Z'));
+  const second = Object.freeze(hit('INGRESS', instant));
+  const result = reconcileUtcChunkEventHits(options([first], [second]));
+  assert.equal(result.duplicateCount, 1);
+  assert.equal(result.hits.length, 1);
+  assert.equal(result.hits[0].eventKey, 'INGRESS');
+  assert.equal(result.hits[0].ownerChunkIndex, 1);
+  assert.equal(result.hits[0].instantUtc, instant);
+});

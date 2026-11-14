@@ -27,7 +27,8 @@ const provider = {
   async getUnwrappedResidualEnclosure() {return [-1,1];},
 };
 const runChunk = makeTransitChunkPipelineRunner({
-  windowInput,scan,refinement,provider,maxTotalProviderCalls:2800,
+  windowInput,identity,scan,refinement,provider,maxTotalProviderCalls:2800,
+  signal:new AbortController().signal, chunkTimeoutMs:2000,
   async prepareCandidates(request: F5PipelineChunkInput<typeof provider>): Promise<TransitCandidatePipelineReport> {
     const typedProvider: typeof provider = request.provider;
     void typedProvider;
@@ -56,3 +57,12 @@ void incompleteScan;
 // @ts-expect-error mandatory refinement budget
 const incompleteRefinement: F5RefinementLimits = {timeToleranceMs:100,maxIterations:40};
 void incompleteRefinement;
+
+// @ts-expect-error caller must pin identity explicitly at construction
+makeTransitChunkPipelineRunner({windowInput,scan,refinement,provider,maxTotalProviderCalls:2800,
+  prepareCandidates:async()=>({} as TransitCandidatePipelineReport)});
+
+makeTransitChunkPipelineRunner({windowInput,identity,scan,refinement,provider,
+  maxTotalProviderCalls:2800,
+  // @ts-expect-error optional cancellation must be an AbortSignal, not a string
+  signal:'stop',prepareCandidates:async()=>({} as TransitCandidatePipelineReport)});

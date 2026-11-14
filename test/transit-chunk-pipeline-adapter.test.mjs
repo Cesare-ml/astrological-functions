@@ -34,7 +34,7 @@ function syntheticResult(req, change={}) {
     verification:'PROVIDER_ASSERTED_NOT_INDEPENDENTLY_VERIFIED',scientificallyValidated:false,
     ...change};
 }
-const options = (prepareCandidates, props={}) => ({windowInput:windowInput(),
+const options = (prepareCandidates, props={}) => ({windowInput:windowInput(),identity:identity(),
   scan:{targetIntervalMs:60000,maxDepth:10,maxProviderCalls:100},
   refinement:refinement(),provider:provider(),prepareCandidates,
   maxTotalProviderCalls:800,...props});
@@ -73,13 +73,15 @@ test('rejects chunks over PR21 31-day limit before calling producer',()=>{
   assert.throws(()=>makeTransitChunkPipelineRunner(config),code('INCOMPATIBLE_PIPELINE_LIMITS'));
 });
 
-test('checks worst-case global provider-call budget before any invocation',()=>{
+test('validates the global provider-call cap without requiring theoretical worst-case allocation',()=>{
   let calls=0;
   const make=async()=>{calls++;return {};};
-  assert.throws(()=>makeTransitChunkPipelineRunner(options(make, {maxTotalProviderCalls:799})),
-    code('GLOBAL_PIPELINE_BUDGET'));
-  assert.throws(()=>makeTransitChunkPipelineRunner(options(make, {maxTotalProviderCalls:0})),
-    code('GLOBAL_PIPELINE_BUDGET'));
+  for(const invalid of [0,-1,1.5,1_000_001,NaN,undefined])
+    assert.throws(()=>makeTransitChunkPipelineRunner(options(make, {maxTotalProviderCalls:invalid})),
+      code('GLOBAL_PIPELINE_BUDGET'));
+  // A caller may now choose an actual budget smaller than worst-case reserved
+  // scan/refinement caps: the enforced constraint is runtime calls, not a guess.
+  assert.equal(typeof makeTransitChunkPipelineRunner(options(make, {maxTotalProviderCalls:1})), 'function');
   assert.equal(calls,0);
 });
 
@@ -159,4 +161,303 @@ test('propagates failures and never silently retries a partially failed scan',as
   await assert.rejects(()=>runner(req),e=>e===err);
   await assert.rejects(()=>runner(req),code('PIPELINE_SEQUENCE_ERROR'));
   assert.equal(runs,1);
+});
+
+test('direct runner pins aspect and provenance; forged subsequent chunks cannot reach pipeline',async()=>{
+  const captured=[];
+  const opts=options(async request=>{captured.push(request);return syntheticResult(request);});
+  const runner=makeTransitChunkPipelineRunner(opts);
+  const pinned=identity();
+  const first={...pinned,chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+  const second={...pinned,chunkIndex:1,startUtc:'2026-11-14T00:30:00.000Z',endUtc:'2026-11-14T01:00:00.000Z'};
+  await runner(first);
+  for(const fake of [
+    {...second,skyBodyName:'Venus'},
+    {...second,aspectId:'conjunction'},
+    {...second,exactAngleDeg:0},
+    {...second,orientation:'NEGATIVE'},
+    {...second,ephemerisProvenance:{...pinned.ephemerisProvenance,kernelSetId:'forged'}},
+    {...second,ephemerisProvenance:{...pinned.ephemerisProvenance,timeModel:'forged'}},
+  ]) await assert.rejects(()=>runner(fake),code('INCOMPATIBLE_CHUNK_REQUEST'));
+  assert.equal(captured.length,1);
+  await runner(second);
+  assert.deepEqual(captured.map(r=>r.skyBodyName),['Mars','Mars']);
+  assert.deepEqual(captured.map(r=>r.ephemerisProvenance.kernelSetId),['synthetic','synthetic']);
+});
+
+test('runner snapshots source identity before first await, even if caller later mutates it',async()=>{
+  const config=options(async request=>{
+    if(request.startUtc==='2026-11-14T00:00:00.000Z') {
+      config.identity.skyBodyName='Jupiter';
+      config.identity.ephemerisProvenance.kernelSetId='mutated';
+    }
+    return syntheticResult(request);
+  });
+  const pinned=identity();
+  const runner=makeTransitChunkPipelineRunner(config);
+  for(const [chunkIndex,startUtc,endUtc] of [
+    [0,'2026-11-14T00:00:00.000Z','2026-11-14T00:30:00.000Z'],
+    [1,'2026-11-14T00:30:00.000Z','2026-11-14T01:00:00.000Z'],
+  ]) {
+    const report=await runner({...pinned,chunkIndex,startUtc,endUtc});
+    assert.equal(report.skyBodyName,'Mars');
+    assert.equal(report.ephemerisProvenance.kernelSetId,'synthetic');
+  }
+});
+
+test('direct runner rejects accessor request identities without invoking their getters',async()=>{
+  let getterCalls=0, calls=0;
+  const runner=makeTransitChunkPipelineRunner(options(async r=>{calls++;return syntheticResult(r);}));
+  for(const key of ['chunkIndex','skyBodyName','ephemerisProvenance']) {
+    const request={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+    Object.defineProperty(request,key,{enumerable:true,get(){getterCalls++;return key==='chunkIndex'?0:key==='skyBodyName'?'Mars':identity().ephemerisProvenance;}});
+    await assert.rejects(()=>runner(request),code('INCOMPATIBLE_CHUNK_REQUEST'));
+  }
+  assert.equal(getterCalls,0);
+  assert.equal(calls,0);
+});
+
+test('builder rejects missing or accessor-based pinned identity before any provider work',()=>{
+  const fn=async()=>({});
+  assert.throws(()=>makeTransitChunkPipelineRunner(options(fn,{identity:null})),code('INVALID_ARGUMENT'));
+  assert.throws(()=>makeTransitChunkPipelineRunner(options(fn,{identity:{...identity(),orientation:'INVALID'}})),code('INVALID_TRANSIT_IDENTITY'));
+  let getterCalls=0;
+  const malformed=identity();
+  Object.defineProperty(malformed,'skyBodyName',{get(){getterCalls++;return 'Mars';}});
+  assert.throws(()=>makeTransitChunkPipelineRunner(options(fn,{identity:malformed})),code('INVALID_TRANSIT_IDENTITY'));
+  assert.equal(getterCalls,0);
+});
+
+
+test('runtime global call cap counts both point and enclosure callbacks over multiple chunks',async()=>{
+  const counts={point:0,enclosure:0};
+  const p={...provider(),
+    async getUnwrappedAspectResidual(){counts.point++;return 1;},
+    async getUnwrappedResidualEnclosure(){counts.enclosure++;return {lowerDeg:-1,upperDeg:1};},
+  };
+  const prepare=async req=>{
+    await req.provider.getUnwrappedResidualEnclosure({startUtc:req.startUtc,endUtc:req.endUtc});
+    await req.provider.getUnwrappedAspectResidual({datetimeUtc:req.startUtc});
+    return syntheticResult(req);
+  };
+  const config=options(prepare,{provider:p,maxTotalProviderCalls:4});
+  const report=await collectTransitChunkCandidateReports({windowInput:config.windowInput,
+    identity:identity(),maxCandidateRecords:12,
+    runChunk:makeTransitChunkPipelineRunner(config)});
+  assert.equal(report.chunkCount,2);
+  assert.deepEqual(counts,{point:2,enclosure:2});
+});
+
+test('runtime global cap rejects the first excess point call before reaching underlying provider',async()=>{
+  const calls=[];
+  const p={...provider(),
+    async getUnwrappedAspectResidual(req){calls.push('point:'+req.datetimeUtc);return 1;},
+    async getUnwrappedResidualEnclosure(req){calls.push('range:'+req.startUtc);return {lowerDeg:-1,upperDeg:1};},
+  };
+  const prepare=async req=>{
+    await req.provider.getUnwrappedResidualEnclosure({startUtc:req.startUtc,endUtc:req.endUtc});
+    await req.provider.getUnwrappedAspectResidual({datetimeUtc:req.startUtc});
+    return syntheticResult(req);
+  };
+  const config=options(prepare,{provider:p,maxTotalProviderCalls:3});
+  const runner=makeTransitChunkPipelineRunner(config);
+  await assert.rejects(()=>collectTransitChunkCandidateReports({windowInput:config.windowInput,
+    identity:identity(),maxCandidateRecords:12,runChunk:runner}),code('GLOBAL_PIPELINE_BUDGET'));
+  assert.deepEqual(calls,[
+    'range:2026-11-14T00:00:00.000Z',
+    'point:2026-11-14T00:00:00.000Z',
+    'range:2026-11-14T00:30:00.000Z',
+  ]);
+  const next={...identity(),chunkIndex:1,startUtc:'2026-11-14T00:30:00.000Z',endUtc:'2026-11-14T01:00:00.000Z'};
+  await assert.rejects(()=>runner(next),code('PIPELINE_SEQUENCE_ERROR'));
+});
+
+test('a pipeline that swallows exhaustion cannot return a successful report',async()=>{
+  let underlyingCalls=0;
+  const p={...provider(),
+    async getUnwrappedAspectResidual(){underlyingCalls++;return 1;},
+  };
+  const prep=async req=>{
+    await req.provider.getUnwrappedAspectResidual({datetimeUtc:req.startUtc});
+    try {
+      await req.provider.getUnwrappedAspectResidual({datetimeUtc:req.endUtc});
+    }catch(err){assert.equal(err?.code,'GLOBAL_PIPELINE_BUDGET');}
+    // Malicious or broken pipeline attempts to convert a partial search into success.
+    return syntheticResult(req);
+  };
+  const config=options(prep,{provider:p,maxTotalProviderCalls:1});
+  const runner=makeTransitChunkPipelineRunner(config);
+  const first={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+  await assert.rejects(()=>runner(first),code('GLOBAL_PIPELINE_BUDGET'));
+  assert.equal(underlyingCalls,1);
+  await assert.rejects(()=>runner(first),code('PIPELINE_SEQUENCE_ERROR'));
+});
+
+test('saved provider references cannot be used after the chunk has completed',async()=>{
+  let retained;
+  let calls=0;
+  const p={...provider(),async getUnwrappedAspectResidual(){calls++;return 0;}};
+  const runner=makeTransitChunkPipelineRunner(options(async req=>{
+    retained=req.provider;
+    await retained.getUnwrappedAspectResidual({datetimeUtc:req.startUtc});
+    return syntheticResult(req);
+  },{provider:p,maxTotalProviderCalls:1}));
+  const first={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+  await runner(first);
+  await assert.rejects(()=>retained.getUnwrappedAspectResidual({datetimeUtc:first.endUtc}),code('PIPELINE_SEQUENCE_ERROR'));
+  assert.equal(calls,1);
+});
+
+test('rejects invalid AbortSignal and per-chunk timeout at construction',()=>{
+  let calls=0;
+  const prepare=async()=>{calls++;return {};};
+  for(const signal of [null,false,{},new AbortController()])
+    assert.throws(()=>makeTransitChunkPipelineRunner(options(prepare,{signal})),code('INVALID_CANCELLATION'));
+  for(const chunkTimeoutMs of [null,0,-1,1.5,86400001,Infinity,NaN])
+    assert.throws(()=>makeTransitChunkPipelineRunner(options(prepare,{chunkTimeoutMs})),code('INVALID_TIMEOUT'));
+  assert.equal(calls,0);
+});
+
+test('pre-aborted signal prevents the first PR21 callback and cannot be retried',async()=>{
+  const controller=new AbortController(); controller.abort('requested');
+  let calls=0;
+  const runner=makeTransitChunkPipelineRunner(options(async req=>{calls++;return syntheticResult(req);},{signal:controller.signal}));
+  const req={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+  await assert.rejects(()=>runner(req),code('SEARCH_CANCELLED'));
+  await assert.rejects(()=>runner(req),code('PIPELINE_SEQUENCE_ERROR'));
+  assert.equal(calls,0);
+});
+
+test('external cancellation interrupts unresolved provider and forwards cooperative signal',async()=>{
+  const external=new AbortController();
+  let providerSignal, started;
+  const began=new Promise(resolve=>{started=resolve;});
+  let calls=0;
+  const p={...provider(),async getUnwrappedResidualEnclosure(req,signal){
+    providerSignal=signal;calls++;started();return new Promise(()=>{});
+  }};
+  const runner=makeTransitChunkPipelineRunner(options(async req=>{
+    await req.provider.getUnwrappedResidualEnclosure({startUtc:req.startUtc,endUtc:req.endUtc});
+    return syntheticResult(req);
+  },{provider:p,signal:external.signal}));
+  const req={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+  const pending=runner(req);
+  await began;
+  assert.ok(providerSignal instanceof AbortSignal);
+  assert.equal(providerSignal.aborted,false);
+  external.abort('user request');
+  await assert.rejects(()=>pending,code('SEARCH_CANCELLED'));
+  assert.equal(providerSignal.aborted,true);
+  assert.equal(calls,1);
+  await assert.rejects(()=>runner(req),code('PIPELINE_SEQUENCE_ERROR'));
+});
+
+test('chunk timeout stops waiting on a never-settling pipeline and closes the runner',async()=>{
+  let calls=0;
+  const runner=makeTransitChunkPipelineRunner(options(async()=>{calls++;return new Promise(()=>{});},{chunkTimeoutMs:15}));
+  const req={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+  await assert.rejects(()=>runner(req),code('CHUNK_TIMEOUT'));
+  assert.equal(calls,1);
+  await assert.rejects(()=>runner(req),code('PIPELINE_SEQUENCE_ERROR'));
+});
+
+test('chunk timeout signals a hung provider without claiming that its I/O was stopped',async()=>{
+  let capturedSignal, called=0;
+  const p={...provider(),async getUnwrappedAspectResidual(req,signal){
+    capturedSignal=signal;called++;return new Promise(()=>{});
+  }};
+  const runner=makeTransitChunkPipelineRunner(options(async req=>{
+    await req.provider.getUnwrappedAspectResidual({datetimeUtc:req.startUtc});
+    return syntheticResult(req);
+  },{provider:p,chunkTimeoutMs:15}));
+  const req={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+  await assert.rejects(()=>runner(req),code('CHUNK_TIMEOUT'));
+  assert.equal(called,1);
+  assert.equal(capturedSignal?.aborted,true);
+});
+
+test('abort between completed chunks prevents later provider work',async()=>{
+  const controller=new AbortController();let called=0;
+  const runner=makeTransitChunkPipelineRunner(options(async req=>{called++;return syntheticResult(req);},{signal:controller.signal}));
+  const i=identity();
+  await runner({...i,chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'});
+  controller.abort();
+  await assert.rejects(()=>runner({...i,chunkIndex:1,startUtc:'2026-11-14T00:30:00.000Z',endUtc:'2026-11-14T01:00:00.000Z'}),code('SEARCH_CANCELLED'));
+  assert.equal(called,1);
+});
+
+test('global budget terminates immediately without timeout even when callback swallows then hangs',async()=>{
+  let calls=0;
+  const p={...provider(),async getUnwrappedAspectResidual(){calls++;return 1;}};
+  const runner=makeTransitChunkPipelineRunner(options(async req=>{
+    await req.provider.getUnwrappedAspectResidual({datetimeUtc:req.startUtc});
+    try { await req.provider.getUnwrappedAspectResidual({datetimeUtc:req.endUtc}); }
+    catch(err){assert.equal(err.code,'GLOBAL_PIPELINE_BUDGET');}
+    return new Promise(()=>{});
+  },{provider:p,maxTotalProviderCalls:1}));
+  const req={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+  let watchdog;
+  try {
+    await assert.rejects(()=>Promise.race([
+      runner(req),
+      new Promise((_, reject)=>{watchdog=setTimeout(()=>reject(Error('budget did not terminate hung pipeline')),500);}),
+    ]),code('GLOBAL_PIPELINE_BUDGET'));
+  } finally { clearTimeout(watchdog); }
+  assert.equal(calls,1);
+  await assert.rejects(()=>runner(req),code('PIPELINE_SEQUENCE_ERROR'));
+});
+
+test('a stale provider callback cannot borrow the next chunk authority or budget',async()=>{
+  let stale;
+  const calls=[];
+  const signals=[];
+  const p={...provider(),async getUnwrappedAspectResidual(req,signal){
+    calls.push(req.datetimeUtc); signals.push(signal);
+    return 1;
+  }};
+  const runner=makeTransitChunkPipelineRunner(options(async req=>{
+    if (req.startUtc==='2026-11-14T00:00:00.000Z')
+      stale=req.provider.getUnwrappedAspectResidual;
+    await req.provider.getUnwrappedAspectResidual({datetimeUtc:req.startUtc});
+    if (req.startUtc==='2026-11-14T00:30:00.000Z') {
+      // Second chunk is active, but the first chunk's callback is revoked.
+      await assert.rejects(()=>stale({datetimeUtc:req.startUtc}),code('PIPELINE_SEQUENCE_ERROR'));
+      assert.equal(signals.length,2);
+      assert.notEqual(signals[0],signals[1]);
+    }
+    return syntheticResult(req);
+  },{provider:p,maxTotalProviderCalls:2}));
+  const i=identity();
+  await runner({...i,chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'});
+  await runner({...i,chunkIndex:1,startUtc:'2026-11-14T00:30:00.000Z',endUtc:'2026-11-14T01:00:00.000Z'});
+  assert.deepEqual(calls,['2026-11-14T00:00:00.000Z','2026-11-14T00:30:00.000Z']);
+});
+
+test('a late continuation from the previous chunk cannot invoke a provider in the next',async()=>{
+  let resumeLate;
+  const lateSignal=new Promise(resolve=>{resumeLate=resolve;});
+  let lateDone;
+  const lateResult=new Promise(resolve=>{lateDone=resolve;});
+  let calls=0;
+  const p={...provider(),async getUnwrappedResidualEnclosure(){calls++;return {};}};
+  const runner=makeTransitChunkPipelineRunner(options(async req=>{
+    if(req.startUtc==='2026-11-14T00:00:00.000Z'){
+      const oldProvider=req.provider;
+      void (async()=>{
+        await lateSignal;
+        try { await oldProvider.getUnwrappedResidualEnclosure({startUtc:req.startUtc,endUtc:req.endUtc});
+          lateDone('UNEXPECTED_ALLOWED');
+        } catch(err){lateDone(err?.code);}
+      })();
+    } else {
+      resumeLate();
+      assert.equal(await lateResult,'PIPELINE_SEQUENCE_ERROR');
+    }
+    await req.provider.getUnwrappedResidualEnclosure({startUtc:req.startUtc,endUtc:req.endUtc});
+    return syntheticResult(req);
+  },{provider:p,maxTotalProviderCalls:2}));
+  const i=identity();
+  await runner({...i,chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'});
+  await runner({...i,chunkIndex:1,startUtc:'2026-11-14T00:30:00.000Z',endUtc:'2026-11-14T01:00:00.000Z'});
+  assert.equal(calls,2);
 });
