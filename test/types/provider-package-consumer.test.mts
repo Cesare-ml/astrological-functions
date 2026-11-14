@@ -102,7 +102,7 @@ experimentalChart.datetimeUtc = '2026-11-15T00:00:00Z';
 experimentalChart.ephemerisProvenance.kernelSetId = 'other-kernel';
 // @ts-expect-error A body longitude cannot be overwritten by chart consumers.
 experimentalChart.bodies.Sun.longitudeDeg = 99;
-// @ts-expect-error House placements cannot be authorized with an unknown-time boolean.
 declare const birthTimeKnownAtRuntime: boolean;
+// @ts-expect-error House placements cannot be authorized with an unknown-time boolean.
 const unverifiedBirthTimePlacement: Parameters<typeof placeNatalBodiesInHouses>[0] = { ...housePlacementRequest, birthTimeKnown: birthTimeKnownAtRuntime };
 void unverifiedBirthTimePlacement;
