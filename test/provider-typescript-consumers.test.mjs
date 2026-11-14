@@ -14,6 +14,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fixtures = [
   'test/types/provider-package-consumer.test.mts',
   'test/types/provider-public-house-composition.test.mts',
+  'test/types/provider-zodiac-export-union.test.mts',
 ];
 const probe = spawnSync('tsc', ['--version'], { cwd: root, encoding: 'utf8', timeout: 10000 });
 const compilerMissing = probe.error?.code === 'ENOENT';

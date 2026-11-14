@@ -8,6 +8,18 @@
     "./ephemeris-provider": {
       "types": "./src/ephemeris-provider.d.ts",
       "import": "./src/ephemeris-provider.js"
+    },
+    "./dodecatemoria": {
+      "types": "./src/dodecatemoria-methods.d.mts",
+      "import": "./src/dodecatemoria-methods.mjs"
+    },
+    "./dodecatemoria-batch": {
+      "types": "./src/dodecatemoria-batch.d.mts",
+      "import": "./src/dodecatemoria-batch.mjs"
+    },
+    "./zodiac-decan-facts": {
+      "types": "./src/zodiac-decan-facts.d.mts",
+      "import": "./src/zodiac-decan-facts.mjs"
     }
   },
   "engines": {
