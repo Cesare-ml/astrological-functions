@@ -141,3 +141,98 @@ test('CLI emits machine readable report without touching files', async t => {
   assert.equal(bad.status, 1);
   assert.match(bad.stderr, /INVALID_STAGE_ROOT/);
 });
+
+test('NodeNext .mjs declaration imports traverse .d.mts transitively', async t => {
+  const root = await fixture(t);
+  await writeFile(join(root, 'src', 'example.d.mts'),
+    "import type { Facts } from './facts.mjs';\nexport type Example = Facts;\n");
+  await writeFile(join(root, 'src', 'facts.d.mts'),
+    "export type { Facts } from './nested.mjs';\n");
+  await writeFile(join(root, 'src', 'nested.d.mts'),
+    'export interface Facts { readonly value: number }\n');
+  const report = await verifyEsmSourceClosure(root);
+  assert.equal(report.declarationModuleCount, 3);
+  assert.equal(report.declarationDependencyEdgeCount, 2);
+  assert.deepEqual(report.declarationFiles,
+    ['src/example.d.mts', 'src/facts.d.mts', 'src/nested.d.mts']);
+});
+
+test('missing transitive declaration blocks despite complete runtime graph', async t => {
+  const root = await fixture(t);
+  await writeFile(join(root, 'src', 'example.d.mts'),
+    "import type { Missing } from './missing.mjs';\nexport type Example = Missing;\n");
+  await fails(verifyEsmSourceClosure(root), 'MISSING_SOURCE_MODULE');
+});
+
+test('mismatched case in declaration import fails on Windows and Linux', async t => {
+  const root = await fixture(t);
+  await writeFile(join(root, 'src', 'example.d.mts'),
+    "export type { Facts } from './Facts.mjs';\n");
+  await writeFile(join(root, 'src', 'facts.d.mts'),
+    'export interface Facts { value: number }\n');
+  await fails(verifyEsmSourceClosure(root), 'SOURCE_CASE_MISMATCH');
+});
+
+test('NodeNext .js declarations map to .d.ts, not .d.mts', async t => {
+  const root = await fixture(t);
+  await writeFile(join(root, 'src', 'example.d.mts'),
+    "import type { Facts } from './facts.js';\nexport type Example = Facts;\n");
+  await writeFile(join(root, 'src', 'facts.d.ts'),
+    'export interface Facts { readonly value: number }\n');
+  const report = await verifyEsmSourceClosure(root);
+  assert.deepEqual(report.declarationFiles,['src/example.d.mts','src/facts.d.ts']);
+});
+
+test('same-package typed subpath references are checked against exported declarations', async t => {
+  const root = await fixture(t);
+  await writeFile(join(root, 'src', 'example.d.mts'),
+    "export type { Example } from 'astrological-functions/example';\nexport interface Example { value: number }\n");
+  const report = await verifyEsmSourceClosure(root);
+  assert.equal(report.declarationModuleCount, 1);
+  assert.deepEqual(report.declarationEdges,
+    [{from:'src/example.d.mts', to:'src/example.d.mts'}]);
+  await writeFile(join(root, 'src', 'example.d.mts'),
+    "import type { Missing } from 'astrological-functions/unlisted';\nexport type Example = Missing;\n");
+  await fails(verifyEsmSourceClosure(root), 'UNPUBLISHED_DECLARATION_DEPENDENCY');
+});
+
+test('bare third-party declaration imports fail closed before TypeScript compile', async t => {
+  const root = await fixture(t);
+  await writeFile(join(root, 'src', 'example.d.mts'),
+    "import type { Swiss } from 'swisseph';\nexport type Example = Swiss;\n");
+  await fails(verifyEsmSourceClosure(root), 'UNPINNED_DECLARATION_DEPENDENCY');
+});
+
+test('inline import type and triple slash reference path are audited', async t => {
+  const root = await fixture(t);
+  await writeFile(join(root, 'src', 'example.d.mts'),
+    "/// <reference path=\"./extra.d.mts\" />\nexport type Example = import('./facts.mjs').Facts;\n");
+  await writeFile(join(root, 'src', 'extra.d.mts'),'export type Tag = string;\n');
+  await writeFile(join(root, 'src', 'facts.d.mts'),'export interface Facts { value: number }\n');
+  const report = await verifyEsmSourceClosure(root);
+  assert.equal(report.declarationModuleCount, 3);
+  assert.equal(report.declarationDependencyEdgeCount, 2);
+});
+
+test('declaration traversal cannot escape package root', async t => {
+  const root = await fixture(t);
+  await writeFile(join(root, 'src', 'example.d.mts'),
+    "export type Example = import('../../outside.mjs').Fact;\n");
+  await fails(verifyEsmSourceClosure(root), 'OUTSIDE_STAGING_ROOT');
+});
+
+test('declaration symlinks are rejected before reading contents', async t => {
+  const root = await fixture(t);
+  await writeFile(join(root, 'src', 'example.d.mts'),
+    "export type { Fact } from './alias.mjs';\n");
+  await writeFile(join(root,'src','target.d.mts'),'export type Fact = number;\n');
+  await symlink(join(root,'src','target.d.mts'),join(root,'src','alias.d.mts'));
+  await fails(verifyEsmSourceClosure(root), 'SYMLINK_SOURCE_MODULE');
+});
+
+test('extensionless declaration references fail closed, preserving NodeNext semantics', async t => {
+  const root = await fixture(t);
+  await writeFile(join(root,'src','example.d.mts'),
+    "export type { Fact } from './facts';\n");
+  await fails(verifyEsmSourceClosure(root), 'UNSUPPORTED_DECLARATION_SPECIFIER');
+});
