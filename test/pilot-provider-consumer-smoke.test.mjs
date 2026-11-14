@@ -74,3 +74,42 @@ test('ESM consumers cannot bypass the provider export through internal paths', a
     await assert.rejects(import(specifier), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
   }
 });
+
+test('ESM package provider rejects geometric J2000 metadata without fallback', async () => {
+  const requests = [];
+  const provider = {
+    async getGeocentricEcliptic(request) {
+      requests.push(request);
+      return {
+        longitudeDeg: 42,
+        latitudeDeg: 0,
+        metadata: {
+          center: 'EARTH',
+          frame: 'ECLIPTIC_J2000',
+          corrections: 'GEOMETRIC',
+          engineVersion: 'synthetic',
+          kernelSetId: 'synthetic',
+          timeModel: 'synthetic'
+        }
+      };
+    }
+  };
+  await assert.rejects(
+    packageProvider.calculateNatalWithProvider({
+      datetimeUtc: '2026-11-14T00:00:00Z',
+      latitudeDeg: 45,
+      longitudeDegEast: 11,
+      bodyNames: ['Sun'],
+      provider
+    }),
+    (error) => error instanceof Error && typeof error.code === 'string'
+  );
+  assert.equal(requests.length, 1);
+  assert.deepEqual(requests[0], {
+    datetimeUtc: '2026-11-14T00:00:00Z',
+    bodyName: 'Sun',
+    corrections: 'APPARENT',
+    frame: 'ECLIPTIC_OF_DATE'
+  });
+  assert.equal(Object.isFrozen(requests[0]), true);
+});
