@@ -188,3 +188,9 @@ Run `node --test test/pilot-provider-consumer-smoke.test.mjs`, `npm test`,
 and the strict NodeNext/Bundler TypeScript consumer commands above on a full
 checkout of draft PR #54. These commands have **not** been executed in this
 GitHub-only update. Do not advance the validation status without exit codes.
+
+### Reentrant body-list mutation regression (14 November 2026)
+
+The public ESM consumer smoke now includes a synthetic asynchronous provider that mutates the caller-owned `bodyNames` array during its first request (replacing `Moon` with `Mars` and appending `Venus`). The chart must continue to request exactly `Sun` then `Moon`, with neither injected body in its output. This guards the validated input snapshot across provider awaits; it does not implement astronomy.
+
+Verification attempted: a native checkout with `git clone --depth 1 --branch agent/provider-runtime-import-smoke-20261113` failed before tests with `Could not resolve host: github.com`. Thus neither `node --test test/pilot-provider-consumer-smoke.test.mjs` nor `npm test` nor NodeNext/Bundler `tsc` was run. Once network access is restored, execute those commands on the exact branch head and record exit codes. Do not treat the published regression fixture as passing evidence.
