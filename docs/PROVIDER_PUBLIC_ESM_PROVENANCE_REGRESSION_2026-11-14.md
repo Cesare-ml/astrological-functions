@@ -18,3 +18,9 @@ npm test
 **Execution status:** Not executed in this change; GitHub commit publication is not a passing test. NodeNext/Bundler TypeScript consumer compilation, actual Rust/WASM integration, NASA/JPL scientific accuracy and cross-PR consolidated integration remain unverified. Reconcile overlapping ESM export changes (including PR #69) before integration.
 
 No new astronomical algorithm, fallback, Swiss source, production changes, GitHub Actions, package release, licensing decision or main merge. Rust remains the sole planned astronomical engine: [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris). Preserve VirgoStars attribution.
+
+## Malformed provenance value regression (14 November 2026)
+
+The public ESM consumer test additionally checks all three provenance keys against empty and whitespace-only strings, number `0`, boolean `false`, object `{}`, and array `[]` (18 synthetic cases). Each must reject with `INVALID_EPHEMERIS_RESULT` on the first body, before querying Moon; the first provider request must remain frozen. This distinguishes invalid values from the separately supported all-absent legacy mock provenance and prevents a future Rust/WASM adapter from silently accepting unpinnable engine/kernel/time identifiers.
+
+Run `node --test test/provider-public-esm-provenance-regression.test.mjs` on the complete stacked PR #54 checkout, then `npm test` and the documented strict NodeNext/Bundler TypeScript consumer checks. **Not executed during this GitHub-only change**; the published fixture is not proof of a pass. Real Rust/WASM and NASA/JPL accuracy are still unverified. No astronomical computation or package export changes. VirgoStars credit: https://github.com/Cesare-ml/VirgoStars-Ephemeris
