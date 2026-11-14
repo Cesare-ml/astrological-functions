@@ -135,3 +135,72 @@ repository `npm test`) remain unexecuted and must not be inferred
 from the TypeScript results. PR #54 still depends on draft PR #3;
 no GitHub Actions, branch merge, deploy, npm publish or visibility change.
 Attribution: https://github.com/Cesare-ml/VirgoStars-Ephemeris.
+
+
+## Native TypeScript consumer gate with unchecked-index safety — 14 November 2026
+
+The two real compile-only provider consumers are now covered by
+`test/provider-typescript-consumers.test.mjs`, a **native Node
+`node:test`** harness that runs the system's existing `tsc` without
+network access or installing a dependency. Each run compiles **both**
+`test/types/provider-package-consumer.test.mts` and
+`test/types/provider-public-house-composition.test.mts`, with four
+strict configurations:
+
+- NodeNext, strict + `noUncheckedIndexedAccess`;
+- NodeNext, additionally `exactOptionalPropertyTypes`;
+- Bundler (`module=ESNext`), strict + `noUncheckedIndexedAccess`;
+- Bundler, additionally `exactOptionalPropertyTypes`.
+
+`noUncheckedIndexedAccess` exposed a genuine fixture problem:
+`placed.placements.Sun.house` is not type-safe when
+`placements` is a `Record<string, ...>`. The desired body may be
+absent at runtime, so the consumer must check for `undefined` before
+using the placement. The fixture now explicitly narrows
+`sunPlacement` with that guard and verifies readonly fields **after**
+narrowing; the provider's public type contract and runtime remain
+unchanged.
+
+Run from a trusted checkout:
+
+```sh
+node --check test/provider-typescript-consumers.test.mjs
+node --test test/provider-typescript-consumers.test.mjs
+```
+
+The tests run as part of `node --test`/`npm test` when the repository
+is checked out and TypeScript is on PATH. They only **skip** when the
+compiler is genuinely absent (`ENOENT`); a present compiler that
+fails its version probe or compilation must produce a failing test.
+A skipped compiler gate is *not* release validation. No GitHub Actions
+are added.
+
+### Verified evidence
+
+Using Node **v22.16.0** and TypeScript **v5.8.3** in an isolated
+provider package reconstructed from authenticated GitHub file blobs:
+
+- Initial stringent compiler pass failed with **TS18048** on
+  `placed.placements.Sun`, demonstrating the unchecked-index gap.
+- After the explicit guard, all **4/4 native Node-run TypeScript tests**
+  passed with **0 failures, 0 skips**, covering both authentic
+  compile-only consumer fixtures together.
+- `node --check` passed for the native test file.
+- Exact GitHub blobs match the locally tested files:
+  - `test/types/provider-package-consumer.test.mts`:
+    `0d097e38cf5263ead900f00d69699ac74ee824c2` (unchanged).
+  - `src/ephemeris-provider.d.ts`:
+    `ef2524155890d72fe8bea5c6abded5a401ea8186` (unchanged).
+  - `test/types/provider-public-house-composition.test.mts`:
+    `02b7cf558142604440bfb82e7ff2f711760e6474`.
+  - `test/provider-typescript-consumers.test.mjs`:
+    `bdee83c5422f2e41a44fe22589d5ece5859d8c87`.
+
+This **does not** demonstrate full PR #54 native runtime
+`npm test` in its actual stacked worktree; no real Ephemeris Rust/WASM
+provider was invoked and no scientific parity or downstream
+Astrolabio/Desktop build was tested. PR #54 remains a draft based on
+draft PR #3. PRs #69 and #83 reconcile ESM exports separately.
+No merge, deploy, npm publication, license/visibility change, or
+GitHub Actions. Attribution:
+https://github.com/Cesare-ml/VirgoStars-Ephemeris.
