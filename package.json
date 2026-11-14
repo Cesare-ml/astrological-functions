@@ -16,12 +16,20 @@
     "./zodiac-decan-facts": {
       "types": "./src/zodiac-decan-facts.d.mts",
       "import": "./src/zodiac-decan-facts.mjs"
+    },
+    "./porphyry-houses": {
+      "types": "./src/porphyry-houses.d.mts",
+      "import": "./src/porphyry-houses.mjs"
+    },
+    "./vehlow-houses": {
+      "types": "./src/vehlow-houses.d.mts",
+      "import": "./src/vehlow-houses.mjs"
     }
   },
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node scripts/run-tests.mjs"
   }
 }
