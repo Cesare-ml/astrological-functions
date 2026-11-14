@@ -23,5 +23,10 @@ export declare function makeTransitChunkPipelineRunner<P>(input: Readonly<{
   provider: P;
   /** Explicit upper bound for all scanner and refinement provider calls. */
   maxTotalProviderCalls: number;
+  /** Optional cancellation of the current and all later chunks. */
+  signal?: AbortSignal;
+  /** Optional per-chunk deadline (ms, 1..86400000), not a total search timeout. */
+  chunkTimeoutMs?: number;
+  /** Provider methods may accept an optional AbortSignal as their second argument. */
   prepareCandidates(input: F5PipelineChunkInput<P>): Promise<TransitCandidatePipelineReport>;
 }>): (request: TransitChunkRequest) => Promise<TransitCandidatePipelineReport>;
