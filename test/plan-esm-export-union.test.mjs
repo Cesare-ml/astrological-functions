@@ -106,7 +106,6 @@ test('CLI is read-only, returns a plan on valid JSON and fails for a conflict', 
   }
 });
 
-
 test('hidden segments are refused in proposed ESM subpaths', () => {
   for (const subpath of ['./.env', './.git/config', './safe/.secret', './a/..hidden']) {
     expectCode(() => planEsmExportUnion([manifest(), manifest({ [subpath]: entry('safe') })]),
