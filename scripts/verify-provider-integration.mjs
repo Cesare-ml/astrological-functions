@@ -38,7 +38,7 @@ if (args.length > 1 || (args.length === 1 && !['--help', '--list'].includes(args
   process.exit(2);
 }
 if (args[0] === '--help') {
-  console.log('Native F2/F3 verification: run all Node tests and strict NodeNext TypeScript fixtures.');
+  console.log('Native F2/F3 verification: run all Node tests and strict NodeNext/Bundler TypeScript fixtures.');
   console.log('No GitHub Actions, network access, publishing, database changes, or deployment.');
   process.exit(0);
 }
@@ -65,4 +65,8 @@ execute(windows ? 'tsc.cmd' : 'tsc', [
   '--strict', '--noEmit', '--target', 'ES2022',
   '--module', 'NodeNext', '--moduleResolution', 'NodeNext', ...types,
 ], 'typescript-nodenext', { shell: windows });
+execute(windows ? 'tsc.cmd' : 'tsc', [
+  '--strict', '--noEmit', '--target', 'ES2022',
+  '--module', 'ESNext', '--moduleResolution', 'Bundler', ...types,
+], 'typescript-bundler', { shell: windows });
 console.log('\nNative JavaScript and TypeScript gates PASS. Rust/JPL parity and release gates remain separate.');
