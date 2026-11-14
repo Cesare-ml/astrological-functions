@@ -23,3 +23,17 @@ Tested file blob SHA-1s:
 - `test/dodecatemoria-point-snapshot.test.mjs`: `fd2df42803fd686238e6e86120ba922ba59f3fef`
 
 Before considering merge, run the **full native `npm test`** and TypeScript NodeNext consumer checks against the combined current `main`. No GitHub Actions, automatic merge, package release, public license, production changes or new astronomical implementation. Keep visible [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) project attribution.
+
+## Additional validated fix: trusted array construction (14 November 2026)
+
+A second check/use boundary was discovered after the initial single-read `id` patch. The original batch code called `points.map(...)` on a caller-supplied Array. Since JavaScript arrays can override their own `.map` method and subclasses can implement `[Symbol.species]`, that operation was not trusted. A synthetic overridden `.map` returned an arbitrary `{id: 'FORGED', facts: {secret: ...}}` record without invoking the intended point validation or single-point mathematics. Array subclasses could also run species constructors during result allocation.
+
+This PR now captures the initial array length, preflights own numeric indices as before, and **constructs a fresh ordinary Array** using an explicit bounded `for` loop and `push`. This avoids calling the input's `.map` and avoids `Array[Symbol.species]`; it reuses the single-read ID and longitude snapshot logic from the first fix. It does **not** reimplement the mathematical formulas. Caller changes to array length during point access cannot silently extend the processing bound.
+
+New test file: `test/dodecatemoria-array-override.test.mjs` (four regressions). In the isolated Node v22.16.0 harness, the first two tests failed on the original PR #98 code and passed after the fix. Full **focused suite of both files: 8 passed, 0 failed, 0 skipped**; `node --check` succeeded for the modified batch file and new test. Tested GitHub source and regression blob SHAs:
+
+- batch: `b1995bee0419d7c663bc6dc952cb15f9360079e3`
+- array tests: `0f1fac811b2878d4ff37e52b1574158c9aa34d6d`
+- earlier point snapshot tests unchanged: `fd2df42803fd686238e6e86120ba922ba59f3fef`
+
+**Test limitation:** These focused tests used the actual upstream batch and dodecatemoria-methods files together with a deliberately labeled small local `index.mjs` helper shim, **not** a full private repository checkout. Merge gating still requires the canonical complete `npm test`, ESM/package consumer tests and strict TypeScript NodeNext tests on the latest combined `main`. The private package remains experimental; no published release, GitHub Actions or production deployment.
