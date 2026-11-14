@@ -206,3 +206,43 @@ done
 ```
 
 **83/83 focused runtime tests passed**, including regression scenarios for stale callbacks during later chunks and swallowed global-budget failures with **no chunk timeout**. `npm test` on a complete private repository checkout and independent Rust/WASM/JPL scientific verification are **still not executed**. This remains draft, no `main` merge, GitHub Actions, release or production deployment.
+
+
+## Addendum — full SHA-matched Node suite and reproducible manual gate (2026-11-14)
+
+### What changed in the validation environment
+
+The previously outstanding `npm test` gate could be exercised **offline** by reconstructing the entire JavaScript/runtime-test surface from the connected private repository into an isolated local directory. Direct `git clone` is unavailable because this execution environment cannot resolve `github.com`; **this is a SHA-matched working-tree reconstruction, not a native Git clone**.
+
+GitHub's recursive integration tree was read without truncation. Every JavaScript file actually consumed by Node was independently verified using local `git hash-object` against the exact blob SHA from the branch:
+
+- `src/*.mjs`: **11/11 exact** including the original full `src/index.mjs` (not the earlier `AstrologyError` stand-in), `src/transit-facts.mjs`, and the actual PR #21 scan/refinement/pipeline modules.
+- `test/*.test.mjs`: **11/11 exact**, including the previously missing original math, transit-facts, interval-scan, exact-hit and event-pipeline tests.
+- `package.json`: **exact** Git blob `f3d0fb087213b43871cae3afeeb24b537a627288`, including the actual `npm test` script and `astrological-functions/transits` self-reference export.
+- `src/*.d.mts`: **10/10 exact**; `test/types/*.test.ts`: **10/10 exact**, plus the exact integration manual TS typecheck source. The temporary local-only compatibility fixture was excluded from the final complete check.
+- `scripts/manual/transit-pr21-smoke.mjs`: **exact** Git blob `fbe10d95b32c265b82337b40af1ae5219c0b5fbf`.
+
+### Executed validation
+
+From the verified local mirror on **Node v22.16.0, TypeScript v5.8.3**:
+
+```sh
+npm test
+# PASS: 123 tests, 0 failed / cancelled / skipped
+
+node scripts/manual/transit-pr21-smoke.mjs
+# PASS: 11 synthetic integration tests against actual PR #21 implementation
+
+tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext test/types/*.ts scripts/manual/transit-pr21-typecheck.ts
+# PASS: all 10 original TypeScript consumer fixtures and integration contract
+```
+
+**134/134 runtime tests passed.** These are all tests checked into the current integration tree, not merely the focused six-file F5 subset. The suite is reproducible from the combined branch using the new **manual command**:
+
+```sh
+node scripts/manual/validate-f5-stack.mjs
+```
+
+The new script runs the repository's `node --test` equivalent to `npm test`, then the actual F5 integration smoke test, then strict TypeScript NodeNext checks. It requires Node >=20 and `tsc` on PATH, runs entirely offline, returns nonzero on missing integration files or any failed gate, and does **not** invoke GitHub Actions, deploy, publish, or merge. Both its passing path and its missing-checkout negative path were locally tested. GitHub blob: `6c6bd0b65f5715d2fa10ff5311943a35aa982f4d`, identical to the tested script.
+
+**Unresolved scientific gate:** all current astronomy residuals and enclosure assertions are synthetic; the F5 provider requires apparent Earth-centered ecliptic-of-date coordinates, a guarantee the unvalidated geometric J2000 Rust prototype does not yet provide. No real NASA/JPL reference parity, complete cancellation of noncooperative I/O, scientific completeness certification, publishing authorization, or production validation is implied. Both F5 PRs remain draft and `main` remains unchanged.
