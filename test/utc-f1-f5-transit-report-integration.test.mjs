@@ -51,7 +51,7 @@ function report(request, overrides = {}) {
 }
 function makeConfig(window, prepareCandidates, options = {}) {
   return {
-    windowInput: window,
+    windowInput: window, identity: identity(),
     scan: {targetIntervalMs: 1, maxDepth: 8, maxProviderCalls: 20},
     refinement: refinement(), provider: provider(), maxTotalProviderCalls: 64,
     prepareCandidates, ...options,

@@ -34,7 +34,7 @@ function syntheticResult(req, change={}) {
     verification:'PROVIDER_ASSERTED_NOT_INDEPENDENTLY_VERIFIED',scientificallyValidated:false,
     ...change};
 }
-const options = (prepareCandidates, props={}) => ({windowInput:windowInput(),
+const options = (prepareCandidates, props={}) => ({windowInput:windowInput(),identity:identity(),
   scan:{targetIntervalMs:60000,maxDepth:10,maxProviderCalls:100},
   refinement:refinement(),provider:provider(),prepareCandidates,
   maxTotalProviderCalls:800,...props});

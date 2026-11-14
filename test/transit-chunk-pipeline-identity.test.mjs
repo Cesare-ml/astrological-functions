@@ -19,7 +19,7 @@ const capabilities = {
   center: 'EARTH', frame: 'ECLIPTIC_OF_DATE', corrections: 'APPARENT',
 };
 const options = prepareCandidates => ({
-  windowInput, scan: { targetIntervalMs: 1000, maxDepth: 4, maxProviderCalls: 8 },
+  windowInput, identity: identity(), scan: { targetIntervalMs: 1000, maxDepth: 4, maxProviderCalls: 8 },
   refinement: { timeToleranceMs: 1, residualToleranceDeg: .0001,
     maxIterations: 8, maxCandidateRefinements: 2, maxRefinementCalls: 8 },
   maxTotalProviderCalls: 32,
@@ -41,7 +41,7 @@ test('direct runner pins aspect and body identity across chunk boundaries', asyn
     {skyBodyName:'Venus'}, {natalBodyName:'Moon'}, {aspectId:'opposition'},
     {exactAngleDeg: 180}, {orientation:'NEGATIVE'},
   ]) {
-    await assert.rejects(() => runner(chunk(1, {...identity(), ...patch})), code('INCOMPATIBLE_CHUNK_IDENTITY'));
+    await assert.rejects(() => runner(chunk(1, {...identity(), ...patch})), code('INCOMPATIBLE_CHUNK_REQUEST'));
     assert.equal(calls, 1);
   }
   await runner(chunk(1));
@@ -58,14 +58,14 @@ test('direct runner rejects silent engine/kernel/time-model changes', async () =
     const id = identity();
     await assert.rejects(() => runner(chunk(1, {
       ...id, ephemerisProvenance: {...id.ephemerisProvenance, ...patch},
-    })), code('INCOMPATIBLE_CHUNK_IDENTITY'));
+    })), code('INCOMPATIBLE_CHUNK_REQUEST'));
     assert.equal(calls, 1);
   }
   await runner(chunk(1));
   assert.equal(calls, 2);
 });
 
-test('first identity is a detached immutable snapshot, not a live caller object', async () => {
+test('constructor identity is a detached immutable snapshot, not a live caller object', async () => {
   const seen = [];
   const runner = makeTransitChunkPipelineRunner(options(async r => {
     seen.push(r.ephemerisProvenance);
@@ -106,4 +106,18 @@ test('accessor-based identity cannot execute user getters', async () => {
   await assert.rejects(() => runner(nested), code('INVALID_TRANSIT_IDENTITY'));
   assert.equal(getterCalls, 0);
   assert.equal(pipelineCalls, 0);
+});
+
+
+test('constructor requires a validated explicit identity before any provider call', () => {
+  let calls = 0;
+  const prep = async () => { calls++; return {}; };
+  assert.throws(() => makeTransitChunkPipelineRunner({...options(prep), identity: undefined}), code('INVALID_ARGUMENT'));
+  assert.throws(() => makeTransitChunkPipelineRunner({...options(prep), identity: {...identity(), aspectId:' '}}), code('INVALID_TRANSIT_IDENTITY'));
+  const forged = identity();
+  let getters = 0;
+  Object.defineProperty(forged, 'skyBodyName', {get(){getters++;return 'Mars';}});
+  assert.throws(() => makeTransitChunkPipelineRunner({...options(prep), identity:forged}), code('INVALID_TRANSIT_IDENTITY'));
+  assert.equal(getters, 0);
+  assert.equal(calls, 0);
 });

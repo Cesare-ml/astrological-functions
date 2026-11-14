@@ -56,7 +56,7 @@ async function run(windowInput, provider, maxDepth=10) {
   return collectTransitChunkCandidateReports({
     windowInput, identity, maxCandidateRecords:128,
     runChunk:makeTransitChunkPipelineRunner({
-      windowInput,scan,refinement,provider,maxTotalProviderCalls:2800,
+      windowInput,identity,scan,refinement,provider,maxTotalProviderCalls:2800,
       prepareCandidates:prepareTransitAspectEventCandidates,
     }),
   });

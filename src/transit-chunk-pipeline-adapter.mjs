@@ -82,6 +82,8 @@ export function makeTransitChunkPipelineRunner(input) {
     maxChunks: raw.maxChunks,
   });
   const plan = splitUtcSearchWindow(windowInput);
+  // Pin the exact aspect and ephemeris provenance before any async call.
+  const identity = pinnedChunkIdentity(object(input.identity, 'identity'));
   const scan = object(input.scan, 'scan');
   const targetIntervalMs = scan.targetIntervalMs;
   const maxDepth = scan.maxDepth;
@@ -131,7 +133,6 @@ export function makeTransitChunkPipelineRunner(input) {
   let nextIndex = 0;
   let running = false;
   let failed = false;
-  let firstIdentity = null;
   return async function runChunk(request) {
     if (running || failed || nextIndex >= plan.chunks.length)
       reject('PIPELINE_SEQUENCE_ERROR', 'F5 chunks must run once, sequentially, without retry after failure');
@@ -141,10 +142,9 @@ export function makeTransitChunkPipelineRunner(input) {
         ownData(request, 'startUtc', 'INCOMPATIBLE_CHUNK_REQUEST') !== expected.startUtc ||
         ownData(request, 'endUtc', 'INCOMPATIBLE_CHUNK_REQUEST') !== expected.endUtc)
       reject('INCOMPATIBLE_CHUNK_REQUEST', 'F5 request does not match the prevalidated UTC chunk');
-    const identity = pinnedChunkIdentity(request);
-    if (firstIdentity !== null && !sameIdentity(firstIdentity, identity))
-      reject('INCOMPATIBLE_CHUNK_IDENTITY', 'F5 aspect identity or ephemeris provenance changed between chunks');
-    if (firstIdentity === null) firstIdentity = identity;
+    const requestIdentity = pinnedChunkIdentity(request);
+    if (!sameIdentity(identity, requestIdentity))
+      reject('INCOMPATIBLE_CHUNK_REQUEST', 'F5 aspect identity or ephemeris provenance changed between chunks');
     running = true;
     try {
       // No chunkIndex forwarded: it is not part of the PR #21 contract.
