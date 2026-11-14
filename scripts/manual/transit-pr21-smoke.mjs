@@ -101,7 +101,6 @@ test('actual F5 stack: scanner call budget exhaustion propagates without a parti
     error=>error?.code==='SEARCH_BUDGET_EXHAUSTED');
 });
 
-
 test('actual F5 stack: a tight live cap permits only two excluding-enclosure provider calls',async()=>{
   let providerCalls=0;
   const constant=()=>1;
