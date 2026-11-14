@@ -128,3 +128,20 @@ The public `astrological-functions/ephemeris-provider` smoke now also injects a 
 ### Exact public ESM incompatibility error (14 November 2026)
 
 The synthetic J2000/geometric rejection test now requires `INCOMPATIBLE_EPHEMERIS` specifically, rather than accepting any string-valued error code. This prevents unrelated argument or provider errors from producing a false-positive boundary test. The fixture still checks the single frozen `APPARENT`/`ECLIPTIC_OF_DATE` request. Commit `0b5cb41` updates the focused test. **Not natively executed in this GitHub-only change**: run `node --test test/pilot-provider-consumer-smoke.test.mjs`, `npm test`, and the NodeNext/Bundler `tsc` commands above on the full stacked branch. This is a synthetic fail-closed check, not astronomical parity or Rust/WASM validation.
+
+
+### Public ESM synthetic success path — 14 November 2026
+
+The package-subpath smoke now covers the **successful** two-body mock-provider
+path as well as the existing geometric J2000 rejection. It checks immutable
+per-body requests, deterministic 361°/-1° normalization across the zodiac
+boundary, sign indices, consistent provenance, and explicit `houses: null` /
+`angles: null` with `houses_unavailable`. This verifies that the public
+adapter exposes the guarded assembly path without manufacturing astronomical
+angles or house positions. The provider returns synthetic values; **no real
+Rust/WASM or JPL astronomical accuracy is asserted**.
+
+Run `node --test test/pilot-provider-consumer-smoke.test.mjs` and `npm test`
+on the complete stacked branch and record versions, exit codes and diagnostics.
+This addition was committed through GitHub without a native Node checkout
+execution; it remains **IMPLEMENTED_ISOLATED**, not `VALIDATED_LOCAL`.
