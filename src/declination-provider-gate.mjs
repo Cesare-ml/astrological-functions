@@ -94,7 +94,7 @@ function assertNotAborted(signal) {
  * or rejection is ignored and never triggers another body request.
  */
 function invokeProvider(provider, method, request, signal) {
-  if (signal === undefined) return method.call(provider, request);
+  if (signal === undefined) return Reflect.apply(method, provider, [request]);
   return new Promise((resolve, reject) => {
     let settled = false;
     const complete = (ok, value) => {
@@ -110,7 +110,7 @@ function invokeProvider(provider, method, request, signal) {
     // Catch an abort fired while the event listener was being installed.
     if (signal.aborted) { onAbort(); return; }
     try {
-      Promise.resolve(method.call(provider, request)).then(
+      Promise.resolve(Reflect.apply(method, provider, [request])).then(
         value => complete(true, value), error => complete(false, error));
     } catch (error) {
       complete(false, error);
