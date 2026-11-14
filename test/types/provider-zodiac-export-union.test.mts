@@ -58,16 +58,11 @@ const chart = calculateNatalWithProvider({
 void chart;
 
 // @ts-expect-error Never accept a geometric frame as apparent coordinates.
-const geometricFrame: EphemerisRequest = {
-  datetimeUtc: '2026-11-14T12:00:00Z', bodyName: 'Sun',
-  corrections: 'APPARENT', frame: 'J2000',
-};
+const geometricFrame: EphemerisRequest = { datetimeUtc: '2026-11-14T12:00:00Z', bodyName: 'Sun', corrections: 'APPARENT', frame: 'J2000' };
 void geometricFrame;
 
 // @ts-expect-error The sidereal decan policy requires an explicit ayanamsa.
-const badSidereal: ZodiacDecanInput = {
-  longitudeDeg: 15, zodiac: { type: 'SIDEREAL' },
-};
+const badSidereal: ZodiacDecanInput = { longitudeDeg: 15, zodiac: { type: 'SIDEREAL' } };
 void badSidereal;
 
 // @ts-expect-error No implicit dodecatemoria method.
