@@ -15,7 +15,7 @@
 4. **Prove a complete candidate:** run native `npm test` plus any relevant manual NodeNext/Bundler/consumer tests on the **combined checkout**, record commit SHAs and observed results, and distinguish synthetic from JPL-reference checks. Do not infer success from a different branch's tests. No GitHub Actions.
 5. **Human review of scientific contracts and licenses:** keep F2/F7 release and backend migration gates closed until pinned Rust/WASM ephemeris and accuracy, cross-language consumer fixtures, privacy, credits, compatibility and rollback reviews all pass.
 
-Status: **planning only**, 2026-11-09. The library will extract **many useful components, not necessarily all backend functions**. No production migration from documentation alone. No GitHub Actions or automatic releases.
+Historical roadmap baseline: **DESIGNED** on 9 November 2026; implementation status and integration gates are updated above as of 14 November 2026. The library will extract **many useful components, not necessarily all backend functions**. No production migration from documentation alone. No GitHub Actions or automatic releases.
 
 | Phase | Scope | Exit condition |
 |---|---|---|
