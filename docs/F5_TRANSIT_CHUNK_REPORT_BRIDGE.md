@@ -118,3 +118,27 @@ Manual and typed examples now supply `identity` explicitly to `makeTransitChunkP
 The earlier draft **worst-case preallocation requirement** has been removed: the cap is now an **enforced live bound**, rather than merely a conservative configuration estimate. PR #21 continues to own its independent per-chunk scan and refinement limits, while the adapter enforces the aggregate cap. A malicious caller can still invoke the original provider directly if it retains an external reference; this adapter enforces only calls through its own injected provider facade. It does not cancel already-started asynchronous work, impose deadlines, or verify the truth of the provider's scientific enclosure claims.
 
 Local isolated validation (Node.js 22.16.0 / TypeScript 5.8.3): **63/63** focused runtime Node tests passed (4 new live-budget cases), **7/7** actual PR #21 synthetic integration smoke tests passed (2 new aggregate-budget cases), and all strict NodeNext TypeScript fixtures passed. SHA-1 Git blobs of the source/test files were matched with the local tested files. **Full private-repository checkout `npm test` and real astronomical parity remain unexecuted.**
+
+
+### Opt-in cancellation and per-chunk deadline (2026-11-14)
+
+`makeTransitChunkPipelineRunner` now also accepts **optional** `signal: AbortSignal` and `chunkTimeoutMs` (an integer in `1..86400000`; 24 hours maximum). The timeout is **per chunk**, not a total wall-clock bound for a multi-chunk search. Both options are unset by default and do not change the PR #21 astronomical request or its scientific semantics.
+
+```js
+const controller = new AbortController();
+const runChunk = makeTransitChunkPipelineRunner({
+  windowInput, identity, scan, refinement, provider,
+  maxTotalProviderCalls:2800,
+  signal:controller.signal, chunkTimeoutMs:10000,
+  prepareCandidates:prepareTransitAspectEventCandidates,
+});
+// controller.abort() rejects an active chunk with SEARCH_CANCELLED.
+// Each chunk taking longer than 10s rejects with CHUNK_TIMEOUT.
+```
+
+- **Pre-aborted** signals reject before invoking `prepareCandidates`. Cancelling during a pending provider call rejects promptly; aborting between chunks prevents the next chunk from running. The runner fails permanently after cancellation, timeout or provider error; it never implicitly retries or returns partial results.
+- On timeout or cancellation, the runner aborts a **per-chunk internal** `AbortSignal`. That signal is passed as an **optional second argument** to the underlying provider's `getUnwrappedAspectResidual(request, signal)` and `getUnwrappedResidualEnclosure(request, signal)` callbacks. Existing one-argument methods remain valid and the strict F5 request object is unchanged.
+- Provider implementations that accept the optional second argument should check its `aborted` state and cancel their own remote work when possible. **Noncooperative or already executing provider work is not forcibly terminated** by `Promise.race`; the caller stops waiting, but underlying computation/I/O may still continue. CPU-bound synchronous work that blocks the event loop cannot be interrupted by a JavaScript timer. Consider process/worker isolation before any production use.
+- The runner observes the losing Promise after a timeout/abort to avoid unhandled promise rejections; removes abort listeners and clears timers on settlement. A terminal error is exposed as `SEARCH_CANCELLED`, `CHUNK_TIMEOUT`, `INVALID_CANCELLATION`, or `INVALID_TIMEOUT` as applicable, while global-call exhaustion retains `GLOBAL_PIPELINE_BUDGET`. Even a callback that swallows the latter and hangs is interrupted by the optional chunk timeout.
+
+Executed **isolated** local checks: **70/70** Node.js runtime tests for the PR #72 modules (seven new abort/timeout regression cases), **9/9** smoke tests against the real PR #21 pipeline code with synthetic ephemeris providers (two new abort/timeout cases on the integration branch), and all TypeScript strict NodeNext fixtures passed. The four new code/test/type blobs match the exact files exercised locally. These checks do **not** constitute a complete private-checkout `npm test`, real Rust/JPL ephemeris validation, or production readiness.

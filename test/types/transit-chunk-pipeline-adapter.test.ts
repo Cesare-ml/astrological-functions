@@ -28,6 +28,7 @@ const provider = {
 };
 const runChunk = makeTransitChunkPipelineRunner({
   windowInput,identity,scan,refinement,provider,maxTotalProviderCalls:2800,
+  signal:new AbortController().signal, chunkTimeoutMs:2000,
   async prepareCandidates(request: F5PipelineChunkInput<typeof provider>): Promise<TransitCandidatePipelineReport> {
     const typedProvider: typeof provider = request.provider;
     void typedProvider;
@@ -60,3 +61,8 @@ void incompleteRefinement;
 // @ts-expect-error caller must pin identity explicitly at construction
 makeTransitChunkPipelineRunner({windowInput,scan,refinement,provider,maxTotalProviderCalls:2800,
   prepareCandidates:async()=>({} as TransitCandidatePipelineReport)});
+
+makeTransitChunkPipelineRunner({windowInput,identity,scan,refinement,provider,
+  maxTotalProviderCalls:2800,
+  // @ts-expect-error optional cancellation must be an AbortSignal, not a string
+  signal:'stop',prepareCandidates:async()=>({} as TransitCandidatePipelineReport)});

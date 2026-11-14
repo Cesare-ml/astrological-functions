@@ -307,3 +307,95 @@ test('saved provider references cannot be used after the chunk has completed',as
   await assert.rejects(()=>retained.getUnwrappedAspectResidual({datetimeUtc:first.endUtc}),code('PIPELINE_SEQUENCE_ERROR'));
   assert.equal(calls,1);
 });
+
+test('rejects invalid AbortSignal and per-chunk timeout at construction',()=>{
+  let calls=0;
+  const prepare=async()=>{calls++;return {};};
+  for(const signal of [null,false,{},new AbortController()])
+    assert.throws(()=>makeTransitChunkPipelineRunner(options(prepare,{signal})),code('INVALID_CANCELLATION'));
+  for(const chunkTimeoutMs of [null,0,-1,1.5,86400001,Infinity,NaN])
+    assert.throws(()=>makeTransitChunkPipelineRunner(options(prepare,{chunkTimeoutMs})),code('INVALID_TIMEOUT'));
+  assert.equal(calls,0);
+});
+
+test('pre-aborted signal prevents the first PR21 callback and cannot be retried',async()=>{
+  const controller=new AbortController(); controller.abort('requested');
+  let calls=0;
+  const runner=makeTransitChunkPipelineRunner(options(async req=>{calls++;return syntheticResult(req);},{signal:controller.signal}));
+  const req={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+  await assert.rejects(()=>runner(req),code('SEARCH_CANCELLED'));
+  await assert.rejects(()=>runner(req),code('PIPELINE_SEQUENCE_ERROR'));
+  assert.equal(calls,0);
+});
+
+test('external cancellation interrupts unresolved provider and forwards cooperative signal',async()=>{
+  const external=new AbortController();
+  let providerSignal, started;
+  const began=new Promise(resolve=>{started=resolve;});
+  let calls=0;
+  const p={...provider(),async getUnwrappedResidualEnclosure(req,signal){
+    providerSignal=signal;calls++;started();return new Promise(()=>{});
+  }};
+  const runner=makeTransitChunkPipelineRunner(options(async req=>{
+    await req.provider.getUnwrappedResidualEnclosure({startUtc:req.startUtc,endUtc:req.endUtc});
+    return syntheticResult(req);
+  },{provider:p,signal:external.signal}));
+  const req={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+  const pending=runner(req);
+  await began;
+  assert.ok(providerSignal instanceof AbortSignal);
+  assert.equal(providerSignal.aborted,false);
+  external.abort('user request');
+  await assert.rejects(()=>pending,code('SEARCH_CANCELLED'));
+  assert.equal(providerSignal.aborted,true);
+  assert.equal(calls,1);
+  await assert.rejects(()=>runner(req),code('PIPELINE_SEQUENCE_ERROR'));
+});
+
+test('chunk timeout stops waiting on a never-settling pipeline and closes the runner',async()=>{
+  let calls=0;
+  const runner=makeTransitChunkPipelineRunner(options(async()=>{calls++;return new Promise(()=>{});},{chunkTimeoutMs:15}));
+  const req={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+  await assert.rejects(()=>runner(req),code('CHUNK_TIMEOUT'));
+  assert.equal(calls,1);
+  await assert.rejects(()=>runner(req),code('PIPELINE_SEQUENCE_ERROR'));
+});
+
+test('chunk timeout signals a hung provider without claiming that its I/O was stopped',async()=>{
+  let capturedSignal, called=0;
+  const p={...provider(),async getUnwrappedAspectResidual(req,signal){
+    capturedSignal=signal;called++;return new Promise(()=>{});
+  }};
+  const runner=makeTransitChunkPipelineRunner(options(async req=>{
+    await req.provider.getUnwrappedAspectResidual({datetimeUtc:req.startUtc});
+    return syntheticResult(req);
+  },{provider:p,chunkTimeoutMs:15}));
+  const req={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+  await assert.rejects(()=>runner(req),code('CHUNK_TIMEOUT'));
+  assert.equal(called,1);
+  assert.equal(capturedSignal?.aborted,true);
+});
+
+test('abort between completed chunks prevents later provider work',async()=>{
+  const controller=new AbortController();let called=0;
+  const runner=makeTransitChunkPipelineRunner(options(async req=>{called++;return syntheticResult(req);},{signal:controller.signal}));
+  const i=identity();
+  await runner({...i,chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'});
+  controller.abort();
+  await assert.rejects(()=>runner({...i,chunkIndex:1,startUtc:'2026-11-14T00:30:00.000Z',endUtc:'2026-11-14T01:00:00.000Z'}),code('SEARCH_CANCELLED'));
+  assert.equal(called,1);
+});
+
+test('timeout still terminates if callback swallows global budget error then hangs',async()=>{
+  let calls=0;
+  const p={...provider(),async getUnwrappedAspectResidual(){calls++;return 1;}};
+  const runner=makeTransitChunkPipelineRunner(options(async req=>{
+    await req.provider.getUnwrappedAspectResidual({datetimeUtc:req.startUtc});
+    try { await req.provider.getUnwrappedAspectResidual({datetimeUtc:req.endUtc}); }
+    catch(err){assert.equal(err.code,'GLOBAL_PIPELINE_BUDGET');}
+    return new Promise(()=>{});
+  },{provider:p,maxTotalProviderCalls:1,chunkTimeoutMs:15}));
+  const req={...identity(),chunkIndex:0,startUtc:'2026-11-14T00:00:00.000Z',endUtc:'2026-11-14T00:30:00.000Z'};
+  await assert.rejects(()=>runner(req),code('CHUNK_TIMEOUT'));
+  assert.equal(calls,1);
+});
