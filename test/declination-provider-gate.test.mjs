@@ -311,3 +311,94 @@ test('orb getter cannot loosen or tighten a definition after validation', async 
   assert.equal(out.facts.contacts[0].configuredMaxOrbDeg, 0.5);
   assert.equal(reads, 1);
 });
+
+test('already-aborted signal prevents every astronomy request', async () => {
+  const controller = new AbortController();
+  controller.abort('switch-chart');
+  let calls = 0;
+  await fails(calculate({ signal: controller.signal }, fake(r => {
+    calls++; return response(r);
+  })), 'DECLINATION_PROVIDER_ABORTED');
+  assert.equal(calls, 0);
+});
+
+test('abort an unresolved provider response promptly without fetching target', async () => {
+  const controller = new AbortController();
+  const calls = [];
+  let resolvePending;
+  const provider = { getGeocentricEquatorialDeclination(request) {
+    calls.push(request);
+    return new Promise(resolve => { resolvePending = () => resolve(response(request)); });
+  } };
+  const pending = calculate({ signal: controller.signal }, provider);
+  assert.deepEqual(calls.map(c => c.bodyId), ['Sun']);
+  assert.equal(calls[0].signal, controller.signal);
+  controller.abort();
+  await fails(pending, 'DECLINATION_PROVIDER_ABORTED');
+  resolvePending();
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual(calls.map(c => c.bodyId), ['Sun']);
+});
+
+test('abort in a provider callback prevents remaining bodies and target', async () => {
+  const controller = new AbortController();
+  const calls = [];
+  await fails(calculate({ signal: controller.signal,
+    source: { ...source, bodyIds: ['Sun', 'Venus'] } }, fake(r => {
+    calls.push(r.bodyId);
+    controller.abort('close-tab');
+    return response(r);
+  })), 'DECLINATION_PROVIDER_ABORTED');
+  assert.deepEqual(calls, ['Sun']);
+});
+
+test('abort signal is passed by identity with each immutable request when supplied', async () => {
+  const controller = new AbortController();
+  const seen = [];
+  const out = await calculate({ signal: controller.signal }, fake(r => {
+    seen.push(r);
+    return response(r);
+  }));
+  assert.equal(out.facts.contacts.length, 1);
+  assert.equal(seen.length, 2);
+  assert.ok(seen.every(r => r.signal === controller.signal && Object.isFrozen(r)));
+});
+
+test('no abort signal leaves legacy provider request shape unchanged', async () => {
+  const requests = [];
+  const out = await calculate({}, fake(r => { requests.push(r); return response(r); }));
+  assert.equal(out.facts.contacts.length, 1);
+  assert.ok(requests.every(r => !Object.hasOwn(r, 'signal')));
+});
+
+test('invalid abort signal is rejected before requesting astronomical data', async () => {
+  let calls = 0;
+  const provider = fake(r => { calls++; return response(r); });
+  for (const signal of [null, false, {}, { aborted: false },
+    { aborted: true, addEventListener: () => {} },
+    { aborted: false, addEventListener: () => {}, removeEventListener: true }]) {
+    await fails(calculate({ signal }, provider), 'INVALID_DECLINATION_ABORT_SIGNAL');
+  }
+  assert.equal(calls, 0);
+});
+
+test('abort event listeners are removed on success and provider rejection', async () => {
+  const controller = new AbortController();
+  const signal = controller.signal;
+  const nativeAdd = signal.addEventListener.bind(signal);
+  const nativeRemove = signal.removeEventListener.bind(signal);
+  let adds = 0, removes = 0;
+  signal.addEventListener = (...args) => { adds++; return nativeAdd(...args); };
+  signal.removeEventListener = (...args) => { removes++; return nativeRemove(...args); };
+  const ok = await calculate({ signal });
+  assert.equal(ok.facts.contacts.length, 1);
+  assert.equal(adds, 2);
+  assert.equal(removes, 2);
+  const failure = new Error('provider unavailable');
+  await assert.rejects(calculate({ signal }, {
+    getGeocentricEquatorialDeclination: async () => { throw failure; },
+  }), error => error === failure);
+  assert.equal(adds, 3);
+  assert.equal(removes, 3);
+});
