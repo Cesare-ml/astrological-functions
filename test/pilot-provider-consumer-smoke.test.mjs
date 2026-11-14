@@ -239,3 +239,39 @@ test('public ESM house placement refuses unknown birth time before reading cusp 
     );
   }
 });
+
+test('provider reentrancy cannot alter the validated body sequence', async () => {
+  const bodyNames = ['Sun', 'Moon'];
+  const requested = [];
+  const chart = await packageProvider.calculateNatalWithProvider({
+    datetimeUtc: '2026-11-14T00:00:00Z',
+    latitudeDeg: 45,
+    longitudeDegEast: 11,
+    bodyNames,
+    provider: {
+      async getGeocentricEcliptic(request) {
+        requested.push(request.bodyName);
+        if (request.bodyName === 'Sun') {
+          bodyNames[1] = 'Mars';
+          bodyNames.push('Venus');
+        }
+        return {
+          longitudeDeg: request.bodyName === 'Sun' ? 1 : 31,
+          latitudeDeg: 0,
+          metadata: {
+            center: 'EARTH',
+            frame: 'ECLIPTIC_OF_DATE',
+            corrections: 'APPARENT',
+            engineVersion: 'synthetic',
+            kernelSetId: 'synthetic',
+            timeModel: 'synthetic'
+          }
+        };
+      }
+    }
+  });
+  assert.deepEqual(requested, ['Sun', 'Moon']);
+  assert.deepEqual(Object.keys(chart.bodies), ['Sun', 'Moon']);
+  assert.equal(chart.bodies.Mars, undefined);
+  assert.equal(chart.bodies.Venus, undefined);
+});
