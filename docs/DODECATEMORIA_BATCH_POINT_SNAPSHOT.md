@@ -37,3 +37,17 @@ New test file: `test/dodecatemoria-array-override.test.mjs` (four regressions). 
 - earlier point snapshot tests unchanged: `fd2df42803fd686238e6e86120ba922ba59f3fef`
 
 **Test limitation:** These focused tests used the actual upstream batch and dodecatemoria-methods files together with a deliberately labeled small local `index.mjs` helper shim, **not** a full private repository checkout. Merge gating still requires the canonical complete `npm test`, ESM/package consumer tests and strict TypeScript NodeNext tests on the latest combined `main`. The private package remains experimental; no published release, GitHub Actions or production deployment.
+
+
+## Consolidated main integration verification — 14 November 2026
+
+After main had already merged the house cusp fix (#96) and the typed zodiac decan exports (#99/#100), this PR was verified again against a local reconstruction of the **exact current main sources, manifest, JavaScript test files, and experimental TypeScript declarations**, plus this PR's actual three changed source/test files.
+
+- Node.js **22.16.0**, `npm test`: **66/66 PASS**, 0 failed, 0 skipped (58 main tests + 8 new snapshot/array-override tests).
+- TypeScript **5.8.3**, strict NodeNext `tsc --noEmit`: **PASS** for all five existing TypeScript fixtures (three dodecatemoria fixtures and two zodiac decan fixtures).
+- `node --check`: **PASS** for updated batch module and both new tests.
+- Confirmed exact Git blob SHA-1 by `git hash-object`: updated batch `b1995bee0419d7c663bc6dc952cb15f9360079e3`; point snapshot tests `fd2df42803fd686238e6e86120ba922ba59f3fef`; array override tests `0f1fac811b2878d4ff37e52b1574158c9aa34d6d`.
+- Verified the current `main` `package.json`, single-point dodecatemoria, house-cusp math, zodiac decan source, and other key test file Git blobs match this tested reconstruction. The GitHub `test/` listing confirms all nine existing root `*.test.mjs` files were included.
+- **Before/after proof:** the same eight targeted tests run on the exact **pre-fix** `src/dodecatemoria-batch.mjs` blob (`0c246471962a8de72ce5021ff5aa13fad93a7d6c`) yielded **3 passing, 5 failing**; after the fix **8 passing, 0 failing**. Failures before the change reproduced mutable point IDs and caller-controlled array behavior.
+
+This is a byte-verified locally reconstructed checkout, **not a direct authenticated Git clone**, and the tests are purely synthetic. No external astronomical provider/JPL reference, downstream VirgoStars application, desktop release, security audit, or production rollout was tested. Packaging remains private and its API/export map is unmodified. No GitHub Actions or deployment were introduced.
