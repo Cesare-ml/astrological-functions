@@ -109,3 +109,60 @@ test('CLI invalid arguments fail without importing code', async () => {
     assert.equal(cli.stdout, '');
   });
 });
+
+
+test('named export verification accepts both root and typed consumer subpath', async () => {
+  await fixture(async dir => {
+    const result = await verifyEsmCheckout(dir, ['./real'], ['./real:answer', '.:rootReady']);
+    assert.deepEqual(result.verifiedNamedExports, ['./real:answer', '.:rootReady']);
+    assert.equal(result.exportCount, 2);
+  });
+});
+
+test('an importable subpath missing a required symbol is rejected', async () => {
+  await fixture(dir => expectCode(
+    () => verifyEsmCheckout(dir, [], ['./real:calculateNatalWithProvider']),
+    'MISSING_NAMED_EXPORT'));
+});
+
+test('a named export from an unintegrated subpath fails before imports', async () => {
+  await fixture(dir => expectCode(
+    () => verifyEsmCheckout(dir, [], ['./provider:calculateNatalWithProvider']),
+    'MISSING_EXPECTED_EXPORT'));
+});
+
+test('invalid named export specifiers are rejected before running code', async () => {
+  await fixture(async dir => {
+    for (const value of ['unsafe', './real:', './real:a.b', './real:bad-name', './bad/../path:ready']) {
+      await expectCode(() => verifyEsmCheckout(dir, [], [value]), 'INVALID_CHECKOUT_ARGUMENT');
+    }
+    await expectCode(() => verifyEsmCheckout(dir, [], [42]), 'INVALID_CHECKOUT_ARGUMENT');
+  });
+});
+
+test('CLI --expect-export verifies named symbols without altering checkout', async () => {
+  await fixture(async dir => {
+    const original = await readFile(join(dir, 'package.json'), 'utf8');
+    const script = fileURLToPath(new URL('../scripts/verify-esm-checkout.mjs', import.meta.url));
+    const cli = spawnSync(process.execPath,
+      [script, dir, '--expect-export', './real:answer', '--expect-export', '.:rootReady'],
+      { encoding: 'utf8' });
+    assert.equal(cli.status, 0, cli.stderr);
+    assert.deepEqual(JSON.parse(cli.stdout).verifiedNamedExports,
+      ['./real:answer', '.:rootReady']);
+    assert.equal(await readFile(join(dir, 'package.json'), 'utf8'), original);
+  });
+});
+
+test('CLI reports missing named symbol explicitly and does not mutate files', async () => {
+  await fixture(async dir => {
+    const old = await readFile(join(dir, 'src/real.mjs'), 'utf8');
+    const script = fileURLToPath(new URL('../scripts/verify-esm-checkout.mjs', import.meta.url));
+    const result = spawnSync(process.execPath,
+      [script, dir, '--expect-export', './real:missing'], { encoding: 'utf8' });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /^MISSING_NAMED_EXPORT:/);
+    assert.equal(result.stdout, '');
+    assert.equal(await readFile(join(dir, 'src/real.mjs'), 'utf8'), old);
+  });
+});
