@@ -111,32 +111,7 @@ export function makeTransitChunkPipelineRunner(input) {
   let running = false;
   let failed = false;
   let providerCallCount = 0;
-  let activeChunkController = null;
-  function budgeted(method) {
-    return async function providerCall(request) {
-      if (!running || failed || !activeChunkController || activeChunkController.signal.aborted)
-        reject('PIPELINE_SEQUENCE_ERROR', 'F5 provider call is outside an active search chunk');
-      if (providerCallCount >= maxTotalProviderCalls) {
-        const error = new AstrologyError('GLOBAL_PIPELINE_BUDGET', 'F5 aggregate provider-call cap exhausted');
-        failed = true;
-        // Notify cooperative in-flight provider calls as well as rejecting
-        // this over-budget call. They may still continue if noncooperative.
-        activeChunkController.abort(error);
-        throw error;
-      }
-      // Reserve BEFORE invoking or awaiting the underlying method. Failed
-      // provider attempts also consume budget; a later chunk cannot reset it.
-      providerCallCount++;
-      // Optional second argument is a cooperative cancellation hint; it does
-      // not add keys to the strict PR #21 astronomical request contract.
-      return method(request, activeChunkController.signal);
-    };
-  }
-  const fixedProvider = Object.freeze({
-    capabilities: Object.freeze({ ...capabilities }),
-    getUnwrappedAspectResidual: budgeted(pointMethod),
-    getUnwrappedResidualEnclosure: budgeted(enclosureMethod),
-  });
+  const fixedCapabilities = Object.freeze({ ...capabilities });
   if (typeof input.prepareCandidates !== 'function')
     reject('MISSING_PIPELINE', 'An explicitly injected F5 prepareCandidates function is required');
   const prepareCandidates = input.prepareCandidates;
@@ -155,7 +130,10 @@ export function makeTransitChunkPipelineRunner(input) {
       reject('INCOMPATIBLE_CHUNK_REQUEST', 'F5 request does not match the prevalidated UTC chunk');
     verifyRequestIdentity(request, identity);
     running = true;
-    activeChunkController = new AbortController();
+    // Each chunk owns a separate provider facade. Late calls retaining a
+    // previous facade must not acquire authority over the next chunk.
+    const chunkController = new AbortController();
+    let chunkOpen = true;
     let timeoutId;
     let onAbort;
     let stopError = null;
@@ -165,9 +143,31 @@ export function makeTransitChunkPipelineRunner(input) {
       if (stopError) return;
       stopError = new AstrologyError(code, message);
       failed = true;
-      activeChunkController.abort(stopError);
+      chunkController.abort(stopError);
       stopReject(stopError);
     }
+    function budgeted(method) {
+      return async function providerCall(request) {
+        if (!chunkOpen || !running || failed || chunkController.signal.aborted)
+          reject('PIPELINE_SEQUENCE_ERROR', 'F5 provider call is outside its owning active search chunk');
+        if (providerCallCount >= maxTotalProviderCalls) {
+          // Reject the raced chunk immediately even if prepareCandidates catches
+          // the provider error and never settles. Never return partial results.
+          stop('GLOBAL_PIPELINE_BUDGET', 'F5 aggregate provider-call cap exhausted');
+          throw stopError;
+        }
+        // Reserve before each call; errors consume budget across chunks.
+        providerCallCount++;
+        // Optional second argument for cooperative interruption; the strict
+        // PR #21 astronomical request object remains unchanged.
+        return method(request, chunkController.signal);
+      };
+    }
+    const chunkProvider = Object.freeze({
+      capabilities: fixedCapabilities,
+      getUnwrappedAspectResidual: budgeted(pointMethod),
+      getUnwrappedResidualEnclosure: budgeted(enclosureMethod),
+    });
     // Attach the cancellation listener before scheduling any pipeline work.
     // Check the signal again after attachment to avoid missing a race.
     if (signal) {
@@ -185,7 +185,7 @@ export function makeTransitChunkPipelineRunner(input) {
           startUtc: expected.startUtc, endUtc: expected.endUtc,
           ...identity,
           targetIntervalMs, maxDepth, maxProviderCalls,
-          provider: fixedProvider, refinement: r,
+          provider: chunkProvider, refinement: r,
         }));
       });
       // Promise.race rejects on timeout/abort even if a provider promise never
@@ -199,12 +199,12 @@ export function makeTransitChunkPipelineRunner(input) {
       return result;
     } catch (error) {
       failed = true;
-      activeChunkController.abort(error);
+      chunkController.abort(error);
       throw error;
     } finally {
       if (timeoutId !== undefined) clearTimeout(timeoutId);
       if (signal && onAbort) signal.removeEventListener('abort', onAbort);
-      activeChunkController = null;
+      chunkOpen = false;
       running = false;
     }
   };
