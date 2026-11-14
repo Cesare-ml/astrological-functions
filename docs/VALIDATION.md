@@ -210,3 +210,24 @@ tsc --noEmit --strict --skipLibCheck false --module ESNext --moduleResolution Bu
 ```
 
 This GitHub-only addition has **not been executed natively**; publication of a test is not evidence of a pass. No astronomy, production, package export or licensing change.
+
+
+### Provider failure propagation regression — 14 November 2026
+
+The ESM consumer smoke includes a synthetic provider that throws on its first
+`getGeocentricEcliptic` call. The chart promise must reject with the **same
+error object**, make exactly one immutable request for `Sun`, and never request
+`Moon` or silently substitute another astronomical engine. This is a
+fail-closed adapter contract check, **not** evidence that Rust/WASM is wired up.
+
+On the complete PR #54 checkout, run:
+
+```sh
+node --check test/pilot-provider-consumer-smoke.test.mjs
+node --test test/pilot-provider-consumer-smoke.test.mjs
+npm test
+```
+
+Record the exact Node version, branch SHA, exit codes and diagnostics.
+These commands were **not executed** during this GitHub API-only edit.
+Do not mark the PR validated or merge on the strength of this test alone.
