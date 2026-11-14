@@ -17,3 +17,14 @@ Fetched exact source from #109, the exact cross-aspect code block and exact new 
 ## Hard merge gates
 
 This candidate must remain a **draft stacked on #109** until the latter's actual native Node full suite, NodeNext/Bundler TypeScript consumer fixtures, ESM import smoke, current-main comparison and security/license review complete. JPL/Rust/WASM apparent Earth-centered ecliptic-of-date data and numerical parity are independent scientific gates; no Swiss fallback. Do **not** merge the old #110 branch or close the stacked ancestor PRs automatically. No GitHub Actions, npm publication, deployed application edits, visibility change or production database access.
+
+## Post-commit combined source replay — 109 passing callbacks
+
+After pushing the branch, fetched the final GitHub `src/index.mjs` blob `16af379bd64f08bc622ab85b0f9dd59bd00f1e26` again, together with **23 exact test files** from this integration branch. The tests were executed in two independent strict isolated V8 groups:
+
+- 12 files: original #110 adversarial cross-aspect cases (13), nine pre-existing cross-aspect test files (21), merged main #108 input snapshot (5), and original #96 ULP house boundary suite (7), **46/46 passed**, zero exceptions or loading failures. The latter suite includes its deterministic **90,000 boundary observations**.
+- 11 files: provider body identifier single-read, async snapshot, provider method pinning, provider state/getter validation, F3 house context/bodies, natal placements, public composition and seam/precision integration, **63/63 passed**, zero exceptions or loading failures.
+
+**Combined: 109/109 passing callbacks**, all executed on the exact final GitHub root source with actual individual test bodies. The test harness substitutes `node:test`, `node:assert/strict` and ESM package import edges; it **does not execute native Node `npm test`**, actual self-import resolution, the full repository's TypeScript compile matrix, or any physical ephemeris kernel/Rust/WASM scientific comparison. These limitations are strict merge blockers, and the #109 ancestor's separate verification cannot be inherited as direct evidence for this exact child tree.
+
+No code changes beyond the three integration paths, no app deployments, license or visibility changes, and no GitHub Actions.
