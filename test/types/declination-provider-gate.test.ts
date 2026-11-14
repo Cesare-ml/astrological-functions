@@ -51,7 +51,6 @@ const invalidResponse: DeclinationProviderResponse = { datetimeUtc: '2000-01-01T
 }, provenance: options.expectedProvenance };
 void invalidResponse;
 
-
 // Desktop/browser clients can cancel stale asynchronous chart requests.
 const controller = new AbortController();
 const abortable: Promise<import('../../src/sourced-declination-contacts.mjs').SourcedDeclinationContactsResult> =
