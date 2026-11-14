@@ -102,7 +102,7 @@ test('ESM package provider rejects geometric J2000 metadata without fallback', a
       bodyNames: ['Sun'],
       provider
     }),
-    (error) => error instanceof Error && typeof error.code === 'string'
+    { code: 'INCOMPATIBLE_EPHEMERIS' }
   );
   assert.equal(requests.length, 1);
   assert.deepEqual(requests[0], {
