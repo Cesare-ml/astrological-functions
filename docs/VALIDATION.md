@@ -280,3 +280,18 @@ These commands were **not executed** by this GitHub connector-only edit;
 record Node version, exit codes and diagnostics before claiming validation.
 The only intended astronomy engine remains
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+
+### Second-body latitude type regression (14 November 2026)
+
+`test/provider-second-body-invalid-latitude-type.test.mjs` uses a synthetic provider returning string `'0'` instead of numeric latitude for Moon. The expected contract is `INVALID_EPHEMERIS_RESULT`, with only Sun and Moon requested and immutable request objects. This tests fail-closed TypeScript/JavaScript provider boundaries, **not** Rust/JPL numerical accuracy.
+
+Manual validation pending on the combined branch checkout:
+
+```sh
+node --check test/provider-second-body-invalid-latitude-type.test.mjs
+node --test test/provider-second-body-invalid-latitude-type.test.mjs
+npm test
+```
+
+No native Node execution or TypeScript NodeNext/Bundler compilation has been recorded for this addition; do not count it as passing until executed.
