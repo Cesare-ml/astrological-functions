@@ -9,3 +9,9 @@ Retains the **exact unchanged Git test blob** `350cbc027aea79de9de8d823d6e9f02a7
 Verification: exact stitched runtime with the seven #96 tests and six #97 getter snapshot tests: **13/13 passed** under strict JavaScript V8 `node:test`-like emulation, including **90,000 deterministic cusp observations**. New provider→house bridge preview: **3/3 passed** with the same V8 execution. These are **not native Node or TypeScript test results**. PR #96's reported native tests apply to its own main-derived code, not this combined tree.
 
 Release gates: keep the PR as a draft stacked on #97; rerun native `npm test`, Node ESM consumer resolution and `tsc` NodeNext/Bundler on the exact combined checkout, reconcile other exports and recent `main` changes, and retain pinned Rust/WASM apparent-of-date/JPL accuracy and provenance as non-negotiable prerequisites. No Swiss fallback, GitHub Actions, npm publishing, deployment, DB or production changes.
+
+## Post-commit combined regression replay
+
+After staging and checking the final GitHub branch, the exact runtime blob `a89f4a50a2c1a159b905180abe0257b15163192d` was replayed against **12 fetched test files**, comprising the original seven-case ULP geometry file, the six-case house-body snapshot suite, the new three-case provider-to-house integration bridge and focused F1/F2 provider/ESM regressions. A strict JavaScript V8 harness substituting the native Node test/assert and package import interfaces registered **62 test callbacks: 62 passed, zero failures**. The cusp regression includes **90,000 deterministic observations**.
+
+This evidence is restricted to V8 function execution; package self-import resolution, native `node --test` scheduling, `npm test`, compiler checks and JPL/Rust scientific validation were **not** exercised on this exact combined branch. The test harness does not justify promoting this draft PR for merge.
