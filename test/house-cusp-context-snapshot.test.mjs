@@ -59,20 +59,23 @@ test('metadata and provenance references are acquired only once', () => {
   let metadataReads = 0;
   let chartReads = 0;
   const valid = cuspSet().metadata;
-  const set = cuspSet({
-    get metadata() {
+  const set = cuspSet();
+  Object.defineProperty(set, 'metadata', {
+    enumerable: true,
+    get() {
       return ++metadataReads === 1 ? valid :
         { ...valid, houseSystem: 'VEHLOW' };
     },
   });
-  const result = validateHouseCuspContext({
-    chart: chart({
-      get ephemerisProvenance() {
-        return ++chartReads === 1 ? provenance : { ...provenance, kernelSetId: 'changed' };
-      },
-    }),
-    cuspSet: set,
+  const incoming = chart();
+  Object.defineProperty(incoming, 'ephemerisProvenance', {
+    enumerable: true,
+    get() {
+      return ++chartReads === 1 ? provenance :
+        { ...provenance, kernelSetId: 'changed' };
+    },
   });
+  const result = validateHouseCuspContext({ chart: incoming, cuspSet: set });
   assert.equal(metadataReads, 1);
   assert.equal(chartReads, 1);
   assert.equal(result.houseSystem, 'PLACIDUS');
@@ -83,9 +86,14 @@ test('cusp system and array getters are used once for validation and output', ()
   let systemReads = 0;
   let cuspReads = 0;
   const regular = cuspSet();
-  const set = cuspSet({
-    get houseSystem() { return ++systemReads === 1 ? 'PLACIDUS' : 'VEHLOW'; },
-    get cusps() { return ++cuspReads === 1 ? regular.cusps : Array(12).fill(0); },
+  const set = cuspSet();
+  Object.defineProperty(set, 'houseSystem', {
+    enumerable: true,
+    get() { return ++systemReads === 1 ? 'PLACIDUS' : 'VEHLOW'; },
+  });
+  Object.defineProperty(set, 'cusps', {
+    enumerable: true,
+    get() { return ++cuspReads === 1 ? regular.cusps : Array(12).fill(0); },
   });
   const result = validateHouseCuspContext({ chart: chart(), cuspSet: set });
   assert.equal(systemReads, 1);
