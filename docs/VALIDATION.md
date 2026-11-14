@@ -194,3 +194,19 @@ GitHub-only update. Do not advance the validation status without exit codes.
 The public ESM consumer smoke now includes a synthetic asynchronous provider that mutates the caller-owned `bodyNames` array during its first request (replacing `Moon` with `Mars` and appending `Venus`). The chart must continue to request exactly `Sun` then `Moon`, with neither injected body in its output. This guards the validated input snapshot across provider awaits; it does not implement astronomy.
 
 Verification attempted: a native checkout with `git clone --depth 1 --branch agent/provider-runtime-import-smoke-20261113` failed before tests with `Could not resolve host: github.com`. Thus neither `node --test test/pilot-provider-consumer-smoke.test.mjs` nor `npm test` nor NodeNext/Bundler `tsc` was run. Once network access is restored, execute those commands on the exact branch head and record exit codes. Do not treat the published regression fixture as passing evidence.
+
+
+### Prototype-like body identifier regression — 14 November 2026
+
+The public ESM provider smoke now requests synthetic bodies named `__proto__`, `constructor`, and `toString`. It asserts that each is an own frozen chart entry, the body map has a null prototype, and requests remain immutable. This guards against prototype-key collisions in a JavaScript consumer result; these strings are **synthetic adversarial identifiers**, not supported astronomical bodies. The actual Rust/WASM adapter must separately enforce its supported body catalog.
+
+Validation still required on the complete stacked draft branch:
+
+```sh
+node --test test/pilot-provider-consumer-smoke.test.mjs
+npm test
+tsc --noEmit --strict --skipLibCheck false --module NodeNext --moduleResolution NodeNext --target ES2022 test/types/provider-package-consumer.test.mts
+tsc --noEmit --strict --skipLibCheck false --module ESNext --moduleResolution Bundler --target ES2022 test/types/provider-package-consumer.test.mts
+```
+
+This GitHub-only addition has **not been executed natively**; publication of a test is not evidence of a pass. No astronomy, production, package export or licensing change.
