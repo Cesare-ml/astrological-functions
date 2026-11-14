@@ -9,3 +9,11 @@ Sixteen exact source/test/type fixture blobs are copied verbatim from main (no c
 **Executed preview before GitHub write:** 8/8 synthetic V8 checks on exact fetched source blobs (provider, math, decan, dodecatemoria, batch and cusp), plus manifest structural comparisons. This is **not** a native Node ESM resolver run, a full `npm test`, TypeScript compiler run or JPL/Rust astronomical validation. No GitHub Actions. The complete typed/runtime package must be checked on a native checkout and compared against active overlapping draft export PRs (#69, #84+), then reviewed before any merge.
 
 **Do not squash this draft directly to main** until its ancestor #92 → #94 → #97 → #101 is handled in order; if any ancestor or main export map changes, re-compare exact Git SHAs before integrating. Publishing, visibility changes, production backend changes and actual astronomical results are out of scope.
+
+## Native Node 22.16.0 manifest-resolution smoke (limited scope)
+
+After the integration branch was committed, the exact staged `package.json` bytes were recreated in an isolated local scratch package and independently checked with `git hash-object package.json`: **`2777e6b260cdd4cc64e8c285e366e17df8e12d9d`**, matching the GitHub file blob. Placeholder ESM modules and declaration files were placed at its declared export targets **only to test Node's real conditional package resolution** (they were *not* copies of the repository's runtime implementation).
+
+`node --test test/native-export-resolution.test.mjs` with Node.js **22.16.0** produced **8/8 PASS**, zero failures: five real ESM self-import resolutions (root and all four typed subpaths), rejection of CommonJS `require` for all conditional subpaths, rejection of three undeclared internal/typo paths, and the `private`/five-key manifest gate.
+
+**Boundary of this evidence:** this verifies the exact GitHub manifest's package resolution semantics under real Node 22.16.0. Because stub source modules were used, it **does not** prove that actual repository modules load, that their functions behave as expected, that `npm test` passes, or that TypeScript declarations compile. The full merged GitHub tree and genuine consumer tests must still be replayed natively before the draft is merge-ready.
