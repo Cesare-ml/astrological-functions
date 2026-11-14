@@ -81,12 +81,12 @@ export function makeTransitChunkPipelineRunner(input) {
       !integer(r.maxCandidateRefinements, 1, 128) ||
       !integer(r.maxRefinementCalls, 1, 16384))
     reject('INCOMPATIBLE_PIPELINE_LIMITS', 'F5 refinement tolerances and budgets must be explicit and finite');
-  // A worst-case cap must fit ALL planned chunks, rather than silently giving
-  // each chunk a new unlimited global budget. The F5 solver owns per-call caps.
+  // Unlike a worst-case estimate, the global cap is enforced on the actual
+  // provider invocations across every chunk (point samples AND enclosures).
+  // The F5 scan/refiner still enforce their independent per-chunk budgets.
   const maxTotalProviderCalls = input.maxTotalProviderCalls;
-  const worstCaseCalls = plan.chunks.length * (maxProviderCalls + r.maxRefinementCalls);
-  if (!integer(maxTotalProviderCalls, 1, 1000000) || worstCaseCalls > maxTotalProviderCalls)
-    reject('GLOBAL_PIPELINE_BUDGET', 'Worst-case F5 provider calls exceed explicit global budget');
+  if (!integer(maxTotalProviderCalls, 1, 1000000))
+    reject('GLOBAL_PIPELINE_BUDGET', 'Explicit global provider-call cap must be an integer in 1..1000000');
   const provider = object(input.provider, 'provider');
   const capabilities = object(provider.capabilities, 'provider.capabilities');
   if (Object.entries(F5_CAPABILITIES).some(([key, value]) => capabilities[key] !== value))
@@ -95,17 +95,36 @@ export function makeTransitChunkPipelineRunner(input) {
       typeof provider.getUnwrappedResidualEnclosure !== 'function')
     reject('UNSUPPORTED_COVERAGE', 'F5 provider must implement point and all-time interval methods');
   // Capture both methods and capability values before any asynchronous work.
+  // Wrap BOTH callback categories, so even an injected prepareCandidates cannot
+  // bypass the aggregate cap by misreporting scan/refinement call counts.
+  const pointMethod = provider.getUnwrappedAspectResidual.bind(provider);
+  const enclosureMethod = provider.getUnwrappedResidualEnclosure.bind(provider);
+  let nextIndex = 0;
+  let running = false;
+  let failed = false;
+  let providerCallCount = 0;
+  function budgeted(method) {
+    return async function providerCall(request) {
+      if (!running || failed)
+        reject('PIPELINE_SEQUENCE_ERROR', 'F5 provider call is outside an active search chunk');
+      if (providerCallCount >= maxTotalProviderCalls) {
+        failed = true;
+        reject('GLOBAL_PIPELINE_BUDGET', 'F5 aggregate provider-call cap exhausted');
+      }
+      // Reserve BEFORE invoking or awaiting the underlying method. Failed
+      // provider attempts also consume budget; a later chunk cannot reset it.
+      providerCallCount++;
+      return method(request);
+    };
+  }
   const fixedProvider = Object.freeze({
     capabilities: Object.freeze({ ...capabilities }),
-    getUnwrappedAspectResidual: provider.getUnwrappedAspectResidual.bind(provider),
-    getUnwrappedResidualEnclosure: provider.getUnwrappedResidualEnclosure.bind(provider),
+    getUnwrappedAspectResidual: budgeted(pointMethod),
+    getUnwrappedResidualEnclosure: budgeted(enclosureMethod),
   });
   if (typeof input.prepareCandidates !== 'function')
     reject('MISSING_PIPELINE', 'An explicitly injected F5 prepareCandidates function is required');
   const prepareCandidates = input.prepareCandidates;
-  let nextIndex = 0;
-  let running = false;
-  let failed = false;
   return async function runChunk(request) {
     if (running || failed || nextIndex >= plan.chunks.length)
       reject('PIPELINE_SEQUENCE_ERROR', 'F5 chunks must run once, sequentially, without retry after failure');
@@ -125,6 +144,10 @@ export function makeTransitChunkPipelineRunner(input) {
         targetIntervalMs, maxDepth, maxProviderCalls,
         provider: fixedProvider, refinement: r,
       }));
+      // A hostile callback may catch and suppress a global budget error.
+      // Never return a successful report after the cap has been exceeded.
+      if (failed)
+        reject('GLOBAL_PIPELINE_BUDGET', 'F5 aggregate provider-call cap exhausted');
       nextIndex++;
       return result;
     } catch (error) {
