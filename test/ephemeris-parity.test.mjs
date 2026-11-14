@@ -5,7 +5,8 @@ import { compareApparentEphemerisProviders, EphemerisParityError } from '../src/
 const datetimeUtc = '2026-01-01T00:00:00Z';
 const tolerances = Object.freeze({
   longitudeArcsec: 1, latitudeArcsec: 1,
-  longitudeSpeedArcsecPerDay: 1, distanceAu: 0.000001,
+  longitudeSpeedArcsecPerDay: 1, latitudeSpeedArcsecPerDay: 1,
+  distanceAu: 0.000001, distanceSpeedAuPerDay: 0.000001,
 });
 const metadata = Object.freeze({
   center: 'EARTH', frame: 'ECLIPTIC_OF_DATE', corrections: 'APPARENT',
@@ -13,7 +14,8 @@ const metadata = Object.freeze({
 });
 function state(overrides = {}, meta = metadata) {
   return { longitudeDeg: 359.9999, latitudeDeg: 0, longitudeSpeedDegPerDay: 0,
-    distanceAu: 1, ...overrides, metadata: meta };
+    latitudeSpeedDegPerDay: 0, distanceAu: 1, distanceSpeedAuPerDay: 0,
+    ...overrides, metadata: meta };
 }
 function providers(ref = state(), cand = state()) {
   return {
@@ -88,7 +90,8 @@ test('missing provenance, finite speeds and physical units are mandatory', async
     ...metadata, kernelSetId: '',
   }))), rejectsCode('MISSING_PROVENANCE'));
   for (const changed of [
-    { longitudeSpeedDegPerDay: undefined }, { latitudeDeg: Number.NaN },
+    { longitudeSpeedDegPerDay: undefined }, { latitudeSpeedDegPerDay: undefined },
+    { distanceSpeedAuPerDay: Number.NaN }, { latitudeDeg: Number.NaN },
     { distanceAu: 0 }, { longitudeDeg: 360 },
   ]) {
     await assert.rejects(compareApparentEphemerisProviders(query(state(), state(changed))),
@@ -114,7 +117,8 @@ test('reject invalid dates, duplicate bodies, self-comparison and invalid tolera
 
 test('zero tolerances accept exact zero values and reject any delta', async () => {
   const zero = { longitudeArcsec: 0, latitudeArcsec: 0,
-    longitudeSpeedArcsecPerDay: 0, distanceAu: 0 };
+    longitudeSpeedArcsecPerDay: 0, latitudeSpeedArcsecPerDay: 0,
+    distanceAu: 0, distanceSpeedAuPerDay: 0 };
   const same = await compareApparentEphemerisProviders(query(
     state({ longitudeDeg: 0 }), state({ longitudeDeg: 0 }), { tolerances: zero },
   ));
@@ -130,4 +134,64 @@ test('provider errors propagate with no fabricated candidate or fallback', async
   await assert.rejects(compareApparentEphemerisProviders(query(state(), state(), {
     referenceProvider,
   })), /missing kernel/);
+});
+
+test('all six polar fields have signed residuals and individually enforce thresholds', async () => {
+  const reference = state({
+    longitudeDeg: 42, latitudeDeg: -3, longitudeSpeedDegPerDay: 0.2,
+    latitudeSpeedDegPerDay: -0.4, distanceAu: 1.5, distanceSpeedAuPerDay: 0.02,
+  });
+  const candidate = state({
+    longitudeDeg: 42 + 0.5 / 3600,
+    latitudeDeg: -3 - 0.25 / 3600,
+    longitudeSpeedDegPerDay: 0.2 - 0.4 / 3600,
+    latitudeSpeedDegPerDay: -0.4 + 0.75 / 3600,
+    distanceAu: 1.5000004,
+    distanceSpeedAuPerDay: 0.0200007,
+  });
+  const report = await compareApparentEphemerisProviders(query(reference, candidate));
+  assert.equal(report.contract, 'APPARENT_EPHEMERIS_PARITY_V2');
+  assert.equal(report.status, 'PASS');
+  assert.deepEqual(Object.keys(report.comparisons[0].residual), [
+    'longitudeArcsec', 'latitudeArcsec', 'longitudeSpeedArcsecPerDay',
+    'latitudeSpeedArcsecPerDay', 'distanceAu', 'distanceSpeedAuPerDay',
+  ]);
+  const { residual } = report.comparisons[0];
+  for (const [field, expected] of Object.entries({
+    longitudeArcsec: 0.5, latitudeArcsec: -0.25,
+    longitudeSpeedArcsecPerDay: -0.4, latitudeSpeedArcsecPerDay: 0.75,
+    distanceAu: 0.0000004, distanceSpeedAuPerDay: 0.0000007,
+  })) {
+    assert.ok(Math.abs(residual[field] - expected) < 1e-9,
+      `${field}: expected ${expected}, got ${residual[field]}`);
+  }
+  for (const field of Object.keys(tolerances)) {
+    const reduced = { ...tolerances, [field]: Math.abs(residual[field]) / 2 };
+    const fail = await compareApparentEphemerisProviders(
+      query(reference, candidate, { tolerances: reduced }),
+    );
+    assert.equal(fail.status, 'FAIL', `Should reject ${field} limit`);
+    assert.equal(fail.failed, 1);
+  }
+});
+
+test('latitude and radial speed deltas never pass silently when other fields agree', async () => {
+  for (const delta of [
+    { latitudeSpeedDegPerDay: 0.005 },
+    { distanceSpeedAuPerDay: -0.005 },
+  ]) {
+    const result = await compareApparentEphemerisProviders(query(state(), state(delta)));
+    assert.equal(result.status, 'FAIL');
+    assert.equal(result.failed, 1);
+  }
+});
+
+test('all six tolerances are mandatory and must be nonnegative finite', async () => {
+  for (const field of ['latitudeSpeedArcsecPerDay', 'distanceSpeedAuPerDay']) {
+    for (const invalid of [undefined, -1, NaN, Infinity]) {
+      await assert.rejects(compareApparentEphemerisProviders(query(
+        state(), state(), { tolerances: { ...tolerances, [field]: invalid } },
+      )), rejectsCode('INVALID_TOLERANCE'));
+    }
+  }
 });
