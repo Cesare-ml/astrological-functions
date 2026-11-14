@@ -16,8 +16,8 @@ const fixtures = [
   'test/types/provider-public-house-composition.test.mts',
 ];
 const probe = spawnSync('tsc', ['--version'], { cwd: root, encoding: 'utf8', timeout: 10000 });
-const hasCompiler = !probe.error && probe.status === 0;
-const gate = (name, fn) => test(name, { skip: hasCompiler ? false : 'TypeScript compiler tsc is not installed; full release validation still required' }, fn);
+const compilerMissing = probe.error?.code === 'ENOENT';
+const gate = (name, fn) => test(name, { skip: compilerMissing ? 'TypeScript compiler tsc is not installed; full release validation still required' : false }, fn);
 
 for (const mode of ['NodeNext', 'Bundler']) {
   for (const exactOptional of [false, true]) {
