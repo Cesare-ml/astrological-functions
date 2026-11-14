@@ -27,27 +27,44 @@ export function reconcileUtcChunkEventHits(input) {
   const seenChunks = new Set();
   const unique = new Map();
   for (const result of chunkResults) {
-    if (!result || typeof result !== 'object' || Array.isArray(result) ||
-        !Number.isInteger(result.chunkIndex) || result.chunkIndex < 0 ||
-        result.chunkIndex >= plan.chunks.length || seenChunks.has(result.chunkIndex) ||
-        !Array.isArray(result.hits))
+    if (!result || typeof result !== 'object' || Array.isArray(result))
       throw new AstrologyError('INVALID_CHUNK_RESULTS', 'Chunks must be unique, indexed and contain hit arrays');
-    seenChunks.add(result.chunkIndex);
-    if (result.hits.length > maxInputHits - rawHitCount)
+    // Snapshot own data properties ONCE; never invoke user-defined getters
+    // when validating a caller/provider-supplied result.
+    const indexProperty = Object.getOwnPropertyDescriptor(result, 'chunkIndex');
+    const hitsProperty = Object.getOwnPropertyDescriptor(result, 'hits');
+    const chunkIndex = indexProperty?.value;
+    const hits = hitsProperty?.value;
+    if (!indexProperty || !Object.hasOwn(indexProperty, 'value') ||
+        !hitsProperty || !Object.hasOwn(hitsProperty, 'value') ||
+        !Number.isSafeInteger(chunkIndex) || chunkIndex < 0 ||
+        chunkIndex >= plan.chunks.length || seenChunks.has(chunkIndex) ||
+        !Array.isArray(hits))
+      throw new AstrologyError('INVALID_CHUNK_RESULTS', 'Chunks must be unique, indexed and contain hit arrays');
+    seenChunks.add(chunkIndex);
+    if (hits.length > maxInputHits - rawHitCount)
       throw new AstrologyError('TOO_MANY_EVENT_HITS', 'Candidate count exceeds maxInputHits');
-    rawHitCount += result.hits.length;
+    rawHitCount += hits.length;
 
-    const chunk = plan.chunks[result.chunkIndex];
-    for (const candidate of result.hits) {
+    const chunk = plan.chunks[chunkIndex];
+    for (const candidate of hits) {
       if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate) ||
-          Object.keys(candidate).length !== 2 || !Object.hasOwn(candidate, 'eventKey') ||
-          !Object.hasOwn(candidate, 'instantUtc') ||
-          typeof candidate.eventKey !== 'string' || !candidate.eventKey.trim() ||
-          candidate.eventKey.length > 256 || candidate.eventKey !== candidate.eventKey.trim())
+          Reflect.ownKeys(candidate).length !== 2)
         throw new AstrologyError('INVALID_EVENT_HIT', 'Each hit requires only a nonempty eventKey and instantUtc');
+      const keyProperty = Object.getOwnPropertyDescriptor(candidate, 'eventKey');
+      const instantProperty = Object.getOwnPropertyDescriptor(candidate, 'instantUtc');
+      if (!keyProperty || !instantProperty ||
+          !Object.hasOwn(keyProperty, 'value') || !Object.hasOwn(instantProperty, 'value') ||
+          !keyProperty.enumerable || !instantProperty.enumerable)
+        throw new AstrologyError('INVALID_EVENT_HIT', 'Each hit requires only own enumerable data properties');
+      const eventKey = keyProperty.value;
+      const instantUtc = instantProperty.value;
+      if (typeof eventKey !== 'string' || !eventKey.trim() ||
+          eventKey.length > 256 || eventKey !== eventKey.trim())
+        throw new AstrologyError('INVALID_EVENT_HIT', 'eventKey must be nonempty, trimmed and at most 256 characters');
       let epochMs;
       try {
-        epochMs = parseStrictUtcInstant(candidate.instantUtc, 'instantUtc');
+        epochMs = parseStrictUtcInstant(instantUtc, 'instantUtc');
       } catch (error) {
         if (error instanceof AstrologyError && error.code === 'INVALID_UTC')
           throw new AstrologyError('INVALID_EVENT_TIME', 'Hit must have a real millisecond-precision UTC instant');
@@ -59,10 +76,10 @@ export function reconcileUtcChunkEventHits(input) {
           epochMs >= plan.window.endEpochMs)
         throw new AstrologyError('EVENT_OUTSIDE_CHUNK', 'Hit falls outside its reported chunk or search window');
       const ownerChunkIndex = Math.floor((epochMs - plan.window.startEpochMs) / plan.chunkDurationMs);
-      const key = JSON.stringify([candidate.eventKey, epochMs]);
+      const key = JSON.stringify([eventKey, epochMs]);
       if (!unique.has(key))
         unique.set(key, Object.freeze({
-          eventKey: candidate.eventKey,
+          eventKey,
           instantUtc: new Date(epochMs).toISOString(),
           epochMs,
           ownerChunkIndex,
