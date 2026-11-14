@@ -1,0 +1,156 @@
+/** Experimental typed contract for the future Rust/WASM-backed ephemeris adapter.
+ * This package does not implement astronomical calculations.
+ */
+export interface ApparentGeocentricState {
+  readonly longitudeDeg: number;
+  readonly latitudeDeg: number;
+  readonly longitudeSpeedDegPerDay?: number | null;
+  readonly metadata: Readonly<{
+    center: 'EARTH';
+    frame: 'ECLIPTIC_OF_DATE';
+    corrections: 'APPARENT';
+    [key: string]: unknown;
+  } & (
+    | { engineVersion: string; kernelSetId: string; timeModel: string }
+    | { engineVersion?: never; kernelSetId?: never; timeModel?: never }
+  )>;
+}
+/** Runtime passes frozen requests to the future Rust/WASM adapter. */
+export interface EphemerisRequest {
+  readonly datetimeUtc: string;
+  readonly bodyName: string;
+  readonly corrections: 'APPARENT';
+  readonly frame: 'ECLIPTIC_OF_DATE';
+}
+export interface EphemerisProvider {
+  getGeocentricEcliptic(input: Readonly<EphemerisRequest>): Promise<Readonly<ApparentGeocentricState>>;
+}
+export interface NatalInput {
+  readonly datetimeUtc: string;
+  readonly latitudeDeg: number;
+  readonly longitudeDegEast: number;
+  readonly bodyNames: readonly string[];
+  readonly provider: EphemerisProvider;
+}
+export interface NatalBody {
+  readonly name: string;
+  readonly longitudeDeg: number;
+  readonly latitudeDeg: number;
+  readonly zodiacSignIndex: number;
+  readonly longitudeSpeedDegPerDay: number | null;
+  readonly ephemerisMetadata: ApparentGeocentricState['metadata'];
+}
+export interface ExperimentalNatalResult {
+  readonly contract: 'NatalChartResult';
+  readonly contractVersion: '0.1.0-experimental';
+  readonly datetimeUtc: string;
+  readonly latitudeDeg: number;
+  readonly longitudeDegEast: number;
+  readonly bodies: Readonly<Record<string, Readonly<NatalBody>>>;
+  /** Snapshot of the consistent provider provenance; null means unavailable. */
+  readonly ephemerisProvenance: Readonly<{
+    engineVersion: string | null;
+    kernelSetId: string | null;
+    timeModel: string | null;
+  }>;
+  readonly houses: null;
+  readonly angles: null;
+  readonly warnings: ReadonlyArray<Readonly<{code: string; message: string}>>;
+}
+export declare function calculateNatalWithProvider(input: NatalInput): Promise<ExperimentalNatalResult>;
+
+/** Identifier-only house-system compatibility; does not compute house cusps. */
+export type CalculationProfile = 'CANONICAL_V1' | 'VIRGOSTARS_LEGACY_V1';
+export type CanonicalHouseSystem = 'VEHLOW' | 'PLACIDUS' | 'KOCH' | 'REGIOMONTANUS' | 'PORPHYRY';
+export type LegacyHouseSystemLabel = 'egizia' | 'placido' | 'koch' | 'regio-montano' | 'porfirio';
+export type HouseSystemSelection =
+  | Readonly<{ houseSystem: CanonicalHouseSystem; calculationProfile: 'CANONICAL_V1' }>
+  | Readonly<{ houseSystem: CanonicalHouseSystem | LegacyHouseSystemLabel; calculationProfile: 'VIRGOSTARS_LEGACY_V1' }>;
+export declare function resolveHouseSystem(input: HouseSystemSelection): Readonly<{ houseSystem: CanonicalHouseSystem; calculationProfile: CalculationProfile }>;
+
+/** House placement policy only: no cusp computation or Swiss houses_pos port. */
+export type HousePlacementMethod = 'CUSP_INTERVAL' | 'LEGACY_HOUSES_POS';
+export declare function resolveHousePlacementPolicy(input: HouseSystemSelection & Readonly<{
+  placementMethod: HousePlacementMethod;
+}>): Readonly<{
+  houseSystem: CanonicalHouseSystem;
+  calculationProfile: CalculationProfile;
+  placementMethod: 'CUSP_INTERVAL';
+}>;
+
+/** Geometric cusp placement only. Cusps must already be supplied by a validated source. */
+export declare function locateLongitudeWithHousePolicy(input: HouseSystemSelection & Readonly<{
+  longitudeDeg: number;
+  cusps: readonly number[];
+  placementMethod: HousePlacementMethod;
+}>): Readonly<{
+  houseSystem: CanonicalHouseSystem;
+  calculationProfile: CalculationProfile;
+  placementMethod: 'CUSP_INTERVAL';
+  house: number;
+  startDeg: number;
+  endDeg: number;
+  distanceFromCuspDeg: number;
+}>;
+
+
+/** Validates an externally calculated cusp payload; no astronomical calculation. */
+export type HouseCuspSetInput = HouseSystemSelection & Readonly<{
+  readonly cusps: readonly number[];
+  readonly metadata: Readonly<{
+    houseSystem: CanonicalHouseSystem;
+    placementMethod: HousePlacementMethod;
+  }>;
+}>;
+export declare function validateHouseCuspSet(input: Readonly<HouseCuspSetInput>): Readonly<{
+  houseSystem: CanonicalHouseSystem;
+  calculationProfile: CalculationProfile;
+  placementMethod: 'CUSP_INTERVAL';
+  cusps: readonly number[];
+  metadata: Readonly<{houseSystem: CanonicalHouseSystem; placementMethod: 'CUSP_INTERVAL'}>;
+}>;
+
+/** Context match for externally computed cusp data; no astronomical computation. */
+export interface HouseCuspContextInput {
+  readonly chart: Readonly<Pick<ExperimentalNatalResult,
+    'datetimeUtc' | 'latitudeDeg' | 'longitudeDegEast' | 'ephemerisProvenance'>>;
+  readonly cuspSet: Readonly<Omit<HouseCuspSetInput, 'metadata'> & {
+    metadata: Readonly<HouseCuspSetInput['metadata'] & {
+      datetimeUtc: string;
+      latitudeDeg: number;
+      longitudeDegEast: number;
+      ephemerisProvenance: Readonly<{
+        engineVersion: string; kernelSetId: string; timeModel: string;
+      }>;
+    }>;
+  }>;
+}
+export declare function validateHouseCuspContext(input: Readonly<HouseCuspContextInput>): Readonly<{
+  houseSystem: CanonicalHouseSystem;
+  calculationProfile: CalculationProfile;
+  placementMethod: 'CUSP_INTERVAL';
+  cusps: readonly number[];
+  metadata: Readonly<{
+    houseSystem: CanonicalHouseSystem;
+    placementMethod: 'CUSP_INTERVAL';
+    datetimeUtc: string; latitudeDeg: number; longitudeDegEast: number;
+    ephemerisProvenance: Readonly<{
+      engineVersion: string; kernelSetId: string; timeModel: string;
+    }>;
+  }>;
+}>;
+
+/** Optional, separate geometric house placements for an experimental natal chart.
+ * Requires explicit birth time and a context-matched external cusp set.
+ */
+export declare function placeNatalBodiesInHouses(input: Readonly<{
+  chart: ExperimentalNatalResult;
+  cuspSet: HouseCuspContextInput['cuspSet'];
+  birthTimeKnown: true;
+}>): Readonly<{
+  houseSystem: CanonicalHouseSystem;
+  calculationProfile: CalculationProfile;
+  placementMethod: 'CUSP_INTERVAL';
+  metadata: ReturnType<typeof validateHouseCuspContext>['metadata'];
+  placements: Readonly<Record<string, ReturnType<typeof locateLongitudeWithHousePolicy>>>;
+}>;
