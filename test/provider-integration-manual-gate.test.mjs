@@ -12,7 +12,7 @@ const execute = (path, ...args) => spawnSync(process.execPath, [path, ...args], 
 test('manual native integration gate documents its offline scope', () => {
   const result = execute(script, '--help');
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /NodeNext/);
+  assert.match(result.stdout, /NodeNext\/Bundler/);
   assert.match(result.stdout, /No GitHub Actions/);
 });
 
