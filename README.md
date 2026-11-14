@@ -49,3 +49,18 @@ No production changes, DB migrations, precomputation rewrites, Astrolabio field 
 The first independent **pure-math** implementation is now proposed in PR #1: `src/index.mjs` provides angle normalization, zodiac sign indices, dodecatemoria, forward-ordered house-cusp placement and directional aspect calculations with caller-defined aspect angles/orbs. It has **no Swiss import**, no DB and no interpretation content. Node.js 22.16.0 local tests: **4/4 passed** on synthetic mathematical cases (not a real astronomical integration test). The exact source/test Git blobs were checked against the locally executed copies. `package.json` is private to prevent accidental publishing. An experimental `calculateNatalWithProvider` contract accepts a synthetic `getGeocentricEcliptic` provider and rejects geometric J2000 inputs. It is **not yet wired to a real ephemeris**.
 
 See [implementation checkpoint](docs/IMPLEMENTATION_CHECKPOINT_2026-11-09.md). No VirgoStars route, database, frontend, deployed Astrolabio or public repository visibility was modified.
+
+
+## Experimental F5 integration testing — 14 November 2026
+
+The draft F5 stack in [integration PR #79](https://github.com/Cesare-ml/astrological-functions/pull/79) adds provider-asserted interval scans, bracketed transit candidate refinement, bounded UTC chunks, pinned aspect/provenance identity, a global provider-call budget, optional per-chunk deadlines and cooperative cancellation. **This does not provide scientifically certified transit event times.**
+
+On a complete checkout of the integration branch, with Node.js >=20 and TypeScript `tsc` available on PATH, run all three local gates at once:
+
+```sh
+node scripts/manual/validate-f5-stack.mjs
+```
+
+As of 2026-11-14, a **SHA-verified local reconstruction** of all repository Node source/test files passed `npm test` (**123/123**), the actual-pipeline synthetic smoke suite (**11/11**) and the strict TypeScript checks. This was **not** a native Git clone or validation of NASA/JPL kernels: `github.com` DNS/network access was unavailable in the local execution environment. See [the execution record](docs/F5_INTEGRATION_VALIDATION_2026-11-14.md), [validation gates](docs/VALIDATION.md) and [roadmap](docs/ROADMAP.md).
+
+All F5 PRs remain drafts pending scientifically validated Rust/WASM ephemeris contracts, all-time enclosure checks, JPL parity, licensing review and explicit approval. No public release, GitHub Actions, deployments or production migrations occurred.
