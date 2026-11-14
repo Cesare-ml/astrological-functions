@@ -50,3 +50,14 @@ const invalidResponse: DeclinationProviderResponse = { datetimeUtc: '2000-01-01T
   ...options.coordinates, frameEpochUtc: null,
 }, provenance: options.expectedProvenance };
 void invalidResponse;
+
+
+// Desktop/browser clients can cancel stale asynchronous chart requests.
+const controller = new AbortController();
+const abortable: Promise<import('../../src/sourced-declination-contacts.mjs').SourcedDeclinationContactsResult> =
+  calculateDeclinationContactsWithProvider({ ...options, signal: controller.signal });
+void abortable;
+// @ts-expect-error cancellation requires an AbortSignal, not an arbitrary state object
+calculateDeclinationContactsWithProvider({ ...options, signal: { aborted: true } });
+// @ts-expect-error cancellation cannot be a string token
+calculateDeclinationContactsWithProvider({ ...options, signal: 'cancel-chart' });
