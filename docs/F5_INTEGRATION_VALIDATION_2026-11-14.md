@@ -49,3 +49,33 @@ tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution noden
 ```
 
 This repository remains private and unreleased. Full native `npm test`, tests of all stacked PR #21 files with their full original dependencies, review of provenance/coverage, consumer export-map coordination, timeouts/cancellation, public-license permission and scientific reference checks are **not yet certified** by the above local focused validation. Do not merge to `main` or deploy based solely on this evidence. No GitHub Actions were added.
+
+
+## Addendum — getter-free UTC hit reconciliation regression (2026-11-14)
+
+The event reconciler previously read `candidate.eventKey` repeatedly and allowed own **accessor properties**, invoking a test getter **seven times** before accepting its result. A provider could therefore change the event identity between checks and deduplication. The corrected PR #72 implementation, imported into PR #79 as a two-parent integration merge commit, now snapshots only own **enumerable data descriptors** for `eventKey` and `instantUtc`, and only own data descriptors for `chunkIndex`/`hits`. It rejects getters, setters, symbol keys, hidden extras and inherited fields without evaluating user getters.
+
+Git blob SHA-1 verification after synchronization:
+
+- `src/utc-chunk-event-reconciliation.mjs`: `09e60b9f7d4ab6ec07774f3bac8f094b5e5b5cef`
+- `test/utc-chunk-event-reconciliation.test.mjs`: `7a7e061cf4c318b90d2bdd719e8dcd1eebe6de1d`
+
+The **five new regression tests** cover both candidate accessors, extra hidden/symbol properties, chunk-result accessors, and unchanged canonical millisecond seam deduplication.
+
+After rebuilding the focused local fixture using these exact GitHub source/test blobs, the unchanged actual PR #21 runtime source blobs, and a minimal `AstrologyError` dependency stand-in, the following **were executed**:
+
+```sh
+node --test test/*.test.mjs
+# 54/54 focused Node.js tests passed (previously 49/49)
+
+node scripts/manual/transit-pr21-smoke.mjs
+# 5/5 end-to-end synthetic PR #21 runtime smoke tests passed
+
+tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext scripts/manual/transit-pr21-typecheck.ts
+# Passed
+
+# Plus all 7 individual strict NodeNext fixture checks under test/types/*.ts
+# Passed
+```
+
+Total **59/59 focused runtime tests passed**. These are synthetic dependency-isolated checks, **not** an execution of the complete private-repository `npm test` command, scientific ephemeris parity, or production readiness. No changes were made to `main` or any production system.
