@@ -1,5 +1,20 @@
 # Astrological Functions — roadmap
 
+## Verified integration status — 14 November 2026
+
+- **`main` is IMPLEMENTED_ISOLATED, not production-ready.** PR #1 introduced the private pure-math Node ESM prototype; [PR #50](https://github.com/Cesare-ml/astrological-functions/pull/50) was squash-merged on 14 November 2026 (commit `c8eec4c53a0ec077b1859bb4ce1706feb1b72e7e`) to preserve binary64 precision around 360° and signed angular separations.
+- **Manual evidence:** PR #50 documents 12/12 native Node 22.16.0 tests on a SHA-matched local reconstruction; on 14 November the exact GitHub source blob `78a494e5aca0e9d9e4423f88d9401c50046fd570` also passed nine targeted V8 checks, including a 100,000-case finite-angle range/idempotence sweep. These are synthetic tests, **not** real JPL/Rust scientific or complete integration validation.
+- **F2–F7 are not integrated on `main`.** Provider hardening (#3/#54), UTC inputs (#70/#72), transit workflows (#13/#14/#17/#21/#79/#81), typed subpaths/export reconciliation (#69/#84/#85/#86), and declination stages (#71 onward) remain experimental draft tracks. A draft PR's GitHub `mergeable` flag or isolated test evidence is **not** a release gate.
+- **Rust remains the only planned astronomical engine.** Do not accept geometric/J2000 or mean/true-of-date results as `APPARENT/ECLIPTIC_OF_DATE`; no production client, NPM publishing or automatic deployment.
+
+### Agent integration and merge gates
+
+1. **Inspect before editing:** refresh `main`, open PR bases, changed paths and dependency graph. Declare a unique feature branch, explicit base ref, and narrow owned paths; avoid simultaneous edits to `src/index.mjs`, `package.json`, and shared export maps.
+2. **Respect stacked ancestry:** experimental PRs based on other draft branches must be reviewed and integrated in dependency order. In particular, #67 was based on the pre-squash #50 branch; after #50's squash merge, do **not** blindly retarget #67 or assume Git ancestry is equivalent. Compare its intended five-file delta with the updated `main`, then rebase/cherry-pick with tests before proposing integration.
+3. **Resolve baseline drift:** PR #3 modifies `src/index.mjs` and must be reconciled against the merged #50 precision contract. Retest 0°/360°, cusp assignment, provider boundary rejection and metadata provenance after conflict resolution.
+4. **Prove a complete candidate:** run native `npm test` plus any relevant manual NodeNext/Bundler/consumer tests on the **combined checkout**, record commit SHAs and observed results, and distinguish synthetic from JPL-reference checks. Do not infer success from a different branch's tests. No GitHub Actions.
+5. **Human review of scientific contracts and licenses:** keep F2/F7 release and backend migration gates closed until pinned Rust/WASM ephemeris and accuracy, cross-language consumer fixtures, privacy, credits, compatibility and rollback reviews all pass.
+
 Status: **planning only**, 2026-11-09. The library will extract **many useful components, not necessarily all backend functions**. No production migration from documentation alone. No GitHub Actions or automatic releases.
 
 | Phase | Scope | Exit condition |
