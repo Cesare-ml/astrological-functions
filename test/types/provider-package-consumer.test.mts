@@ -94,3 +94,15 @@ const missingCuspSet: Parameters<typeof placeNatalBodiesInHouses>[0] = {
   birthTimeKnown: true
 };
 void missingCuspSet;
+
+// Public result objects are immutable to consumers, including nested provenance.
+// @ts-expect-error A chart's declared UTC instant cannot be reassigned.
+experimentalChart.datetimeUtc = '2026-11-15T00:00:00Z';
+// @ts-expect-error The provider provenance snapshot is readonly.
+experimentalChart.ephemerisProvenance.kernelSetId = 'other-kernel';
+// @ts-expect-error A body longitude cannot be overwritten by chart consumers.
+experimentalChart.bodies.Sun.longitudeDeg = 99;
+// @ts-expect-error House placements cannot be authorized with an unknown-time boolean.
+declare const birthTimeKnownAtRuntime: boolean;
+const unverifiedBirthTimePlacement: Parameters<typeof placeNatalBodiesInHouses>[0] = { ...housePlacementRequest, birthTimeKnown: birthTimeKnownAtRuntime };
+void unverifiedBirthTimePlacement;
