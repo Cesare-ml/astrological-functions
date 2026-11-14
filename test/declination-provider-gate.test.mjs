@@ -402,3 +402,68 @@ test('abort event listeners are removed on success and provider rejection', asyn
   assert.equal(adds, 3);
   assert.equal(removes, 3);
 });
+
+
+test('provider callable with a non-call own .call property works without AbortSignal', async () => {
+  const requests = [];
+  const provider = {
+    async getGeocentricEquatorialDeclination(request) {
+      assert.equal(this, provider);
+      requests.push(request.bodyId);
+      return response(request);
+    },
+  };
+  provider.getGeocentricEquatorialDeclination.call = null;
+  const out = await calculate({}, provider);
+  assert.deepEqual(requests, ['Sun', 'Moon']);
+  assert.equal(out.facts.contacts.length, 1);
+});
+
+test('provider callable with a non-call own .call property works with AbortSignal', async () => {
+  const requests = [];
+  const provider = {
+    async getGeocentricEquatorialDeclination(request) {
+      assert.equal(this, provider);
+      requests.push(request.bodyId);
+      return response(request);
+    },
+  };
+  provider.getGeocentricEquatorialDeclination.call = false;
+  const out = await calculate({ signal: new AbortController().signal }, provider);
+  assert.deepEqual(requests, ['Sun', 'Moon']);
+  assert.equal(out.facts.contacts.length, 1);
+});
+
+test('own .call override cannot spoof the selected declination implementation', async () => {
+  const actuallyCalled = [];
+  let intercepted = 0;
+  const provider = {
+    async getGeocentricEquatorialDeclination(request) {
+      actuallyCalled.push(request.bodyId);
+      return response(request);
+    },
+  };
+  provider.getGeocentricEquatorialDeclination.call = () => {
+    intercepted++;
+    throw new Error('shadowed .call must not be consulted');
+  };
+  const out = await calculate({}, provider);
+  assert.equal(intercepted, 0);
+  assert.deepEqual(actuallyCalled, ['Sun', 'Moon']);
+  assert.equal(out.facts.contacts.length, 1);
+});
+
+test('mutating own .call after first provider await does not alter later requests', async () => {
+  const seen = [];
+  async function method(request) {
+    seen.push(request.bodyId);
+    if (request.bodyId === 'Sun') {
+      method.call = () => { throw new Error('dynamic shadow must not be invoked'); };
+    }
+    return response(request);
+  }
+  const provider = { getGeocentricEquatorialDeclination: method };
+  const out = await calculate({ signal: new AbortController().signal }, provider);
+  assert.deepEqual(seen, ['Sun', 'Moon']);
+  assert.equal(out.facts.contacts.length, 1);
+});
