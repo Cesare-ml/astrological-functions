@@ -110,7 +110,6 @@ test('CLI invalid arguments fail without importing code', async () => {
   });
 });
 
-
 test('named export verification accepts both root and typed consumer subpath', async () => {
   await fixture(async dir => {
     const result = await verifyEsmCheckout(dir, ['./real'], ['./real:answer', '.:rootReady']);
