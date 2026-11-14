@@ -211,3 +211,56 @@ Keep all existing integration, provenance, legal and downstream gates.
 No GitHub Actions, merge, deploy, npm release, production edit or
 visibility change. Credit
 [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+
+## Typed ESM condition target validation — 14 November 2026
+
+The read-only union planner now rejects manifest exports whose targets do not
+have an extension appropriate to this **private, Node >=20, ESM-only package**:
+
+- Root `exports["."]` and each subpath `import` target: `.js` or `.mjs`.
+- Each subpath `types` target: `.d.ts` or `.d.mts`.
+
+Malformed but safe-relative filenames fail closed with the new
+`INVALID_EXPORT_TARGET` code. For example, publishing `.cjs` as the ESM
+runtime, `.ts` source as the uncompiled runtime, or an executable `.js`
+file as a declaration target is rejected before a union is proposed.
+`UNSAFE_EXPORT_PATH` continues to take precedence for hidden, traversal,
+encoded or reserved paths. This does **not** inspect file contents or ensure
+the targets actually exist in a merged checkout.
+
+An independent eight-case native Node test suite was added:
+`test/plan-esm-export-conditions.test.mjs`. The tests cover both valid
+declaration/runtime pair styles, CommonJS and uncompiled TypeScript targets,
+JSON/extensionless targets, invalid declaration targets, root-export
+mismatches, error precedence and a non-mutating CLI failure.
+
+Locally executed with **Node v22.16.0**:
+
+```sh
+node --check scripts/plan-esm-export-union.mjs
+node --check test/plan-esm-export-conditions.test.mjs
+node --test test/plan-esm-export-conditions.test.mjs
+```
+
+The new focused suite: **8 passed, 0 failed**. The GitHub file blobs
+match the byte-exact locally tested Git SHA-1 values:
+
+- `scripts/plan-esm-export-union.mjs`:
+  `4e04a4441dd0dcca97f42ccff74bc7e996a3b814`.
+- `test/plan-esm-export-conditions.test.mjs`:
+  `87524af963bdbb0c7e9d052d08910929cf414842`.
+
+At the observed GitHub `package.json` blob SHA snapshots already listed
+in this document, the `main` and draft PR #25, #41, #54, #60, #65, #68
+export targets **all satisfy the extension policy**. This is a manifest
+declaration audit only, not a consolidated package import test.
+The original 28-test planner suite was not rerun in this increment:
+the verified outcome above is specifically the new eight-case test suite.
+
+The PR remains draft; no `main` merge, GitHub Actions, npm publish,
+production application change, Rust/WASM scientific validation or repository
+visibility change. The required integration gate remains a real consolidated
+checkout followed by full native `npm test`, TypeScript NodeNext/Bundler
+consumer imports and the separate source/license review. Attribution:
+[VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
