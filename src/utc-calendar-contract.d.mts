@@ -25,7 +25,9 @@ export type UtcInputErrorCode =
   | 'INVALID_UTC_INPUT'
   | 'UNSUPPORTED_CALENDAR'
   | 'UNSUPPORTED_TIME_SCALE'
-  | 'INVALID_UTC_INTERVAL';
+  | 'INVALID_UTC_INTERVAL'
+  | 'INVALID_INTERVAL_LIMIT'
+  | 'UNSUPPORTED_UTC_PRECISION';
 
 export declare class UtcInputError extends Error {
   readonly code: UtcInputErrorCode;
