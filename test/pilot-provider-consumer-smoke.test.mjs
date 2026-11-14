@@ -225,3 +225,17 @@ test('public ESM provider rejects engine-version and time-model drift independen
     assert.equal(requests.every(Object.isFrozen), true, changedField);
   }
 });
+
+test('public ESM house placement refuses unknown birth time before reading cusp data', () => {
+  for (const birthTimeKnown of [false, undefined, null, 0, 'true']) {
+    assert.throws(
+      () => packageProvider.placeNatalBodiesInHouses({
+        birthTimeKnown,
+        chart: null,
+        cuspSet: null
+      }),
+      { code: 'BIRTH_TIME_REQUIRED' },
+      String(birthTimeKnown)
+    );
+  }
+});
