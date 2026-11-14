@@ -18,3 +18,9 @@ The input must be either a flat JSON array or the paginated array-of-arrays prod
 **Limitations:** The graph is a snapshot, not an atomic multi-PR transaction. A missing base may be a genuinely existing branch without an open PR, a closed PR, or an incomplete snapshot. A forked head needs separate review. The tool does not inspect changed files, merge conflicts, release rights, labels, branch protection, test results or Rust/WASM scientific accuracy. `order` is **not** a safe-to-merge list: an independent reviewer must inspect each prerequisite, run native Node and strict TypeScript NodeNext/Bundler tests, and obtain explicit approval before any merge.
 
 Keep VirgoStars Ephemeris (Rust) as the sole astronomical engine. No Swiss code, production changes, npm release, license/visibility change or GitHub Actions are part of this utility. Preserve [VirgoStars project attribution](https://github.com/Cesare-ml/VirgoStars-Ephemeris).
+
+## Additional stale-plan gate (PR #91)
+
+Before acting on any dependency plan from this read-only audit, capture **two** full GitHub open-PR snapshots (one at planning time, one just before review), then run `node scripts/compare-pr-snapshots.mjs <old.json> <new.json> --json`. This second offline tool rejects incomplete SHA/repository metadata and detects any change to branch head/base SHA, base targeting, draft status, additions or removals of open PRs. A nonzero exit means the old plan is unusable; a zero exit **never** authorizes a merge. See [PR_SNAPSHOT_DRIFT_GATE.md](PR_SNAPSHOT_DRIFT_GATE.md).
+
+A parallel dependency wave implementation also exists in draft PR #90; maintainers should consolidate the overlapping graph-audit tools before a permanent package release. The SHA-pinned drift check is a separate protection, not another merge planner.
