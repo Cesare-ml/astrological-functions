@@ -104,3 +104,33 @@ done
 ```
 
 **Current evidence: 64/64 focused runtime tests passing.** This does not constitute a full native checkout `npm test` run or ephemeris/JPL scientific validation. The adapter's mandatory `identity` parameter is an intentional breaking change to an **unreleased experimental** contract. The repository remains private; PR #72 and integration PR #79 remain drafts. No production or `main` changes, automatic actions, or releases.
+
+
+## Addendum — live F5 aggregate provider-call budget (2026-11-14)
+
+The earlier PR #72 adapter used only a **worst-case arithmetic preflight**: it required `maxTotalProviderCalls` to cover `chunkCount × (maxProviderCalls + maxRefinementCalls)` but did not count actual provider invocations itself. This has been replaced by a **live aggregate limit** shared across point-residual calls and all-time interval-enclosure requests. The cap may be smaller than the worst case; the first exceeding call throws `GLOBAL_PIPELINE_BUDGET` before invoking the underlying provider. Calls that fail still consume their reserved slot.
+
+A saved provider function reference cannot be called outside an active chunk (`PIPELINE_SEQUENCE_ERROR`). If an injected pipeline swallows a budget exception and attempts to return a result, the adapter still rejects rather than returning a partial or artificially empty success report. This guard covers calls made through the injected F5 provider facade, not references to the caller's original provider retained elsewhere. It does not cancel calls already in flight or impose a wall-clock timeout.
+
+**Exact GitHub SHA-1 blobs used by the isolated test fixture:**
+
+- `src/transit-chunk-pipeline-adapter.mjs`: `3d0e7f2d5419b37fc9a30b8229beef8d64b702d5`
+- `test/transit-chunk-pipeline-adapter.test.mjs`: `595a5f093ac38ed5e2160e1d0345e4b5c89e16e5`
+- `scripts/manual/transit-pr21-smoke.mjs`: `c668b10b94a250c87e14323bd1b1964593a7a672` (integration-branch-only two additional cases)
+
+**Executed locally** using Node v22.16.0 and TypeScript 5.8.3 on the existing isolated PR #72 + actual PR #21 source fixture:
+
+```sh
+node --test test/*.test.mjs
+# 63/63 passed (4 additional aggregate-budget regression cases)
+
+node scripts/manual/transit-pr21-smoke.mjs
+# 7/7 passed (2 additional actual PR21 runtime/ synthetic-ephemeris budget cases)
+
+for f in test/types/*.ts scripts/manual/transit-pr21-typecheck.ts; do
+  tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext "$f"
+done
+# All TypeScript 5.8.3 strict NodeNext checks passed
+```
+
+**70/70 focused runtime tests passed.** The complete private repository was **not** cloned into this environment (direct network access to GitHub is unavailable); `npm test` on the full private checkout remains a separate outstanding gate. The fixture uses the previously documented minimal unchanged `AstrologyError` dependency. No Rust/WASM/JPL ephemeris reference comparison, scientific validation, production change, GitHub Actions or `main` merge occurred.
