@@ -25,6 +25,10 @@
       "types": "./src/placidus-houses.d.mts",
       "import": "./src/placidus-houses.mjs"
     },
+    "./placidus-position": {
+      "types": "./src/placidus-position.d.mts",
+      "import": "./src/placidus-position.mjs"
+    },
     "./regiomontanus-houses": {
       "types": "./src/regiomontanus-houses.d.mts",
       "import": "./src/regiomontanus-houses.mjs"
