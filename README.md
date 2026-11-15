@@ -1,51 +1,54 @@
 # Astrological Functions
 
-**Private extraction and redesign workspace for the astrological calculations used by VirgoStars and Astrolabio.**
+Framework-independent, experimental **JavaScript ESM** building blocks for deterministic astrological calculations in the [VirgoStars](https://github.com/Cesare-ml) ecosystem.
 
-**Status: ISOLATED EXPERIMENTAL PROTOTYPE, NOT PRODUCTION.** The initial pure-math Node.js package and local tests exist on the feature branch; this is not yet a complete astrology engine, public package or production source of truth. Public release is possible later, only after code provenance, dependency licenses, and privacy/security reviews.
+> **Pre-release / not production-ready.** The repository is currently private and **has no granted open-source license**. This README prepares the project for a possible public source release; it does **not** grant permission to copy, redistribute or commercially use the code.
 
-## Mission
+## Scope and current capabilities
 
-Build a modular, testable, framework-independent JavaScript/TypeScript library for astrology. Its independent astronomical backend is planned to be [VirgoStars Ephemeris](https://github.com/Cesare-ml/virgostars-ephemeris), which uses NASA/JPL SPK data rather than Swiss Ephemeris. Do not vendor Swiss Ephemeris or copy code from it.
+The current `main` branch includes pure-math utilities for angular normalization, zodiac positions, dodecatemoria, configured aspect geometry and experimental house-system calculations (Vehlow, Porphyry, Placidus, Regiomontanus and Koch). The package includes selected `.d.mts` declarations and deterministic Node test fixtures.
 
-**Language boundary:** This library stays in **TypeScript**; its independent astronomical dependency will have a **single Rust core** exposed to JS/TS via WASM, and separately to Python via PyO3/maturin. No astronomy algorithms are duplicated here. See [ADR-0001](docs/ADR-0001-RUST-CORE-AND-BINDINGS.md).\n\nThe source of existing VirgoStars behavior remains the private monorepo `Cesare-ml/virgo-stars` until migration is tested and approved. This library may extract/reimplement **selected** methods: it is *not* a promise to migrate every legacy script.
+The separate [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) Rust project is the **only intended source for astronomy**. This package must not duplicate orbital computation, import Swiss Ephemeris source or silently substitute a lower-accuracy engine. An experimental provider boundary and real-DE441 integration tests do **not** establish full astronomical accuracy or production parity.
 
-### Inside this package
+**Not included:** natal chart interpretations, user accounts, private birth records, databases, API credentials, frontend graphics, NASA/JPL kernels, or production VirgoStars services. Proposed interfaces described in `docs/CONTRACTS.md` are not necessarily shipped APIs.
 
-- Zodiac coordinates, signs, dodecatemoria, configurable tropical/sidereal variants
-- Chart input and result normalization; house-system methods and placements
-- Astrological aspects, configurable orbs, angular distances
-- Natal chart, directed synastry, transits, solar/lunar returns
-- Synodic phase classification and astronomical event search orchestration
-- Optional fixed-star, planetary-hour and other extensions after provenance/accuracy review
+## Try the source locally
 
-### Outside this package
+Requirements: **Node.js >=20** and npm. The repository is not published as an npm package; do not run `npm publish`.
 
-- Swiss Ephemeris bindings or its source code
-- NASA kernel data files and their loader implementation (ephemeris package owns that)
-- User accounts, PostgreSQL, HTTP controllers, rate limits, billing, API keys
-- Interpretation corpus, AI agents, private knowledge catalogs, personal birth records
-- UI, Angular, Three.js chart rendering and graphical assets
+```sh
+git clone https://github.com/Cesare-ml/astrological-functions.git
+cd astrological-functions
+npm test
+```
 
-## Documentation
+`npm test` runs local JavaScript tests. Tests requiring an **externally supplied** Rust adapter/kernel are conditional, not a substitute for scientific validation. TypeScript fixtures require a separately configured TypeScript checker; they are not automatically covered by this command. Consult [validation](docs/VALIDATION.md).
 
-- [Architecture and package boundaries](docs/ARCHITECTURE.md)\n- [Rust Ephemeris dependency and bindings — ADR-0001](docs/ADR-0001-RUST-CORE-AND-BINDINGS.md)
-- [Legacy extraction inventory](docs/MIGRATION_INVENTORY.md)
-- [Roadmap and migration gates](docs/ROADMAP.md)
-- [Contracts with Ephemeris](docs/CONTRACTS.md)
-- [Test and compatibility strategy](docs/VALIDATION.md)
-- [License and publication decisions](docs/LEGAL_AND_PUBLICATION.md)
-- [Contributor / AI agent instructions](AGENTS.md)
-- [Italian overview](docs/README.it.md)
+Example, executed from the repository root:
 
-## Critical guardrail
+```sh
+node --input-type=module -e "import {normalize360, zodiacSignIndex, angularSeparation} from 'astrological-functions'; console.log(normalize360(-20), zodiacSignIndex(45), angularSeparation(350, 10));"
+```
 
-No production changes, DB migrations, precomputation rewrites, Astrolabio field updates, npm release, public switch or GitHub Actions as a side effect of extraction.
+Expected output: `340 1 20`.
 
-**License:** no public reuse license has yet been granted by this private repository. MIT is a candidate for **original, legally cleared** code; deciding to publish requires a separate review and explicit approval.
+### Current ESM entry points
 
-## Implementation checkpoint — 9 November 2026
+`astrological-functions` exposes root math primitives and experimental subpaths `/dodecatemoria`, `/dodecatemoria-batch`, `/zodiac-decan-facts`, `/porphyry-houses`, `/placidus-houses`, `/regiomontanus-houses`, `/koch-houses`, `/house-set`, and `/vehlow-houses`. Their precise contracts and unsupported conditions are defined in the respective source/declaration files. Some exports have no root-level declaration coverage; do not assume a complete TypeScript API.
 
-The first independent **pure-math** implementation is now proposed in PR #1: `src/index.mjs` provides angle normalization, zodiac sign indices, dodecatemoria, forward-ordered house-cusp placement and directional aspect calculations with caller-defined aspect angles/orbs. It has **no Swiss import**, no DB and no interpretation content. Node.js 22.16.0 local tests: **4/4 passed** on synthetic mathematical cases (not a real astronomical integration test). The exact source/test Git blobs were checked against the locally executed copies. `package.json` is private to prevent accidental publishing. An experimental `calculateNatalWithProvider` contract accepts a synthetic `getGeocentricEcliptic` provider and rejects geometric J2000 inputs. It is **not yet wired to a real ephemeris**.
+Version: `0.1.0-dev`. The package stays `"private": true` to prevent accidental npm publishing, independently of GitHub repository visibility. There is **no stable API or compatibility commitment yet**.
 
-See [implementation checkpoint](docs/IMPLEMENTATION_CHECKPOINT_2026-11-09.md). No VirgoStars route, database, frontend, deployed Astrolabio or public repository visibility was modified.
+## Architecture and safety
+
+- Keep mathematical/astrological conventions explicit (frames, UTC/UT1/TT, observers, house systems, boundary ownership, error behavior). Distinguish mathematical accuracy from astrological interpretation.
+- Fail closed on unknown ephemeris metadata or unsupported calculations; never fabricate data.
+- Use synthetic examples rather than identifiable birth records; keep private application logic outside this library.
+- Do not introduce GitHub Actions or automated production deployments.
+
+Read the [architecture](docs/ARCHITECTURE.md), [provider contracts](docs/CONTRACTS.md), [test strategy](docs/VALIDATION.md) and [contributing guide](CONTRIBUTING.md). The [Italian overview](docs/README.it.md) describes the same project boundaries.
+
+## Licensing, credit and planned public release
+
+**Copyright retained by the respective rights holders. No outbound license has been selected.** The intended public release should permit free and commercial use with appropriate preservation of VirgoStars credits, subject to an explicit owner decision and a third-party compatibility audit. Apache-2.0 with NOTICE and CPAL-1.0 have different requirements for visible application attribution; neither is automatically applicable. See [licensing options](docs/LICENSING_OPTIONS.md), [legal policy](docs/LEGAL_AND_PUBLICATION.md), and the [publication checklist](docs/PUBLICATION_READINESS.md).
+
+The project will **remain private** until permission, provenance, privacy, security and history checks are completed and repository visibility is separately approved.
