@@ -1,30 +1,23 @@
-# Licensing and possible future publication
+# Legal and public-release policy
 
-**As of 2026-11-09 this repository is PRIVATE and has no outbound open-source license.** Collaborator access is not permission for third-party distribution.
+**Status (2026-11-15): private, unlicensed for external reuse, not approved for distribution.** Visibility and npm package publication are separate decisions.
 
-## Proposed outcome
+The owner wants a free-to-use open-source project that permits commercial use and retains VirgoStars credits. The 15 November follow-up favors **visible VirgoStars credit in downstream application UI** (Credits/About), rather than source notices alone. The exact enforceable extent, including CPAL launch/session display and Larger Works, remains subject to legal and compatibility approval. The previous suggestion of MIT alone cannot satisfy an explicit UI-credit requirement. Do not select any outbound license without the owner and an audit of all copyright holders and dependencies.
 
-Open-source selected **original** astrology functions under a permissive license such as MIT if the owner approves after an audit. Do not preemptively assume all existing VirgoStars backend source can be licensed MIT.
+See [license comparison and decision](LICENSING_OPTIONS.md) and [release gate](PUBLICATION_READINESS.md).
 
-## Strict third-party separation
+## Third-party separation
 
-- `virgostars-ephemeris`: intended original MIT code backed by externally licensed NASA/JPL data; its license does not automatically license NASA kernels.
-- Swiss Ephemeris: AGPL/professional dual-license. **Do not vendor, copy, adapt or translate Swiss code** in this package. Using a standalone independent ephemeris package does not retroactively cure licensing obligations of the current backend while it still uses Swiss.
-- Libraries and star catalogs: inspect each license and attribution, preserving required notices.
-- Source extraction from `virgo-stars`: review copyright authors, contributor rights, git history, dependencies and any code of uncertain origin; only approved original logic may be transferred.
+- `VirgoStars-Ephemeris` provides independent Rust astronomy through a provider contract; do not duplicate source or assume its licensing extends to external kernels, datasets, or this package.
+- Never import/copy/adapt Swiss Ephemeris implementation or treat recorded Swiss comparison fixtures as proof of independent scientific accuracy.
+- Inspect the licenses/attributions of each external numerical table, catalog, reference algorithm and original snippet.
+- Protect private VirgoStars monorepo sources, customer data and account/interpretation material; audit all past commits and metadata before public visibility.
 
-## Publication readiness checklist
+## Policy before authorization
 
-- [ ] Explicit go-ahead to make repository public and choose LICENSE
-- [ ] File-level license/provenance classification completed
-- [ ] No secrets/tokens/auth logic/customer data/production exports/personal records
-- [ ] No Swiss-linked code, hidden dependency or prohibited dataset
-- [ ] Tests run with synthetic fixtures, scientific reference documented
-- [ ] Contracts and semver stability agreed; public documentation/examples accurate
-- [ ] Contributors' inbound rights, notices and attribution policy recorded
-- [ ] No private monorepo commit history, accidental submodules or internal endpoints leaked
-- [ ] Human review of both Git history and release artifacts
+- Prepare documentation and non-production tooling in reviewed PRs.
+- Keep `"private": true` and do not publish npm packages.
+- Do not add `LICENSE`, `NOTICE`, SPDX claims or a UI credit requirement on behalf of authors until approved.
+- Do not flip GitHub visibility, deploy to production, or enable GitHub Actions as a side effect of preparation.
 
-## Policy until publication
-
-Use PRs and private collaboration. Do not publish an npm package, flip GitHub visibility, insert permissive LICENSE, or invite external reuse before the above gate.
+**Approval required:** verified rights clearance + exact approved license and attribution text + independent explicit public-visibility authorization.
