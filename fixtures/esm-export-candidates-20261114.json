@@ -1,0 +1,212 @@
+{
+  "observationDate": "2026-11-14",
+  "source": "explicit manually inspected GitHub PR package.json files, not a live API contract",
+  "baseline": {
+    "packageBlobSha": "7950cfbc2853a7ba73744d34d294d5cb1899e826",
+    "manifest": {
+      "name": "astrological-functions",
+      "version": "0.1.0-dev",
+      "private": true,
+      "type": "module",
+      "exports": {
+        ".": "./src/index.mjs"
+      },
+      "engines": {
+        "node": ">=20"
+      },
+      "scripts": {
+        "test": "node --test"
+      }
+    }
+  },
+  "candidates": [
+    {
+      "pr": 25,
+      "branch": "feat/transit-events-consumer-export-20261112",
+      "packageBlobSha": "d5fff324b5e309880562d5556df87637e583ab3c",
+      "manifest": {
+        "name": "astrological-functions",
+        "version": "0.1.0-dev",
+        "private": true,
+        "type": "module",
+        "exports": {
+          ".": "./src/index.mjs",
+          "./transits": {
+            "types": "./src/transit-facts.d.mts",
+            "import": "./src/transit-facts.mjs"
+          },
+          "./transit-events": {
+            "types": "./src/transit-event-pipeline.d.mts",
+            "import": "./src/transit-event-pipeline.mjs"
+          }
+        },
+        "engines": {
+          "node": ">=20"
+        },
+        "scripts": {
+          "test": "node --test"
+        }
+      }
+    },
+    {
+      "pr": 41,
+      "branch": "feat/dodecatemoria-consumer-export-20261112",
+      "packageBlobSha": "104afd423f22fb6fcfe6a7f8ff25824b4b03f684",
+      "manifest": {
+        "name": "astrological-functions",
+        "version": "0.1.0-dev",
+        "private": true,
+        "type": "module",
+        "exports": {
+          ".": "./src/index.mjs",
+          "./dodecatemoria": {
+            "types": "./src/dodecatemoria-methods.d.mts",
+            "import": "./src/dodecatemoria-methods.mjs"
+          }
+        },
+        "engines": {
+          "node": ">=20"
+        },
+        "scripts": {
+          "test": "node --test"
+        }
+      }
+    },
+    {
+      "pr": 54,
+      "branch": "agent/provider-runtime-import-smoke-20261113",
+      "packageBlobSha": "9f638fd753c036c8addd9203aae59fb6fd20b181",
+      "manifest": {
+        "name": "astrological-functions",
+        "version": "0.1.0-dev",
+        "private": true,
+        "type": "module",
+        "exports": {
+          ".": "./src/index.mjs",
+          "./ephemeris-provider": {
+            "types": "./src/ephemeris-provider.d.ts",
+            "import": "./src/ephemeris-provider.js"
+          }
+        },
+        "engines": {
+          "node": ">=20"
+        },
+        "scripts": {
+          "test": "node --test"
+        }
+      }
+    },
+    {
+      "pr": 60,
+      "branch": "feat/f3-pinned-consumer-esm-20261113",
+      "packageBlobSha": "6fd996285dd989afd4f903de143cd04eead6be79",
+      "manifest": {
+        "name": "astrological-functions",
+        "version": "0.1.0-dev",
+        "private": true,
+        "type": "module",
+        "exports": {
+          ".": "./src/index.mjs",
+          "./house-method-comparison": {
+            "types": "./src/house-method-comparison.d.mts",
+            "import": "./src/house-method-comparison.mjs"
+          },
+          "./whole-equal-house-comparison": {
+            "types": "./src/whole-equal-house-comparison.d.mts",
+            "import": "./src/whole-equal-house-comparison.mjs"
+          },
+          "./pinned-whole-equal-comparison": {
+            "types": "./src/pinned-whole-equal-comparison.d.mts",
+            "import": "./src/pinned-whole-equal-comparison.mjs"
+          }
+        },
+        "engines": {
+          "node": ">=20"
+        },
+        "scripts": {
+          "test": "node --test"
+        }
+      }
+    },
+    {
+      "pr": 65,
+      "branch": "feat/house-matrix-typed-esm-consumer-20261113",
+      "packageBlobSha": "f1d946b6c45b4db74914d3530b574dcf44d982ea",
+      "manifest": {
+        "name": "astrological-functions",
+        "version": "0.1.0-dev",
+        "private": true,
+        "type": "module",
+        "exports": {
+          ".": "./src/index.mjs",
+          "./sourced-house-placement-matrix": {
+            "types": "./src/sourced-house-placement-matrix.d.mts",
+            "import": "./src/sourced-house-placement-matrix.mjs"
+          }
+        },
+        "engines": {
+          "node": ">=20"
+        },
+        "scripts": {
+          "test": "node --test"
+        }
+      }
+    },
+    {
+      "pr": 68,
+      "branch": "feat/f6-decan-typed-esm-consumer-20261113",
+      "packageBlobSha": "f1eb92d225fa54b12efb070141fb45e92d2894cd",
+      "manifest": {
+        "name": "astrological-functions",
+        "version": "0.1.0-dev",
+        "private": true,
+        "type": "module",
+        "exports": {
+          ".": "./src/index.mjs",
+          "./zodiac-decan-facts": {
+            "types": "./src/zodiac-decan-facts.d.mts",
+            "import": "./src/zodiac-decan-facts.mjs"
+          }
+        },
+        "engines": {
+          "node": ">=20"
+        },
+        "scripts": {
+          "test": "node --test"
+        }
+      }
+    },
+    {
+      "pr": 80,
+      "branch": "feat/declination-typed-esm-package-20261114",
+      "packageBlobSha": "3609e6eadef7b714ac31d59e8efeba5b297304f7",
+      "manifest": {
+        "name": "astrological-functions",
+        "version": "0.1.0-dev",
+        "private": true,
+        "type": "module",
+        "exports": {
+          ".": "./src/index.mjs",
+          "./declination-contacts": {
+            "types": "./src/declination-contacts.d.mts",
+            "import": "./src/declination-contacts.mjs"
+          },
+          "./sourced-declination-contacts": {
+            "types": "./src/sourced-declination-contacts.d.mts",
+            "import": "./src/sourced-declination-contacts.mjs"
+          },
+          "./declination-provider": {
+            "types": "./src/declination-provider-gate.d.mts",
+            "import": "./src/declination-provider-gate.mjs"
+          }
+        },
+        "engines": {
+          "node": ">=20"
+        },
+        "scripts": {
+          "test": "node --test"
+        }
+      }
+    }
+  ]
+}
