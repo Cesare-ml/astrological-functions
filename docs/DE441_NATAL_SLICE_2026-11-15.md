@@ -15,7 +15,7 @@ const result = calculateExperimentalNatalSlice({
   ut1JulianDay, // caller-supplied UT1 for the same instant
   latitudeDeg:41.9028, longitudeDegEast:12.4964,
   birthTimeKnown:true, zodiac:'TROPICAL',
-  requestedTargets:['Sun','Moon','MarsBarycenter'],
+  requestedTargets:['Sun','Moon','MarsBarycenter','MeanNode'],
   engineVersion:'example', kernelSetId:'example', timeModel:'caller-specified',
 }, provider);
 ```
@@ -23,10 +23,12 @@ const result = calculateExperimentalNatalSlice({
 All ten explicit target names are `Sun`, `Moon`, `Mercury`, `Venus`,
 `MarsBarycenter`, `JupiterBarycenter`, `SaturnBarycenter`, `UranusBarycenter`,
 `NeptuneBarycenter` and `PlutoBarycenter`. System barycenters must retain
-their names. The provider currently calculates the complete ten-body batch;
-only requested targets are returned. Chirone and lunar points are unsupported
-here, as are fixed stars, other bodies and alternate corrections. Unsupported
-or duplicate target requests fail before invoking the provider.
+their names. Four optional approximate lunar points are also accepted:
+`MeanNode`, `TrueNode`, `MeanApogee` and `OsculatingApogee`. The provider
+currently calculates the complete ten-body batch, and calculates all four
+lunar points if any one is requested; only requested targets are returned.
+Chiron, fixed stars, other bodies and alternate corrections remain unsupported.
+Unsupported or duplicate target requests fail before invoking the provider.
 
 The input instant is an explicit UTC string and UT1 must be supplied by the
 caller for that same modern instant. A two-second UTC/UT1 difference check is
@@ -39,7 +41,11 @@ classic DE441 kernel and executable are required; no network access, implicit
 fallback or bundled kernel is used.
 
 Each returned body includes ecliptic longitude/latitude and distance, three
-signed rates per TDB day, and a fractional Placidus position. `houses` has
+signed rates and a fractional Placidus position. Planetary rates are per TDB
+day; lunar-point rates are separately named per TT day. Mean lunar distances
+are nominal and the mean-point model is approximate; their per-body source and
+Placidus input retain `EXPERIMENTAL_LUNAR_POINT_MODEL` rather than inheriting the
+planetary correction label. `houses` has
 Vehlow, Porphyry, Placidus, Regiomontanus and Koch cusps. A failure of any
 requested point or of any one of these house systems fails the whole call;
 there is no polar fallback. No southern inversion is applied. This is not
@@ -53,12 +59,12 @@ orientation, but omits solar deflection and physical center corrections for
 the labelled planet-system barycenters. It must not be relabelled as full
 Swiss apparent-position parity or passed off as the separate strict
 `calculateNatalWithProvider` APPARENT contract. Body velocities retain the
-provider's reception-TDB-day units. The output warnings, immutable snapshots
+provider's explicitly named reception-time units. The output warnings, immutable snapshots
 and provider contract preserve these distinctions.
 
 Tests include synthetic provider cases and rejection of unsupported bodies,
 mixed epochs and invalid metadata. An opt-in real-kernel test composes all ten
-body positions with the house geometry and compares recorded Swiss 2.09.03
+body positions and four lunar points with the house geometry and compares recorded Swiss 2.09.03
 house placements made with those same coordinates. This checks composition,
 not the independent accuracy of the planetary coordinates. Set absolute paths
 in `VIRGOSTARS_EPHEMERIS_ADAPTER`, `VIRGOSTARS_EPHEMERIS_CLI` and `DE441_PATH`

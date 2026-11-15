@@ -4,6 +4,7 @@ import {calculateHouseSet} from './house-set.mjs';
 import {calculatePlacidusHousePosition} from './placidus-position.mjs';
 
 const TARGETS=Object.freeze(['Sun','Moon','Mercury','Venus','MarsBarycenter','JupiterBarycenter','SaturnBarycenter','UranusBarycenter','NeptuneBarycenter','PlutoBarycenter']);
+const LUNAR_POINTS=Object.freeze(['MeanNode','TrueNode','MeanApogee','OsculatingApogee']);
 const fail=(code,message)=>{throw new AstrologyError(code,message);};
 const nonempty=value=>typeof value==='string' && value.length>0 && value===value.trim();
 
@@ -29,12 +30,12 @@ export function calculateExperimentalNatalSlice(input,provider) {
   if(![engineVersion,kernelSetId,timeModel].every(nonempty)) fail('INVALID_SOURCE','Explicit engine, kernel and time-model identifiers are required');
   if(!Array.isArray(requestedTargets)) fail('INVALID_TARGETS','A nonempty explicit target list is required');
   const targetCount=requestedTargets.length;
-  if(!Number.isInteger(targetCount) || targetCount===0 || targetCount>TARGETS.length) fail('INVALID_TARGETS','A nonempty explicit target list is required');
+  if(!Number.isInteger(targetCount) || targetCount===0 || targetCount>TARGETS.length+LUNAR_POINTS.length) fail('INVALID_TARGETS','A nonempty explicit target list is required');
   const requested=[];
   for(let i=0;i<targetCount;i++){
     if(!Object.hasOwn(requestedTargets,i)) fail('INVALID_TARGETS','The requested target list must be dense');
     const target=requestedTargets[i];
-    if(typeof target!=='string' || !TARGETS.includes(target) || requested.includes(target)) fail('UNSUPPORTED_TARGET','Targets must be unique supported DE441 names, including barycenter labels');
+    if(typeof target!=='string' || (!TARGETS.includes(target) && !LUNAR_POINTS.includes(target)) || requested.includes(target)) fail('UNSUPPORTED_TARGET','Targets must be unique supported body or lunar-point names, including barycenter labels');
     requested.push(target);
   }
   const batch=provider.calculate(canonical);
@@ -53,6 +54,23 @@ export function calculateExperimentalNatalSlice(input,provider) {
     states.push(Object.freeze({target,ttJulianDay,tdbJulianDay,longitudeDeg,latitudeDeg,distanceAu,longitudeSpeedDegPerTdbDay,latitudeSpeedDegPerTdbDay,distanceSpeedAuPerTdbDay}));
   }
   const ttJulianDay=states[0].ttJulianDay;
+  const lunarStates=[];
+  if(requested.some(target=>LUNAR_POINTS.includes(target))){
+    if(typeof provider.calculateLunarPoints!=='function') fail('UNSUPPORTED_TARGET','The provider does not expose lunar-point calculations');
+    const lunarBatch=provider.calculateLunarPoints(canonical);
+    if(!lunarBatch || typeof lunarBatch!=='object') fail('INCOMPATIBLE_EPHEMERIS','Expected an experimental lunar-point batch');
+    const {contract:lunarContract,frame:lunarFrame,center:lunarCenter,timeModel:lunarTimeModel,results:lunarResults}=lunarBatch;
+    if(lunarContract!=='VIRGOSTARS_EXPERIMENTAL_LUNAR_POINTS_1' || lunarFrame!=='IAU2006_2000B_TRUE_ECLIPTIC_OF_DATE' || lunarCenter!=='EARTH' || lunarTimeModel!=='BOUNDED_UTC_TRUNCATED_TDB' || !Array.isArray(lunarResults) || lunarResults.length!==LUNAR_POINTS.length) fail('INCOMPATIBLE_EPHEMERIS','Expected the labelled experimental lunar-point batch');
+    for(let i=0;i<LUNAR_POINTS.length;i++){
+      if(!Object.hasOwn(lunarResults,i)) fail('INCOMPATIBLE_EPHEMERIS','The lunar-point batch must be dense');
+      const row=lunarResults[i];
+      if(!row || typeof row!=='object') fail('INCOMPATIBLE_EPHEMERIS','Each lunar point must contain a state');
+      const {point,ttJulianDay:pointTt,tdbJulianDay,longitudeDeg,latitudeDeg,distanceAu,longitudeSpeedDegPerTtDay,latitudeSpeedDegPerTtDay,distanceSpeedAuPerTtDay}=row;
+      if(point!==LUNAR_POINTS[i] || ![pointTt,tdbJulianDay,longitudeDeg,latitudeDeg,distanceAu,longitudeSpeedDegPerTtDay,latitudeSpeedDegPerTtDay,distanceSpeedAuPerTtDay].every(Number.isFinite) || longitudeDeg<0 || longitudeDeg>=360 || Math.abs(latitudeDeg)>90 || distanceAu<=0) fail('INCOMPATIBLE_EPHEMERIS','Invalid lunar-point identity or state');
+      if(pointTt!==ttJulianDay || tdbJulianDay!==states[0].tdbJulianDay) fail('INCOHERENT_EPOCH','Lunar points and planetary positions must share TT and TDB reception epochs');
+      lunarStates.push(Object.freeze({target:point,ttJulianDay:pointTt,tdbJulianDay,longitudeDeg,latitudeDeg,distanceAu,longitudeSpeedDegPerTtDay,latitudeSpeedDegPerTtDay,distanceSpeedAuPerTtDay}));
+    }
+  }
   const angleInput={ut1JulianDay,ttJulianDay,latitudeDeg,longitudeDegEast};
   const rawAngles=provider.calculateHouseAngles(angleInput);
   if(!rawAngles || typeof rawAngles!=='object') fail('INCOMPATIBLE_ANGLE_SOURCE','Expected explicit house angles');
@@ -60,11 +78,14 @@ export function calculateExperimentalNatalSlice(input,provider) {
   const angles=Object.freeze({model,ut1JulianDay:angleUt1,ttJulianDay:angleTt,latitudeDeg:angleLat,longitudeDegEast:angleLon,armcDeg,ascendantDeg,midheavenDeg,trueObliquityDeg});
   const set=calculateHouseSet({datetimeUtc:canonical,birthTimeKnown,ut1JulianDay,ttJulianDay,latitudeDeg,longitudeDegEast,engineVersion,kernelSetId,timeModel},{calculateHouseAngles:()=>angles});
   const source=Object.freeze({engineVersion,kernelSetId,timeModel,corrections,center:'EARTH',observerLongitudeDegEast:longitudeDegEast});
+  const lunarSource=Object.freeze({...source,corrections:'EXPERIMENTAL_LUNAR_POINT_MODEL'});
   const bodies=requested.map(target=>{
-    const state=states[TARGETS.indexOf(target)];
-    const placement=calculatePlacidusHousePosition({armcDeg:angles.armcDeg,latitudeDeg,trueObliquityDeg:angles.trueObliquityDeg,eclipticLongitudeDeg:state.longitudeDeg,eclipticLatitudeDeg:state.latitudeDeg,frame:'ECLIPTIC_OF_DATE',zodiac,birthTimeKnown,datetimeUtc:canonical,source});
-    return Object.freeze({state,placidusPosition:placement});
+    const index=TARGETS.indexOf(target);
+    const state=index>=0 ? states[index] : lunarStates[LUNAR_POINTS.indexOf(target)];
+    const pointSource=index>=0?source:lunarSource;
+    const placement=calculatePlacidusHousePosition({armcDeg:angles.armcDeg,latitudeDeg,trueObliquityDeg:angles.trueObliquityDeg,eclipticLongitudeDeg:state.longitudeDeg,eclipticLatitudeDeg:state.latitudeDeg,frame:'ECLIPTIC_OF_DATE',zodiac,birthTimeKnown,datetimeUtc:canonical,source:pointSource});
+    return Object.freeze({state,source:pointSource,placidusPosition:placement});
   });
   return Object.freeze({contract:'ExperimentalDe441NatalSlice',contractVersion:'0.1.0-experimental',datetimeUtc:canonical,ut1JulianDay,ttJulianDay,latitudeDeg,longitudeDegEast,zodiac,bodies:Object.freeze(bodies),houses:set.houses,source,
-    warnings:Object.freeze(['NOT_SWISS_PARITY','SOLAR_DEFLECTION_OMITTED','PLANET_SYSTEM_BARYCENTERS','NO_CHIRON_OR_LUNAR_POINTS','NO_SOUTHERN_INVERSION','NO_PRODUCTION_INTEGRATION'])});
+    warnings:Object.freeze(['NOT_SWISS_PARITY','SOLAR_DEFLECTION_OMITTED','PLANET_SYSTEM_BARYCENTERS','NO_CHIRON',...(lunarStates.length?['LUNAR_POINTS_APPROXIMATE','MEAN_DISTANCES_NOMINAL']:[]),'NO_SOUTHERN_INVERSION','NO_PRODUCTION_INTEGRATION'])});
 }
