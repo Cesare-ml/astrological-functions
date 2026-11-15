@@ -1,0 +1,138 @@
+/**
+ * Compile-only consumer contract check (NodeNext ESM).
+ * npx tsc --noEmit --strict --target es2022 --module nodenext
+ *   --moduleResolution nodenext test/types/lunar-provider-consumer.mts
+ */
+import {
+  calculateLunarElongationWithProvider,
+  type LunarGeocentricProvider,
+  type LunarElongationProviderInput,
+  type LunarProviderPin,
+  type LunarProviderPosition,
+} from 'astrological-functions/lunar-provider';
+import {
+  calculateLunarElongationSectors,
+  type LunarElongationSectors,
+  type LunarLongitudeContext,
+  type LunarSectorId,
+} from 'astrological-functions/lunar-elongation';
+
+const pin: LunarProviderPin = {
+  engineVersion: 'mock-v1',
+  kernelSetId: 'synthetic-kernel',
+  timeModelId: 'synthetic-time',
+};
+
+const provider: LunarGeocentricProvider = {
+  async getGeocentricEcliptic(request) {
+    const name: 'Sun' | 'Moon' = request.bodyName;
+    const center: 'EARTH' = request.center;
+    void center;
+    const kernel: string = request.kernelSetId;
+    const timeModel: string = request.timeModelId;
+    void [kernel, timeModel];
+    return {
+      longitudeDeg: name === 'Sun' ? 350 : 80,
+      latitudeDeg: 0,
+      metadata: {
+        bodyName: name,
+        datetimeUtc: request.datetimeUtc,
+        center: 'EARTH',
+        frame: request.frame,
+        corrections: request.corrections,
+        engineVersion: pin.engineVersion,
+        kernelSetId: pin.kernelSetId,
+        timeModelId: pin.timeModelId,
+      },
+    };
+  },
+};
+
+const input: LunarElongationProviderInput = {
+  datetimeUtc: '2026-11-13T12:30:00Z',
+  zodiac: 'TROPICAL',
+  expectedEphemeris: pin,
+  provider,
+};
+
+const lunarContext: LunarLongitudeContext = {
+  center: 'EARTH',
+  frame: 'ECLIPTIC_OF_DATE',
+  corrections: 'APPARENT',
+  zodiac: 'TROPICAL',
+};
+const direct: Readonly<LunarElongationSectors> = calculateLunarElongationSectors({
+  sunLongitudeDeg: 350,
+  moonLongitudeDeg: 80,
+  context: lunarContext,
+});
+const label: LunarSectorId = direct.sectorId;
+void label;
+
+async function consume(): Promise<string> {
+  const result = await calculateLunarElongationWithProvider(input);
+  const longitude: number = result.positions.Moon.longitudeDeg;
+  const sector: LunarSectorId = result.sectors.sectorId;
+  const version: string = result.ephemeris.engineVersion;
+  return [longitude, sector, version].join('|');
+}
+void consume;
+
+// @ts-expect-error sidereal mode requires a different, validated adapter
+const wrongZodiac: LunarElongationProviderInput = { ...input, zodiac: 'SIDEREAL' };
+void wrongZodiac;
+
+// @ts-expect-error a pinned time model is mandatory
+const missingPin: LunarProviderPin = { engineVersion: 'mock-v1', kernelSetId: 'synthetic' };
+void missingPin;
+
+// @ts-expect-error the tropical geometry input cannot carry a sidereal ayanamsa
+const wrongContext: LunarLongitudeContext = { ...lunarContext, zodiac: 'TROPICAL', ayanamsaId: 'X' };
+void wrongContext;
+
+// @ts-expect-error consumers must not mutate snapshots
+direct.sectorId = 'NEW';
+
+const compatibleMetadata: LunarProviderPosition['metadata'] = {
+  bodyName: 'Moon',
+  datetimeUtc: input.datetimeUtc,
+  center: 'EARTH',
+  frame: 'ECLIPTIC_OF_DATE',
+  corrections: 'APPARENT',
+  zodiac: 'TROPICAL',
+  observer: null,
+  engineVersion: pin.engineVersion,
+  kernelSetId: pin.kernelSetId,
+  timeModelId: pin.timeModelId,
+};
+void compatibleMetadata;
+
+const explicitlySidereal: LunarProviderPosition['metadata'] = {
+  ...compatibleMetadata,
+  // @ts-expect-error sidereal coordinates cannot satisfy tropical provider metadata
+  zodiac: 'SIDEREAL',
+};
+void explicitlySidereal;
+
+const explicitlyTopocentric: LunarProviderPosition['metadata'] = {
+  ...compatibleMetadata,
+  // @ts-expect-error observer coordinates cannot satisfy geocentric provider metadata
+  observer: { latitudeDeg: 42 },
+};
+void explicitlyTopocentric;
+
+/** Warning-bearing positions are representable by providers but rejected at runtime. */
+const degradedEphemerisPosition: LunarProviderPosition = {
+  longitudeDeg: 12,
+  latitudeDeg: 3,
+  warnings: [{ code: 'PRECISION_REQUIREMENT_UNMET', detail: 'synthetic' }],
+  metadata: {
+    ...compatibleMetadata,
+    warnings: [{ code: 'APPROXIMATE_FRAME' }],
+  },
+};
+void degradedEphemerisPosition;
+
+// @ts-expect-error warning codes must be textual identifiers
+const invalidWarning: LunarProviderPosition['warnings'] = [{ code: 42 }];
+void invalidWarning;

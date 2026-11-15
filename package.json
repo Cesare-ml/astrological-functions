@@ -33,6 +33,14 @@
       "types": "./src/de441-natal-slice.d.mts",
       "import": "./src/de441-natal-slice.mjs"
     },
+    "./lunar-elongation": {
+      "types": "./src/lunar-elongation.d.mts",
+      "import": "./src/lunar-elongation.mjs"
+    },
+    "./lunar-provider": {
+      "types": "./src/lunar-elongation-provider.d.mts",
+      "import": "./src/lunar-elongation-provider.mjs"
+    },
     "./regiomontanus-houses": {
       "types": "./src/regiomontanus-houses.d.mts",
       "import": "./src/regiomontanus-houses.mjs"
