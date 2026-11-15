@@ -23,6 +23,14 @@
 - [ ] **Publication decision**: separately approve changing the GitHub repository visibility. If old history cannot safely be exposed, use a reviewed clean-history export instead.
 - [ ] **npm decision (independent)**: only if requested, assess versioning, export declarations, README/legal files and `npm pack --dry-run` contents before removing `private: true` and publishing.
 
+## Limited source-tree credential-pattern screening — 2026-11-15
+
+A **non-exhaustive, read-only** search was performed through the authenticated GitHub connector on the exact candidate tree `1d348b0abf2ee5a3ed812ff3e6f6108de27f5131`: **95/95 current text blobs** returned and inspected. Patterns searched included typical GitHub token prefixes, AWS access key IDs, private-key PEM headers, explicit password/secret/API-token assignments and common database connection strings.
+
+**Result:** no convincing exposed credential matched these patterns. One nominal match in `test/dodecatemoria-array-override.test.mjs` line 14 is **synthetic adversarial fixture text**: `facts: { secret: 'not validated' }`. The check did not test whether all data is legally publishable.
+
+**Important limits:** not a Gitleaks/trufflehog scan; does not cover obfuscated tokens, binary assets, issues/PR bodies, author email exposure, private URLs not captured by the patterns, third-party rights or any historical commits and other branch refs. At least **100 branches** appeared on the first GitHub branches API page (pagination still required), and **90 open pull requests** were listed at the time of inspection. Review all metadata/history before revealing this repository. If that is impractical, prefer a curated, **clean-history public export** rather than flipping the existing long-lived development repository to public.
+
 ## Suggested manual commands for a reviewer with an authenticated local clone
 
 ```sh
