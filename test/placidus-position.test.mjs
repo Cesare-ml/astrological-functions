@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {pathToFileURL} from 'node:url';
 import {calculatePlacidusHousePosition as position} from 'astrological-functions/placidus-position';
 
-const base={armcDeg:0,latitudeDeg:0,trueObliquityDeg:23.43786,eclipticLongitudeDeg:0,eclipticLatitudeDeg:0,frame:'ECLIPTIC_OF_DATE',zodiac:'TROPICAL',birthTimeKnown:true};
+const base={armcDeg:0,latitudeDeg:0,trueObliquityDeg:23.43786,eclipticLongitudeDeg:0,eclipticLatitudeDeg:0,frame:'ECLIPTIC_OF_DATE',zodiac:'TROPICAL',birthTimeKnown:true,datetimeUtc:'2026-11-10T00:00:00Z',source:{engineVersion:'fixture',kernelSetId:'fixture',timeModel:'explicit',corrections:'fixture',center:'EARTH',observerLongitudeDegEast:0}};
 test('equatorial cardinal hour angles give the four house axes',()=>{
   for(const [armcDeg,house] of [[0,10],[90,7],[180,4],[270,1]]){
     const result=position({...base,armcDeg});
@@ -11,6 +11,7 @@ test('equatorial cardinal hour angles give the four house axes',()=>{
     assert.equal(result.house,house);
     assert.ok(Object.isFrozen(result));
     assert.ok(Object.isFrozen(result.input));
+    assert.ok(Object.isFrozen(result.input.source));
   }
 });
 test('independent recorded Swiss samples cover latitude and both hemispheres',()=>{
@@ -34,6 +35,8 @@ test('known Placidus ecliptic cusps give integer positions',()=>{
 test('rejects incompatible inputs, singular directions and circumpolar semi-arcs',()=>{
   assert.throws(()=>position({...base,birthTimeKnown:false}),e=>e.code==='BIRTH_TIME_REQUIRED');
   assert.throws(()=>position({...base,frame:'J2000'}),e=>e.code==='INCOMPATIBLE_FRAME');
+  assert.throws(()=>position({...base,datetimeUtc:'2026-02-30T00:00:00Z'}),e=>e.code==='INVALID_UTC');
+  assert.throws(()=>position({...base,source:{...base.source,center:'SUN'}}),e=>e.code==='INCOMPATIBLE_SOURCE');
   assert.throws(()=>position({...base,eclipticLongitudeDeg:360}),e=>e.code==='INVALID_ANGLES');
   assert.throws(()=>position({...base,latitudeDeg:90}),e=>e.code==='INVALID_ANGLES');
   assert.throws(()=>position({...base,eclipticLongitudeDeg:90,eclipticLatitudeDeg:90-base.trueObliquityDeg}),e=>e.code==='SINGULAR_DIRECTION');
@@ -52,7 +55,7 @@ test('external DE441 positions and angles compose into planetary house positions
   assert.equal(batch.results.length,references.length);
   for(let i=0;i<references.length;i++){
     const body=batch.results[i];
-    const result=position({armcDeg:angles.armcDeg,latitudeDeg:41.9028,trueObliquityDeg:angles.trueObliquityDeg,eclipticLongitudeDeg:body.longitudeDeg,eclipticLatitudeDeg:body.latitudeDeg,frame:'ECLIPTIC_OF_DATE',zodiac:'TROPICAL',birthTimeKnown:true});
+    const result=position({...base,source:{engineVersion:'experimental-cli',kernelSetId:'external-DE441',timeModel:'UT1_EQUALS_UTC_TEST_ASSUMPTION',corrections:batch.corrections,center:'EARTH',observerLongitudeDegEast:12.4964},armcDeg:angles.armcDeg,latitudeDeg:41.9028,trueObliquityDeg:angles.trueObliquityDeg,eclipticLongitudeDeg:body.longitudeDeg,eclipticLatitudeDeg:body.latitudeDeg});
     assert.ok(Math.abs(result.housePosition-references[i])<2e-8,body.target);
   }
 });

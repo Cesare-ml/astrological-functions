@@ -14,6 +14,9 @@ const placement = calculatePlacidusHousePosition({
   trueObliquityDeg: 23.437859777570328,
   eclipticLongitudeDeg: 227.5, eclipticLatitudeDeg: -2,
   frame: 'ECLIPTIC_OF_DATE', zodiac: 'TROPICAL', birthTimeKnown: true,
+  datetimeUtc: '2026-11-10T00:00:00Z',
+  source: {engineVersion:'example',kernelSetId:'example',timeModel:'explicit',
+    corrections:'example',center:'EARTH',observerLongitudeDegEast:12.4964},
 });
 // placement.housePosition ≈ 3.5213852; placement.house === 3
 ```
@@ -23,6 +26,9 @@ latitude strictly between the poles, obliquity strictly between 0 and 90°, and
 ecliptic latitude in [-90, 90]. ARMC, true obliquity and the ecliptic
 coordinates must describe the same epoch and compatible reference frame; the
 caller supplies and is responsible for those facts and physical corrections.
+An explicit UTC datetime and caller-asserted Earth-centered engine, kernel,
+time model, correction labels and observer longitude are required and retained;
+they cannot prove that the numerical values actually match their labels.
 No ephemeris, sidereal time, time-scale conversion or house cusp computation
 is performed here. Input values are retained as a frozen snapshot. Output
 `housePosition` is in [1, 13), with `house` obtained by taking its floor.
