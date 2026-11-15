@@ -114,7 +114,8 @@ export declare function validateHouseCuspSet(input: Readonly<HouseCuspSetInput>)
 export interface HouseCuspContextInput {
   readonly chart: Readonly<Pick<ExperimentalNatalResult,
     'datetimeUtc' | 'latitudeDeg' | 'longitudeDegEast' | 'ephemerisProvenance'>>;
-  readonly cuspSet: Readonly<Omit<HouseCuspSetInput, 'metadata'> & {
+  readonly cuspSet: Readonly<HouseSystemSelection & {
+    readonly cusps: readonly number[];
     metadata: Readonly<HouseCuspSetInput['metadata'] & {
       datetimeUtc: string;
       latitudeDeg: number;
