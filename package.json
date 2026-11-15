@@ -41,6 +41,18 @@
       "types": "./src/lunar-elongation-provider.d.mts",
       "import": "./src/lunar-elongation-provider.mjs"
     },
+    "./declination-contacts": {
+      "types": "./src/declination-contacts.d.mts",
+      "import": "./src/declination-contacts.mjs"
+    },
+    "./sourced-declination-contacts": {
+      "types": "./src/sourced-declination-contacts.d.mts",
+      "import": "./src/sourced-declination-contacts.mjs"
+    },
+    "./declination-provider": {
+      "types": "./src/declination-provider-gate.d.mts",
+      "import": "./src/declination-provider-gate.mjs"
+    },
     "./regiomontanus-houses": {
       "types": "./src/regiomontanus-houses.d.mts",
       "import": "./src/regiomontanus-houses.mjs"
