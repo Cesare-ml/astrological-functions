@@ -2,7 +2,7 @@
 
 **Status (2026-11-15): private, unlicensed for external reuse, not approved for distribution.** Visibility and npm package publication are separate decisions.
 
-The owner wants a free-to-use open-source project that permits commercial use and retains VirgoStars credits. Whether a credit must appear in redistributed source/documentation or **visibly in downstream application UI** remains unresolved. The previous suggestion of MIT alone cannot satisfy an explicit UI-credit requirement. Do not select any outbound license without the owner and an audit of all copyright holders and dependencies.
+The owner wants a free-to-use open-source project that permits commercial use and retains VirgoStars credits. The 15 November follow-up favors **visible VirgoStars credit in downstream application UI** (Credits/About), rather than source notices alone. The exact enforceable extent, including CPAL launch/session display and Larger Works, remains subject to legal and compatibility approval. The previous suggestion of MIT alone cannot satisfy an explicit UI-credit requirement. Do not select any outbound license without the owner and an audit of all copyright holders and dependencies.
 
 See [license comparison and decision](LICENSING_OPTIONS.md) and [release gate](PUBLICATION_READINESS.md).
 

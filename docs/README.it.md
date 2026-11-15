@@ -8,6 +8,8 @@ L'astronomia è compito esclusivo di [VirgoStars Ephemeris](https://github.com/C
 
 Per lavorare nel repository con Node.js >=20: `npm test`. Le prove TypeScript e quelle che richiedono un adapter Rust e dati DE441 esterni devono essere verificate separatamente. Il pacchetto rimane `"private": true` su npm.
 
-Prima di rendere pubblico il progetto occorre scegliere e approvare una licenza compatibile con l'uso commerciale gratuito e con il requisito dei **crediti VirgoStars**, verificare la provenienza del codice, dati e fixture, effettuare audit di sicurezza, privacy e **intera cronologia Git**, poi autorizzare separatamente il cambio di visibilità.
+La preferenza ora è per **crediti VirgoStars visibili nelle applicazioni che incorporano la libreria**, non soltanto nel codice sorgente. CPAL-1.0 con Exhibit B è un candidato da verificare: la clausola può richiedere l'attribuzione all'avvio della sessione e non soltanto una pagina Credits/About consultabile a richiesta. Nessuna licenza è ancora concessa.
+
+Prima dell'apertura pubblica vanno verificati diritti su codice, dati e fixture, compatibilità della licenza, audit di sicurezza e privacy dell'**intera cronologia Git**, e autorizzazione separata al cambio di visibilità.
 
 Documenti: [README principale](../README.md), [architettura](ARCHITECTURE.md), [contratti](CONTRACTS.md), [licenza](LICENSING_OPTIONS.md), [controlli di pubblicazione](PUBLICATION_READINESS.md), [provenienza](PROVENANCE_REVIEW.md).

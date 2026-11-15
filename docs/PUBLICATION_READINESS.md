@@ -12,7 +12,7 @@
 
 ## Blocking gates before changing visibility
 
-- [ ] **Owner legal approval**: decide redistribution-only vs visible UI attribution; approve LICENSE, NOTICE/Exhibit B, copyright and SPDX policy after compatibility review. See [licensing options](LICENSING_OPTIONS.md) and issue #2.
+- [ ] **Owner legal approval and compatibility**: preferred requirement is visible downstream VirgoStars credit, pending full CPAL-1.0 / Larger Works / initial-session display and third-party compatibility assessment. Approve the actual LICENSE, Exhibit A/B, copyright and SPDX policy only after rights review. See [attribution proposal](CPAL_ATTRIBUTION_PROPOSAL.md), [licensing options](LICENSING_OPTIONS.md) and issue #2.
 - [ ] **Rights/provenance**: sign off every public source, fixture, copied benchmark, third-party input and contribution against [provenance review](PROVENANCE_REVIEW.md).
 - [ ] **Security/history**: scan HEAD and complete reachable Git history/branches/tags and review issue/PR discussion, author emails, URLs, assets and releases; fix exposure properly and rotate leaked credentials. Deletion in the latest commit is insufficient.
 - [ ] **Privacy**: confirm no personal birth charts, identifiable customers, tokens, private repositories' source, infrastructure configuration or contractual materials are exposed.
