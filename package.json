@@ -29,6 +29,10 @@
       "types": "./src/placidus-position.d.mts",
       "import": "./src/placidus-position.mjs"
     },
+    "./de441-natal-slice": {
+      "types": "./src/de441-natal-slice.d.mts",
+      "import": "./src/de441-natal-slice.mjs"
+    },
     "./regiomontanus-houses": {
       "types": "./src/regiomontanus-houses.d.mts",
       "import": "./src/regiomontanus-houses.mjs"
