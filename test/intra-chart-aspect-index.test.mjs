@@ -144,3 +144,69 @@ test('rejects sparse IDs and facts even with synthetic iterators',()=>{
   failsWith(()=>indexIntraChartAspects({pointIds,facts:[]}), 'INVALID_ASPECT_INDEX');
   failsWith(()=>indexIntraChartAspects({pointIds:[],facts}), 'INVALID_ASPECT_FACT');
 });
+
+test('shrinking the caller facts array from a field getter preserves a coherent bounded index', () => {
+  const raw = {
+    pointBId:'B', aspectId:'square', exactAngleDeg:90, actualAngleDeg:90,
+    signedOrbDeg:0, absoluteOrbDeg:0, configuredMaxOrbDeg:0,
+  };
+  const sourceFacts = [];
+  Object.defineProperty(raw, 'pointAId', {
+    enumerable:true,
+    get() { sourceFacts.length = 0; return 'A'; },
+  });
+  sourceFacts.push(raw);
+
+  const result = indexIntraChartAspects({pointIds:['A','B'],facts:sourceFacts});
+  assert.equal(sourceFacts.length,0);
+  assert.equal(result.factCount,1);
+  assert.deepEqual(result.nodes.map(node=>node.connections.length),[1,1]);
+  assert.equal(result.nodes.find(node=>node.pointId==='A').connections[0].otherPointId,'B');
+  assert.equal(result.nodes.find(node=>node.pointId==='B').connections[0].otherPointId,'A');
+});
+
+test('appending facts from a field getter cannot expand the initial workload bound', () => {
+  const sourceFacts = [];
+  const appended = {
+    pointAId:'A', pointBId:'C', aspectId:'trine', exactAngleDeg:120,
+    actualAngleDeg:120, signedOrbDeg:0, absoluteOrbDeg:0, configuredMaxOrbDeg:0,
+  };
+  const first = {
+    pointBId:'B', aspectId:'square', exactAngleDeg:90, actualAngleDeg:90,
+    signedOrbDeg:0, absoluteOrbDeg:0, configuredMaxOrbDeg:0,
+  };
+  Object.defineProperty(first,'pointAId',{
+    enumerable:true,
+    get() { sourceFacts.push(appended); return 'A'; },
+  });
+  sourceFacts.push(first);
+
+  const result = indexIntraChartAspects({pointIds:['A','B','C'],facts:sourceFacts});
+  assert.equal(sourceFacts.length,2);
+  assert.equal(result.factCount,1);
+  assert.deepEqual(result.nodes.map(node=>node.connections.length),[1,1,0]);
+});
+
+test('accepts ordinary dense arrays and frozen fact arrays unchanged', () => {
+  const ordinary = facts();
+  const frozenFacts = Object.freeze(ordinary.map(fact=>Object.freeze({...fact})));
+  const result = indexIntraChartAspects({
+    pointIds:Object.freeze(points.map(point=>point.id)),
+    facts:frozenFacts,
+  });
+  assert.equal(result.factCount,frozenFacts.length);
+  assert.equal(result.nodes.reduce((sum,node)=>sum+node.connections.length,0),2*result.factCount);
+});
+
+test('rejects accessor-backed array slots without invoking them', () => {
+  let invoked = false;
+  const accessorFacts = [];
+  Object.defineProperty(accessorFacts,'0',{
+    configurable:true,
+    enumerable:true,
+    get() { invoked=true; return facts()[0]; },
+  });
+  accessorFacts.length=1;
+  failsWith(()=>indexIntraChartAspects({pointIds:['Sun','Moon'],facts:accessorFacts}),'INVALID_ASPECT_FACT');
+  assert.equal(invoked,false);
+});
