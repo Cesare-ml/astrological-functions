@@ -99,3 +99,38 @@ test('longitude-sector context snapshots caller zodiac accessors once', () => {
   assert.equal(reads, 1);
   assert.equal(result.context.zodiac, 'TROPICAL');
 });
+
+
+function adjacentFloat(value, direction) {
+  const buffer = new ArrayBuffer(8);
+  const view = new DataView(buffer);
+  view.setFloat64(0, value);
+  let bits = view.getBigUint64(0);
+  bits += direction;
+  view.setBigUint64(0, bits);
+  return view.getFloat64(0);
+}
+
+test('every half-sector cusp preserves the immediately adjacent binary64 values', () => {
+  for (let boundaryIndex = 0; boundaryIndex < 8; boundaryIndex++) {
+    const boundary = 22.5 + boundaryIndex * 45;
+    const below = adjacentFloat(boundary, -1n);
+    const above = adjacentFloat(boundary, 1n);
+    const previousSector = boundaryIndex;
+    const nextSector = (boundaryIndex + 1) % 8;
+
+    const before = run(0, below);
+    const exact = run(0, boundary);
+    const after = run(0, above);
+
+    assert.equal(before.sectorIndex, previousSector, `below ${boundary}°`);
+    assert.equal(exact.sectorIndex, nextSector, `at ${boundary}°`);
+    assert.equal(after.sectorIndex, nextSector, `above ${boundary}°`);
+    for (const result of [before, exact, after]) {
+      assert.ok(result.sectorIndex >= 0 && result.sectorIndex <= 7);
+      assert.equal(typeof result.sectorId, 'string');
+      assert.ok(Math.abs(result.signedDistanceFromSectorCenterDeg) <= 22.5);
+      assert.ok(Object.isFrozen(result));
+    }
+  }
+});
