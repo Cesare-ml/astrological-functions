@@ -15,3 +15,33 @@ test('rejects unknown birth time or mismatched provider metadata',()=>{
   assert.throws(()=>calculateHouseSet({...input,birthTimeKnown:false},provider),e=>e.code==='BIRTH_TIME_REQUIRED');
   assert.throws(()=>calculateHouseSet(input,{calculateHouseAngles(a){return {...provider.calculateHouseAngles(a),ut1JulianDay:a.ut1JulianDay+1};}}),e=>e.code==='INCOMPATIBLE_ANGLE_SOURCE');
 });
+
+test('rejects invalid UTC, observer site and source identifiers before provider I/O',()=>{
+  let calls=0;
+  const counting={calculateHouseAngles(args){calls++;return provider.calculateHouseAngles(args);}};
+  const invalidCases=[
+    [{datetimeUtc:'2026-13-99T00:00:00Z'},'INVALID_UTC'],
+    [{datetimeUtc:'2026-02-30T00:00:00Z'},'INVALID_UTC'],
+    [{latitudeDeg:95},'INVALID_INPUT'],
+    [{latitudeDeg:90},'INVALID_INPUT'],
+    [{longitudeDegEast:190},'INVALID_INPUT'],
+    [{longitudeDegEast:-181},'INVALID_INPUT'],
+    [{engineVersion:''},'INVALID_INPUT'],
+    [{kernelSetId:' '},'INVALID_INPUT'],
+    [{timeModel:null},'INVALID_INPUT'],
+    [{ut1JulianDay:NaN},'INVALID_INPUT'],
+  ];
+  for(const [patch,code] of invalidCases){
+    assert.throws(()=>calculateHouseSet({...input,...patch},counting),e=>e.code===code);
+  }
+  assert.equal(calls,0);
+});
+
+test('valid request calls the angle provider exactly once',()=>{
+  let calls=0;
+  const counting={calculateHouseAngles(args){calls++;return provider.calculateHouseAngles(args);}};
+  const result=calculateHouseSet(input,counting);
+  assert.equal(calls,1);
+  assert.deepEqual(Object.keys(result.houses),['vehlow','porphyry','placidus','regiomontanus','koch']);
+});
+
