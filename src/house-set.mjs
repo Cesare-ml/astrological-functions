@@ -81,20 +81,36 @@ function validateProvider(provider) {
   return descriptor.value;
 }
 
+function snapshotAngles(angles) {
+  if (!record(angles)) fail('INCOMPATIBLE_ANGLE_SOURCE', 'Angle provider must return an object');
+  const snapshot = {};
+  for (const field of [
+    'model', 'ut1JulianDay', 'ttJulianDay', 'latitudeDeg', 'longitudeDegEast',
+    'armcDeg', 'ascendantDeg', 'midheavenDeg', 'trueObliquityDeg',
+  ]) {
+    const descriptor = Object.getOwnPropertyDescriptor(angles, field);
+    if (!descriptor || !Object.hasOwn(descriptor, 'value'))
+      fail('INVALID_ANGLE_SOURCE', `Angle provider result requires own data property ${field}`);
+    snapshot[field] = descriptor.value;
+  }
+  return snapshot;
+}
+
 function validateAngles(angles, input) {
-  if (!record(angles) ||
-      angles.model !== 'IAU2006_2000B_APPROXIMATE_SIDEREAL_TIME' ||
-      angles.ut1JulianDay !== input.ut1JulianDay ||
-      angles.ttJulianDay !== input.ttJulianDay ||
-      angles.latitudeDeg !== input.latitudeDeg ||
-      angles.longitudeDegEast !== input.longitudeDegEast)
+  const snapshot = snapshotAngles(angles);
+  if (snapshot.model !== 'IAU2006_2000B_APPROXIMATE_SIDEREAL_TIME' ||
+      snapshot.ut1JulianDay !== input.ut1JulianDay ||
+      snapshot.ttJulianDay !== input.ttJulianDay ||
+      snapshot.latitudeDeg !== input.latitudeDeg ||
+      snapshot.longitudeDegEast !== input.longitudeDegEast)
     fail('INCOMPATIBLE_ANGLE_SOURCE', 'Angle provider metadata must match the validated request');
-  if (!finite(angles.armcDeg) || !finite(angles.ascendantDeg) ||
-      angles.ascendantDeg < 0 || angles.ascendantDeg > 360 ||
-      !finite(angles.midheavenDeg) ||
-      !finite(angles.trueObliquityDeg) ||
-      angles.trueObliquityDeg <= 0 || angles.trueObliquityDeg >= 90)
+  if (!finite(snapshot.armcDeg) || !finite(snapshot.ascendantDeg) ||
+      snapshot.ascendantDeg < 0 || snapshot.ascendantDeg > 360 ||
+      !finite(snapshot.midheavenDeg) ||
+      !finite(snapshot.trueObliquityDeg) ||
+      snapshot.trueObliquityDeg <= 0 || snapshot.trueObliquityDeg >= 90)
     fail('INVALID_ANGLE_SOURCE', 'Provider must return finite ARMC, valid Ascendant/MC and physical true obliquity');
+  return Object.freeze(snapshot);
 }
 
 /**
@@ -111,8 +127,7 @@ export function calculateHouseSet(input, provider) {
     latitudeDeg: request.latitudeDeg,
     longitudeDegEast: request.longitudeDegEast,
   });
-  const angles = calculateHouseAngles.call(provider, requestAngles);
-  validateAngles(angles, request);
+  const angles = validateAngles(calculateHouseAngles.call(provider, requestAngles), request);
 
   const source = Object.freeze({
     engineVersion: request.engineVersion,
