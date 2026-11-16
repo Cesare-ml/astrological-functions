@@ -144,3 +144,42 @@ test('rejects sparse IDs and facts even with synthetic iterators',()=>{
   failsWith(()=>indexIntraChartAspects({pointIds,facts:[]}), 'INVALID_ASPECT_INDEX');
   failsWith(()=>indexIntraChartAspects({pointIds:[],facts}), 'INVALID_ASPECT_FACT');
 });
+
+test('rejects accessor-backed fact properties without executing mutating getters', () => {
+  const valid = facts()[0];
+  const mutations = [
+    ['shrink', array => { array.length = 0; }],
+    ['grow', array => { array.push(valid); }],
+  ];
+  for (const [label, mutate] of mutations) {
+    const sourceFacts = [{ ...valid }];
+    let getterCalls = 0;
+    Object.defineProperty(sourceFacts[0], 'pointAId', {
+      configurable: true,
+      enumerable: true,
+      get() {
+        getterCalls++;
+        mutate(sourceFacts);
+        return valid.pointAId;
+      },
+    });
+
+    failsWith(() => indexIntraChartAspects({
+      pointIds: points.map(point => point.id),
+      facts: sourceFacts,
+    }), 'INVALID_ASPECT_FACT');
+    assert.equal(getterCalls, 0, label + ' getter must not execute');
+    assert.equal(sourceFacts.length, 1, label + ' mutation must not occur');
+  }
+});
+
+test('accepts ordinary frozen dense fact arrays and reports the indexed count', () => {
+  const sourceFacts = Object.freeze(facts().map(fact => Object.freeze({ ...fact })));
+  const result = indexIntraChartAspects({
+    pointIds: Object.freeze(points.map(point => point.id)),
+    facts: sourceFacts,
+  });
+  assert.equal(result.factCount, sourceFacts.length);
+  assert.equal(result.factCount, 2);
+  assert.ok(Object.isFrozen(result));
+});
