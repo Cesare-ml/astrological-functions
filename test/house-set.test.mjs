@@ -60,3 +60,18 @@ test('valid requests still invoke the pinned provider exactly once',()=>{
   assert.equal(calls,1);
   assert.equal(result.contract,'ExperimentalHouseSet');
 });
+
+test('rejects accessor-backed provider angle results without invoking their getters',()=>{
+  let getterCalls=0,providerCalls=0;
+  const accessorResult={...provider.calculateHouseAngles({
+    ut1JulianDay:input.ut1JulianDay,ttJulianDay:input.ttJulianDay,
+    latitudeDeg:input.latitudeDeg,longitudeDegEast:input.longitudeDegEast,
+  })};
+  Object.defineProperty(accessorResult,'ascendantDeg',{
+    enumerable:true,get(){getterCalls++;return 157.82641479007887;},
+  });
+  const counting={calculateHouseAngles(args){providerCalls++;return accessorResult;}};
+  assert.throws(()=>calculateHouseSet(input,counting),e=>e.code==='INVALID_ANGLE_SOURCE');
+  assert.equal(providerCalls,1);
+  assert.equal(getterCalls,0);
+});
