@@ -61,9 +61,9 @@ export interface ApparentEclipticState {
   readonly latitudeDeg: number;
   readonly longitudeSpeedDegPerDay?: number | null;
   readonly metadata: {
-    readonly center: "EARTH" | string;
-    readonly frame: "ECLIPTIC_OF_DATE" | string;
-    readonly corrections: "APPARENT" | string;
+    readonly center: "EARTH";
+    readonly frame: "ECLIPTIC_OF_DATE";
+    readonly corrections: "APPARENT";
     readonly [key: string]: unknown;
   };
 }
