@@ -33,8 +33,14 @@ export function indexIntraChartAspects({ pointIds, facts } = {}) {
   if (!Array.isArray(facts) || facts.length > MAX_FACTS)
     fail('INVALID_ASPECT_INDEX', `facts must be an array of at most ${MAX_FACTS}`);
 
+  // Fix both workloads before reading caller-controlled point/fact properties.
+  // Accessors may mutate either source array while individual elements are read;
+  // iteration and the published counts must remain tied to these initial bounds.
+  const pointCount = pointIds.length;
+  const factCount = facts.length;
+
   const graph = new Map();
-  for (let i = 0; i < pointIds.length; i++) {
+  for (let i = 0; i < pointCount; i++) {
     if (!Object.hasOwn(pointIds, i))
       fail('INVALID_ASPECT_INDEX', 'pointIds must have own dense slots');
     const pointId = id(pointIds[i], 'pointId');
@@ -43,7 +49,7 @@ export function indexIntraChartAspects({ pointIds, facts } = {}) {
   }
 
   const seenFacts = new Set();
-  for (let i = 0; i < facts.length; i++) {
+  for (let i = 0; i < factCount; i++) {
     if (!Object.hasOwn(facts, i))
       fail('INVALID_ASPECT_FACT', 'facts must have own dense slots');
     const fact = facts[i];
@@ -86,7 +92,7 @@ export function indexIntraChartAspects({ pointIds, facts } = {}) {
   return Object.freeze({
     contract:'IntraChartAspectIndex',contractVersion:'0.1.0-experimental',
     validationStatus:'CALLER_SUPPLIED_FACTS_NOT_ASTRONOMICALLY_VERIFIED',
-    pointCount:graph.size,factCount:facts.length,nodes:Object.freeze(nodes),
+    pointCount:graph.size,factCount,nodes:Object.freeze(nodes),
   });
 }
 
