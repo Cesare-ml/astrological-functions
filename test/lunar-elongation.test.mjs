@@ -99,3 +99,40 @@ test('longitude-sector context snapshots caller zodiac accessors once', () => {
   assert.equal(reads, 1);
   assert.equal(result.context.zodiac, 'TROPICAL');
 });
+
+test('every half-sector cusp owns exact ties while its immediate lower float stays behind', () => {
+  const buffer = new ArrayBuffer(8);
+  const view = new DataView(buffer);
+  const nextDown = value => {
+    view.setFloat64(0, value, false);
+    view.setBigUint64(0, view.getBigUint64(0, false) - 1n, false);
+    return view.getFloat64(0, false);
+  };
+  const nextUp = value => {
+    view.setFloat64(0, value, false);
+    view.setBigUint64(0, view.getBigUint64(0, false) + 1n, false);
+    return view.getFloat64(0, false);
+  };
+
+  for (let i = 0; i < 8; i++) {
+    const boundary = 22.5 + i * 45;
+    const nextSector = (i + 1) % 8;
+    const below = run(0, nextDown(boundary));
+    const exact = run(0, boundary);
+    const above = run(0, nextUp(boundary));
+
+    assert.equal(below.sectorIndex, i, `below ${boundary}°`);
+    assert.equal(exact.sectorIndex, nextSector, `exact ${boundary}°`);
+    assert.equal(above.sectorIndex, nextSector, `above ${boundary}°`);
+    for (const result of [below, exact, above]) {
+      assert.ok(result.sectorIndex >= 0 && result.sectorIndex < 8);
+      assert.ok(result.sectorId);
+      assert.ok(Object.isFrozen(result));
+    }
+  }
+
+  assert.equal(run(0, 22.499999999999996).sectorId, 'NEW');
+  assert.equal(run(0, 22.5).sectorId, 'WAXING_CRESCENT');
+  assert.equal(run(0, 337.49999999999994).sectorId, 'WANING_CRESCENT');
+  assert.equal(run(0, 337.5).sectorId, 'NEW');
+});
