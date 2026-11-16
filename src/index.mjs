@@ -155,7 +155,10 @@ export async function calculateNatalWithProvider({ datetimeUtc, latitudeDeg, lon
     if (!state || state.metadata?.center !== 'EARTH' || state.metadata?.frame !== 'ECLIPTIC_OF_DATE' ||
         state.metadata?.corrections !== 'APPARENT')
       throw new AstrologyError('INCOMPATIBLE_EPHEMERIS', 'Provider must return apparent Earth-centered ecliptic-of-date coordinates');
-    finite(state.longitudeDeg, 'longitudeDeg'); finite(state.latitudeDeg, 'latitudeDeg');
+    finite(state.longitudeDeg, 'longitudeDeg');
+    if (typeof state.latitudeDeg !== 'number' || !Number.isFinite(state.latitudeDeg) ||
+        state.latitudeDeg < -90 || state.latitudeDeg > 90)
+      throw new AstrologyError('INCOMPATIBLE_EPHEMERIS', 'Provider ecliptic latitude must be finite and within [-90, 90] degrees');
     const lon = normalize360(state.longitudeDeg);
     bodies[bodyName] = Object.freeze({ name:bodyName, longitudeDeg:lon, latitudeDeg:state.latitudeDeg,
       zodiacSignIndex:zodiacSignIndex(lon), longitudeSpeedDegPerDay:
