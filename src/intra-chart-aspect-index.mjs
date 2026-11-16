@@ -42,11 +42,22 @@ export function indexIntraChartAspects({ pointIds, facts } = {}) {
     graph.set(pointId, []);
   }
 
+  // Snapshot the initial bounded list before inspecting any fact object.
+  // A fact getter may mutate the caller's array (including its length or later
+  // slots); none of those mutations may change which records this call indexes.
+  const factCount = facts.length;
+  const factSnapshots = [];
+  for (let i = 0; i < factCount; i++) {
+    const descriptor = Object.getOwnPropertyDescriptor(facts, String(i));
+    // Accessor-backed array slots could run arbitrary code during snapshotting.
+    // Accept only dense own data slots and retain their values exactly once.
+    if (!descriptor || !Object.hasOwn(descriptor, 'value'))
+      fail('INVALID_ASPECT_FACT', 'facts must have dense own data slots');
+    factSnapshots.push(descriptor.value);
+  }
+
   const seenFacts = new Set();
-  for (let i = 0; i < facts.length; i++) {
-    if (!Object.hasOwn(facts, i))
-      fail('INVALID_ASPECT_FACT', 'facts must have own dense slots');
-    const fact = facts[i];
+  for (const fact of factSnapshots) {
     if (!fact || typeof fact !== 'object' || Array.isArray(fact))
       fail('INVALID_ASPECT_FACT', 'Each aspect fact must be an object');
     // Exactly one field-read for each value: never check one getter result
@@ -86,7 +97,7 @@ export function indexIntraChartAspects({ pointIds, facts } = {}) {
   return Object.freeze({
     contract:'IntraChartAspectIndex',contractVersion:'0.1.0-experimental',
     validationStatus:'CALLER_SUPPLIED_FACTS_NOT_ASTRONOMICALLY_VERIFIED',
-    pointCount:graph.size,factCount:facts.length,nodes:Object.freeze(nodes),
+    pointCount:graph.size,factCount,nodes:Object.freeze(nodes),
   });
 }
 
