@@ -3,6 +3,7 @@
  * The provider owns astronomy and calculation of the dated ayanamsa.
  */
 import { AstrologyError, normalize360, zodiacSignIndex } from './index.mjs';
+import { parseUtcGregorianInstant } from './utc-calendar-contract.mjs';
 
 function fail(code, message) {
   throw new AstrologyError(code, message);
@@ -11,8 +12,19 @@ function canonicalUtc(value) {
   if (typeof value !== 'string') return false;
   const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,3}))?Z$/.exec(value);
   if (!match) return false;
-  const ms = Date.parse(value);
-  return Number.isFinite(ms) && new Date(ms).toISOString().slice(0, 19) === match[1];
+  // Reuse the package's strict proleptic-Gregorian validator instead of
+  // Date.parse(), which accepts year 0000 and can normalize invalid dates.
+  // Keep this projection's narrower 1..3 fractional-digit contract above.
+  try {
+    parseUtcGregorianInstant({
+      datetimeUtc: value,
+      calendar: 'PROLEPTIC_GREGORIAN',
+      timeScale: 'UTC',
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 function isPlainRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
