@@ -28,13 +28,13 @@ function finiteRange(value, field, min, max) {
 const compareId = (a, b) => a < b ? -1 : a > b ? 1 : 0;
 
 /**
- * Read an own enumerable data slot without invoking a caller-supplied getter.
+ * Read an own data slot without invoking a caller-supplied getter.
  * This also rejects holes and accessor-backed array indexes.
  */
 function readOwnDataSlot(array, index, code, label) {
   const descriptor = Object.getOwnPropertyDescriptor(array, String(index));
-  if (!descriptor || !Object.hasOwn(descriptor, 'value') || descriptor.enumerable !== true)
-    fail(code, `${label} must contain own enumerable data slots`);
+  if (!descriptor || !Object.hasOwn(descriptor, 'value'))
+    fail(code, `${label} must contain own data slots`);
   return descriptor.value;
 }
 
@@ -49,8 +49,8 @@ function snapshotFact(fact) {
   const snapshot = {};
   for (const field of FACT_FIELDS) {
     const descriptor = Object.getOwnPropertyDescriptor(fact, field);
-    if (!descriptor || !Object.hasOwn(descriptor, 'value') || descriptor.enumerable !== true)
-      fail('INVALID_ASPECT_FACT', `Each aspect fact requires own enumerable data property ${field}`);
+    if (!descriptor || !Object.hasOwn(descriptor, 'value'))
+      fail('INVALID_ASPECT_FACT', `Each aspect fact requires own data property ${field}`);
     snapshot[field] = descriptor.value;
   }
   return snapshot;
