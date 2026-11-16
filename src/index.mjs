@@ -139,7 +139,7 @@ export function calculateCrossAspects({direction,sourcePoints,targetPoints,aspec
  */
 function isValidUtcInstant(datetimeUtc) {
   if (typeof datetimeUtc !== 'string') return false;
-  const match = /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.(\\d+))?Z$/.exec(datetimeUtc);
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?Z$/.exec(datetimeUtc);
   if (!match) return false;
 
   const [, yearText, monthText, dayText, hourText, minuteText, secondText] = match;
