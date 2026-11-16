@@ -51,3 +51,47 @@ test('experimental provider boundary accepts only apparent Earth-centered eclipt
     metadata:{center:'EARTH',frame:'J2000',corrections:'GEOMETRIC'}})};
   await assert.rejects(()=>calculateNatalWithProvider({...input,provider:geometric}),e=>e.code==='INCOMPATIBLE_EPHEMERIS');
 });
+
+test('natal provider accepts the closed ecliptic-latitude range and rejects impossible values', async()=> {
+  const { calculateNatalWithProvider } = await import('../src/index.mjs');
+  const base = {
+    datetimeUtc: '2026-11-16T12:00:00Z',
+    latitudeDeg: 44.8,
+    longitudeDegEast: 11.9,
+    bodyNames: ['Sun'],
+  };
+  const matchingMetadata = {
+    center: 'EARTH',
+    frame: 'ECLIPTIC_OF_DATE',
+    corrections: 'APPARENT',
+    engineVersion: 'synthetic-test',
+  };
+
+  for (const latitudeDeg of [-90, -23.4, 0, 51.5, 90]) {
+    const provider = {
+      getGeocentricEcliptic: async () => ({
+        longitudeDeg: 42,
+        latitudeDeg,
+        metadata: matchingMetadata,
+      }),
+    };
+    const result = await calculateNatalWithProvider({ ...base, provider });
+    assert.equal(result.bodies.Sun.latitudeDeg, latitudeDeg);
+  }
+
+  for (const latitudeDeg of [-90.000001, 90.000001, NaN, Infinity, -Infinity]) {
+    let calls = 0;
+    const provider = {
+      getGeocentricEcliptic: async () => {
+        calls += 1;
+        return { longitudeDeg: 42, latitudeDeg, metadata: matchingMetadata };
+      },
+    };
+    await assert.rejects(
+      () => calculateNatalWithProvider({ ...base, provider }),
+      error => error.code === 'INCOMPATIBLE_EPHEMERIS',
+      String(latitudeDeg),
+    );
+    assert.equal(calls, 1, 'provider was queried once, but no invalid result may be published');
+  }
+});
