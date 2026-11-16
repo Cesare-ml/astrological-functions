@@ -144,3 +144,45 @@ test('rejects sparse IDs and facts even with synthetic iterators',()=>{
   failsWith(()=>indexIntraChartAspects({pointIds,facts:[]}), 'INVALID_ASPECT_INDEX');
   failsWith(()=>indexIntraChartAspects({pointIds:[],facts}), 'INVALID_ASPECT_FACT');
 });
+
+
+test('fails closed when a fact accessor shrinks the bounded source array', () => {
+  const second = { ...facts()[0], pointAId: 'Mars' };
+  const source = [];
+  const first = { ...facts()[0] };
+  Object.defineProperty(first, 'pointAId', {
+    get() {
+      source.length = 0;
+      return 'Sun';
+    },
+  });
+  source.push(first, second);
+  failsWith(() => indexIntraChartAspects({ pointIds: points.map(p => p.id), facts: source }),
+    'INVALID_ASPECT_FACT');
+});
+
+test('does not expand processing when a fact accessor grows the source array', () => {
+  const source = [];
+  const first = { ...facts()[0] };
+  Object.defineProperty(first, 'pointAId', {
+    get() {
+      source.push({ ...facts()[1] });
+      return 'Sun';
+    },
+  });
+  source.push(first);
+  const result = indexIntraChartAspects({ pointIds: points.map(p => p.id), facts: source });
+  assert.equal(source.length, 2);
+  assert.equal(result.factCount, 1);
+  assert.equal(result.nodes.reduce((sum, node) => sum + node.connections.length, 0), 2);
+});
+
+test('preserves stable counts for ordinary dense frozen point and fact arrays', () => {
+  const pointIds = Object.freeze(['Sun', 'Moon', 'Mars', 'Venus']);
+  const stableFacts = Object.freeze(facts().map(fact => Object.freeze({ ...fact })));
+  const result = indexIntraChartAspects({ pointIds, facts: stableFacts });
+  assert.equal(result.pointCount, pointIds.length);
+  assert.equal(result.factCount, stableFacts.length);
+  assert.equal(result.nodes.reduce((sum, node) => sum + node.connections.length, 0),
+    stableFacts.length * 2);
+});
