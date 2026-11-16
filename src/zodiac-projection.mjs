@@ -10,7 +10,7 @@ function fail(code, message) {
 }
 function canonicalUtc(value) {
   if (typeof value !== 'string' ||
-      !/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$/.test(value)) return false;
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)) return false;
   // Share strict civil-date validation with the UTC contract. Date.parse()
   // accepts year 0000 and can normalize invalid calendar dates.
   try {
