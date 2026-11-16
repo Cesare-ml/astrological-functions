@@ -15,3 +15,63 @@ test('rejects unknown birth time or mismatched provider metadata',()=>{
   assert.throws(()=>calculateHouseSet({...input,birthTimeKnown:false},provider),e=>e.code==='BIRTH_TIME_REQUIRED');
   assert.throws(()=>calculateHouseSet(input,{calculateHouseAngles(a){return {...provider.calculateHouseAngles(a),ut1JulianDay:a.ut1JulianDay+1};}}),e=>e.code==='INCOMPATIBLE_ANGLE_SOURCE');
 });
+
+
+test('rejects invalid date, site, provenance and epochs before provider I/O', () => {
+  let calls = 0;
+  const countingProvider = { calculateHouseAngles(args) {
+    calls++;
+    return provider.calculateHouseAngles(args);
+  }};
+  const invalidInputs = [
+    {...input,datetimeUtc:'2026-13-99T00:00:00Z'},
+    {...input,datetimeUtc:'0000-01-01T00:00:00Z'},
+    {...input,latitudeDeg:90},
+    {...input,latitudeDeg:-90},
+    {...input,latitudeDeg:95},
+    {...input,longitudeDegEast:180.01},
+    {...input,longitudeDegEast:-181},
+    {...input,engineVersion:''},
+    {...input,kernelSetId:' '},
+    {...input,timeModel:null},
+    {...input,ut1JulianDay:NaN},
+    {...input,ttJulianDay:Infinity},
+    {...input,birthTimeKnown:false},
+  ];
+  for (const candidate of invalidInputs) {
+    assert.throws(() => calculateHouseSet(candidate,countingProvider));
+  }
+  assert.equal(calls,0);
+});
+
+test('valid input calls the angle provider exactly once with a detached frozen request', () => {
+  let calls=0, received;
+  const countingProvider = { calculateHouseAngles(args) {
+    calls++;
+    received=args;
+    return provider.calculateHouseAngles(args);
+  }};
+  const result=calculateHouseSet(input,countingProvider);
+  assert.equal(calls,1);
+  assert.deepEqual(received,{
+    ut1JulianDay:input.ut1JulianDay,
+    ttJulianDay:input.ttJulianDay,
+    latitudeDeg:input.latitudeDeg,
+    longitudeDegEast:input.longitudeDegEast,
+  });
+  assert.ok(Object.isFrozen(received));
+  assert.equal(result.contract,'ExperimentalHouseSet');
+});
+
+test('snapshots input properties once before any provider call', () => {
+  let calls=0, dateReads=0;
+  const candidate={...input};
+  Object.defineProperty(candidate,'datetimeUtc',{
+    enumerable:true,
+    get(){dateReads++; return dateReads===1?input.datetimeUtc:'0000-01-01T00:00:00Z';},
+  });
+  const countingProvider={calculateHouseAngles(args){calls++;return provider.calculateHouseAngles(args);}};
+  calculateHouseSet(candidate,countingProvider);
+  assert.equal(dateReads,1);
+  assert.equal(calls,1);
+});
