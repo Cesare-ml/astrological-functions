@@ -47,3 +47,8 @@ const natal = await calculateNatalWithProvider({
 const error: AstrologyError = new AstrologyError("INVALID_ANGLE", "Invalid angle");
 
 void [normalized, signed, separation, sign, dodecatemoria, house, aspects, natal, error];
+
+// @ts-expect-error: direction must be explicit and one of the documented contracts.
+calculateCrossAspects({ direction: "INBOUND", sourcePoints: [], targetPoints: [], aspectDefinitions: [] });
+// @ts-expect-error: house placement requires twelve cusp values.
+locateLongitudeInHouses(0, [0, 30, 60]);
