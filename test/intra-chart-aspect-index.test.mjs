@@ -144,3 +144,43 @@ test('rejects sparse IDs and facts even with synthetic iterators',()=>{
   failsWith(()=>indexIntraChartAspects({pointIds,facts:[]}), 'INVALID_ASPECT_INDEX');
   failsWith(()=>indexIntraChartAspects({pointIds:[],facts}), 'INVALID_ASPECT_FACT');
 });
+
+
+test('snapshots the initial fact list before fact getters can truncate the caller array', () => {
+  const edges = [{
+    get pointAId() { edges.length = 0; return 'A'; },
+    pointBId:'B',aspectId:'square',exactAngleDeg:90,actualAngleDeg:90,
+    configuredMaxOrbDeg:0,signedOrbDeg:0,absoluteOrbDeg:0,
+  }];
+  const result = indexIntraChartAspects({pointIds:['A','B'],facts:edges});
+  assert.equal(edges.length,0);
+  assert.equal(result.factCount,1);
+  assert.equal(result.nodes.find(n=>n.pointId==='A').connections[0].otherPointId,'B');
+  assert.equal(result.nodes.find(n=>n.pointId==='B').connections[0].otherPointId,'A');
+});
+
+test('appended facts cannot expand the initial processing budget', () => {
+  const extra = {pointAId:'A',pointBId:'C',aspectId:'trine',exactAngleDeg:120,
+    actualAngleDeg:120,configuredMaxOrbDeg:0,signedOrbDeg:0,absoluteOrbDeg:0};
+  const edges = [{
+    get pointAId() { edges.push(extra); return 'A'; },
+    pointBId:'B',aspectId:'square',exactAngleDeg:90,actualAngleDeg:90,
+    configuredMaxOrbDeg:0,signedOrbDeg:0,absoluteOrbDeg:0,
+  }];
+  const result = indexIntraChartAspects({pointIds:['A','B','C'],facts:edges});
+  assert.equal(edges.length,2);
+  assert.equal(result.factCount,1);
+  assert.equal(result.nodes.find(n=>n.pointId==='A').connections.length,1);
+  assert.equal(result.nodes.find(n=>n.pointId==='C').connections.length,0);
+});
+
+test('accepts ordinary frozen dense fact snapshots and rejects accessor-backed array slots', () => {
+  const edge = Object.freeze({pointAId:'A',pointBId:'B',aspectId:'square',
+    exactAngleDeg:90,actualAngleDeg:90,configuredMaxOrbDeg:0,signedOrbDeg:0,absoluteOrbDeg:0});
+  const frozenFacts = Object.freeze([edge]);
+  assert.equal(indexIntraChartAspects({pointIds:['A','B'],facts:frozenFacts}).factCount,1);
+
+  const accessorFacts = [];
+  Object.defineProperty(accessorFacts,'0',{get(){throw Error('must not execute');}});
+  failsWith(()=>indexIntraChartAspects({pointIds:['A','B'],facts:accessorFacts}),'INVALID_ASPECT_FACT');
+});
