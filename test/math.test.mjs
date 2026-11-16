@@ -47,6 +47,40 @@ test('experimental provider boundary accepts only apparent Earth-centered eclipt
   const result=await calculateNatalWithProvider({...input,provider:good});
   assert.equal(result.bodies.Sun.zodiacSignIndex,11);
   assert.equal(result.houses,null);
+
+  // Impossible ISO-shaped UTC values must fail before the provider is called.
+  const invalidUtc = [
+    '2026-02-29T12:00:00Z',
+    '2026-02-30T12:00:00Z',
+    '2026-04-31T12:00:00Z',
+    '2026-01-01T24:00:00Z',
+    '2026-01-01T12:60:00Z',
+    '2026-01-01T12:00:60Z',
+  ];
+  for (const datetimeUtc of invalidUtc) {
+    let calls = 0;
+    const spy = {getGeocentricEcliptic:async()=>{calls++; return {
+      longitudeDeg:1,latitudeDeg:0,
+      metadata:{center:'EARTH',frame:'ECLIPTIC_OF_DATE',corrections:'APPARENT'}
+    };}};
+    await assert.rejects(
+      ()=>calculateNatalWithProvider({...input,datetimeUtc,provider:spy}),
+      error=>error.code==='INVALID_UTC',
+      datetimeUtc
+    );
+    assert.equal(calls,0, `provider must not be called for ${datetimeUtc}`);
+  }
+
+  const leapDay = await calculateNatalWithProvider({
+    ...input,datetimeUtc:'2024-02-29T12:34:56Z',provider:good
+  });
+  assert.equal(leapDay.datetimeUtc,'2024-02-29T12:34:56Z');
+
+  const fractional = await calculateNatalWithProvider({
+    ...input,datetimeUtc:'2026-11-16T12:34:56.123456Z',provider:good
+  });
+  assert.equal(fractional.datetimeUtc,'2026-11-16T12:34:56.123456Z');
+
   const geometric={getGeocentricEcliptic:async()=>({longitudeDeg:359,latitudeDeg:0,
     metadata:{center:'EARTH',frame:'J2000',corrections:'GEOMETRIC'}})};
   await assert.rejects(()=>calculateNatalWithProvider({...input,provider:geometric}),e=>e.code==='INCOMPATIBLE_EPHEMERIS');

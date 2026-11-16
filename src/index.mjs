@@ -138,9 +138,21 @@ export function calculateCrossAspects({direction,sourcePoints,targetPoints,aspec
  * supplies geometric J2000 vectors and therefore CANNOT satisfy this yet.
  */
 export async function calculateNatalWithProvider({ datetimeUtc, latitudeDeg, longitudeDegEast, bodyNames, provider }) {
-  if (typeof datetimeUtc !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(datetimeUtc) ||
-      Number.isNaN(Date.parse(datetimeUtc)))
-    throw new AstrologyError('INVALID_UTC', 'Explicit ISO UTC instant ending Z is required');
+  const utcMatch = typeof datetimeUtc === 'string'
+    ? /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?Z$/.exec(datetimeUtc)
+    : null;
+  const parsedUtc = utcMatch ? new Date(Date.parse(datetimeUtc)) : null;
+  // Date.parse accepts some impossible calendar dates by rolling them forward
+  // (for example, 30 February). Compare every whole-second UTC field with the
+  // declared input so the provider never receives a silently normalized date.
+  if (!utcMatch || !parsedUtc || Number.isNaN(parsedUtc.getTime()) ||
+      parsedUtc.getUTCFullYear() !== Number(utcMatch[1]) ||
+      parsedUtc.getUTCMonth() + 1 !== Number(utcMatch[2]) ||
+      parsedUtc.getUTCDate() !== Number(utcMatch[3]) ||
+      parsedUtc.getUTCHours() !== Number(utcMatch[4]) ||
+      parsedUtc.getUTCMinutes() !== Number(utcMatch[5]) ||
+      parsedUtc.getUTCSeconds() !== Number(utcMatch[6]))
+    throw new AstrologyError('INVALID_UTC', 'Explicit valid ISO UTC instant ending Z is required');
   finite(latitudeDeg, 'latitudeDeg'); finite(longitudeDegEast, 'longitudeDegEast');
   if (latitudeDeg < -90 || latitudeDeg > 90 || longitudeDegEast < -180 || longitudeDegEast > 180)
     throw new AstrologyError('INVALID_COORDINATES', 'Geographic coordinates outside valid bounds');
