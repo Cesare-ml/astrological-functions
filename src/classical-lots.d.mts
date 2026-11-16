@@ -2,12 +2,11 @@
 export type ClassicalSect = 'DAY' | 'NIGHT';
 export type ClassicalZodiac = 'TROPICAL' | 'SIDEREAL';
 
-export interface ClassicalLotsInput {
+interface ClassicalLotsSharedInput {
   /** Caller-asserted known birth time; false/unknown cannot yield trusted lots. */
   readonly birthTimeKnown: true;
   /** Explicitly established day/night chart sect, never inferred by this module. */
   readonly sect: ClassicalSect;
-  readonly zodiac: ClassicalZodiac;
   /** Nonempty identifier for the shared chart context, not a personal record. */
   readonly chartContextId: string;
   /** All three coordinates must use the same zodiac, frame and instant. */
@@ -15,6 +14,12 @@ export interface ClassicalLotsInput {
   readonly sunLongitudeDeg: number;
   readonly moonLongitudeDeg: number;
 }
+
+/** Sidereal coordinates must declare the ayanamsa that produced them. */
+export type ClassicalLotsInput = ClassicalLotsSharedInput & (
+  { readonly zodiac: 'TROPICAL'; readonly ayanamsaId?: never; readonly ayanamsaVersion?: never } |
+  { readonly zodiac: 'SIDEREAL'; readonly ayanamsaId: string; readonly ayanamsaVersion: string }
+);
 
 export interface ClassicalLotFact {
   readonly id: 'FORTUNE' | 'SPIRIT';
@@ -24,11 +29,12 @@ export interface ClassicalLotFact {
 
 export interface ClassicalLotsResult {
   readonly contract: 'ClassicalLotsResult';
-  readonly contractVersion: '0.1.0-experimental';
+  readonly contractVersion: '0.2.0-experimental';
   readonly method: 'SECT_REVERSAL_V1';
   readonly sect: ClassicalSect;
   readonly zodiac: ClassicalZodiac;
   readonly chartContextId: string;
+  readonly ayanamsa: Readonly<{ id: string; version: string }> | null;
   readonly lots: Readonly<{
     fortune: Readonly<ClassicalLotFact & { readonly id: 'FORTUNE' }>;
     spirit: Readonly<ClassicalLotFact & { readonly id: 'SPIRIT' }>;

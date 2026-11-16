@@ -17,7 +17,7 @@ export function calculateClassicalLots(input) {
   }
   const {
     ascendantLongitudeDeg, sunLongitudeDeg, moonLongitudeDeg,
-    birthTimeKnown, sect, zodiac, chartContextId,
+    birthTimeKnown, sect, zodiac, chartContextId, ayanamsaId, ayanamsaVersion,
   } = input;
   if (birthTimeKnown !== true) {
     throw new AstrologyError('BIRTH_TIME_REQUIRED', 'An established birth time and Ascendant are required');
@@ -31,6 +31,17 @@ export function calculateClassicalLots(input) {
   if (typeof chartContextId !== 'string' || !chartContextId.trim()) {
     throw new AstrologyError('INVALID_CHART_CONTEXT', 'A nonempty shared chartContextId is required');
   }
+  let ayanamsa = null;
+  if (zodiac === 'SIDEREAL') {
+    if (typeof ayanamsaId !== 'string' || !ayanamsaId.trim() || ayanamsaId !== ayanamsaId.trim() ||
+        typeof ayanamsaVersion !== 'string' || !ayanamsaVersion.trim() ||
+        ayanamsaVersion !== ayanamsaVersion.trim()) {
+      throw new AstrologyError('INVALID_AYANAMSA', 'Sidereal lots require explicit nonempty ayanamsaId and ayanamsaVersion');
+    }
+    ayanamsa = Object.freeze({ id: ayanamsaId, version: ayanamsaVersion });
+  } else if (ayanamsaId !== undefined || ayanamsaVersion !== undefined) {
+    throw new AstrologyError('UNEXPECTED_AYANAMSA', 'Tropical lots cannot carry sidereal ayanamsa metadata');
+  }
 
   const asc = normalize360(ascendantLongitudeDeg);
   const sun = normalize360(sunLongitudeDeg);
@@ -43,11 +54,12 @@ export function calculateClassicalLots(input) {
 
   return Object.freeze({
     contract: 'ClassicalLotsResult',
-    contractVersion: '0.1.0-experimental',
+    contractVersion: '0.2.0-experimental',
     method: METHOD,
     sect,
     zodiac,
     chartContextId,
+    ayanamsa,
     lots: Object.freeze({
       fortune: lot('FORTUNE', fortuneDeg),
       spirit: lot('SPIRIT', spiritDeg),

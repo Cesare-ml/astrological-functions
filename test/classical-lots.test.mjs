@@ -25,6 +25,7 @@ test('day sect computes Fortune = ASC + Moon - Sun, Spirit = ASC + Sun - Moon', 
   assert.equal(result.lots.spirit.zodiacSignIndex, 9);
   assert.equal(result.method, 'SECT_REVERSAL_V1');
   assert.equal(result.contract, 'ClassicalLotsResult');
+  assert.equal(result.ayanamsa, null);
 });
 
 test('night sect explicitly reverses both formulas', () => {
@@ -87,6 +88,8 @@ test('unknown or omitted day/night sect fails closed', () => {
 test('invalid or omitted zodiac fails closed', () => {
   invalid({...base, zodiac:undefined}, 'INVALID_ZODIAC');
   invalid({...base, zodiac:'TOPOCENTRIC'}, 'INVALID_ZODIAC');
+  invalid({...base, ayanamsaId:'LAHIRI'}, 'UNEXPECTED_AYANAMSA');
+  invalid({...base, ayanamsaVersion:'1'}, 'UNEXPECTED_AYANAMSA');
 });
 
 test('missing or empty shared context fails closed', () => {
@@ -108,9 +111,24 @@ test('non-object inputs fail closed', () => {
 });
 
 test('no input mutation and explicit sidereal context retained', () => {
-  const result = calculateClassicalLots({...base, zodiac:'SIDEREAL'});
+  const result = calculateClassicalLots({...base, zodiac:'SIDEREAL', ayanamsaId:'LAHIRI', ayanamsaVersion:'2026.1'});
   assert.equal(result.zodiac, 'SIDEREAL');
+  assert.deepEqual(result.ayanamsa, {id:'LAHIRI', version:'2026.1'});
+  assert.ok(Object.isFrozen(result.ayanamsa));
   assert.equal(result.chartContextId, base.chartContextId);
   assert.equal(base.ascendantLongitudeDeg,350);
   assert.equal(base.sect,'DAY');
+});
+
+test('sidereal coordinates require an explicit versioned ayanamsa identifier', () => {
+  for (const change of [
+    { ayanamsaId: undefined, ayanamsaVersion: undefined },
+    { ayanamsaId: 'LAHIRI', ayanamsaVersion: undefined },
+    { ayanamsaId: undefined, ayanamsaVersion: '2026.1' },
+    { ayanamsaId: '', ayanamsaVersion: '2026.1' },
+    { ayanamsaId: 'LAHIRI ', ayanamsaVersion: '2026.1' },
+    { ayanamsaId: 'LAHIRI', ayanamsaVersion: ' ' },
+  ]) {
+    invalid({...base, zodiac:'SIDEREAL', ...change}, 'INVALID_AYANAMSA');
+  }
 });
