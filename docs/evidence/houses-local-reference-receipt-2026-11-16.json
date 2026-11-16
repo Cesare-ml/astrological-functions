@@ -1,0 +1,304 @@
+{
+ "schema": "virgostars/local-reference-receipt/1",
+ "kind": "aggregate residuals only; no reference-library output rows, code or binaries are stored",
+ "date": "2026-11-16",
+ "subject": {
+  "repository": "astrological-functions",
+  "commit": "f8757ff",
+  "angles_from": {
+   "repository": "VirgoStars-Ephemeris",
+   "module": "house_angles via bindings/node provider",
+   "commit": "fb08499"
+  }
+ },
+ "reference": {
+  "name": "Swiss Ephemeris C library (AGPL-3.0), swe_houses_armc, local only",
+  "version": "2.10.03 via sweph-sys 0.3.0"
+ },
+ "method": "Both sides received the identical ARMC, latitude and true obliquity (from the Rust provider), isolating the cusp algorithms from sidereal time.",
+ "grid": {
+  "latitudes_deg": [
+   -66,
+   -60,
+   -45,
+   -33.8688,
+   -10,
+   0.5,
+   10,
+   30,
+   41.9028,
+   52.5,
+   60,
+   64,
+   66,
+   67,
+   70,
+   75
+  ],
+  "longitudes_per_latitude": 19,
+  "cases": 304,
+  "instant": "2026-11-10T00:00:00 UT1 (test), TT-UT1 = 69.2 s"
+ },
+ "systems": {
+  "vehlow": {
+   "code": "V",
+   "cases_compared": 247,
+   "max_abs_cusp_difference_arcsec": 1.800799509510398e-7,
+   "max_by_latitude": {
+    "10": 1.6821104509290308e-7,
+    "30": 1.7721504264045507e-7,
+    "60": 1.6493686416652054e-7,
+    "64": 1.6002559277694672e-7,
+    "66": 1.4529177860822529e-7,
+    "67": 0,
+    "70": 0,
+    "75": 0,
+    "-66": 1.7762431525625288e-7,
+    "-60": 1.7680577002465725e-7,
+    "-45": 1.7721504264045507e-7,
+    "-33.8688": 1.6943886294029653e-7,
+    "-10": 1.800799509510398e-7,
+    "0.5": 1.710759534034878e-7,
+    "41.9028": 1.4938450476620346e-7,
+    "52.5": 1.7025740817189217e-7
+   },
+   "latitudes_where_ours_refuses": {
+    "67": {
+     "ours_error_codes": {
+      "POLAR_HOUSES_UNAVAILABLE": 18,
+      "DEGENERATE_QUADRANTS": 1
+     },
+     "reference_returned_error": false,
+     "reference_returned_values": true
+    },
+    "70": {
+     "ours_error_codes": {
+      "POLAR_HOUSES_UNAVAILABLE": 16,
+      "DEGENERATE_QUADRANTS": 3
+     },
+     "reference_returned_error": false,
+     "reference_returned_values": true
+    },
+    "75": {
+     "ours_error_codes": {
+      "DEGENERATE_QUADRANTS": 6,
+      "POLAR_HOUSES_UNAVAILABLE": 13
+     },
+     "reference_returned_error": false,
+     "reference_returned_values": true
+    }
+   }
+  },
+  "placidus": {
+   "code": "P",
+   "cases_compared": 247,
+   "max_abs_cusp_difference_arcsec": 0.002516196582291741,
+   "max_by_latitude": {
+    "10": 1.735315890982747e-7,
+    "30": 1.7721504264045507e-7,
+    "60": 0.00021054211174487136,
+    "64": 0.0006748774467268959,
+    "66": 0.0020719745407404844,
+    "67": 0,
+    "70": 0,
+    "75": 0,
+    "-66": 0.002516196582291741,
+    "-60": 0.00022643334887106903,
+    "-45": 0.00003865006874548271,
+    "-33.8688": 3.437889972701669e-7,
+    "-10": 1.8417267710901797e-7,
+    "0.5": 1.8785613065119833e-7,
+    "41.9028": 0.000014974466466810554,
+    "52.5": 0.00006181203389132861
+   },
+   "latitudes_where_ours_refuses": {
+    "67": {
+     "ours_error_codes": {
+      "POLAR_HOUSES_UNAVAILABLE": 18,
+      "DEGENERATE_QUADRANTS": 1
+     },
+     "reference_returned_error": true,
+     "reference_returned_values": false
+    },
+    "70": {
+     "ours_error_codes": {
+      "POLAR_HOUSES_UNAVAILABLE": 16,
+      "DEGENERATE_QUADRANTS": 3
+     },
+     "reference_returned_error": true,
+     "reference_returned_values": false
+    },
+    "75": {
+     "ours_error_codes": {
+      "DEGENERATE_QUADRANTS": 6,
+      "POLAR_HOUSES_UNAVAILABLE": 13
+     },
+     "reference_returned_error": true,
+     "reference_returned_values": false
+    }
+   }
+  },
+  "koch": {
+   "code": "K",
+   "cases_compared": 247,
+   "max_abs_cusp_difference_arcsec": 1.800799509510398e-7,
+   "max_by_latitude": {
+    "10": 1.7844286048784852e-7,
+    "30": 1.7721504264045507e-7,
+    "60": 1.7885213310364634e-7,
+    "64": 1.7762431525625288e-7,
+    "66": 1.7885213310364634e-7,
+    "67": 0,
+    "70": 0,
+    "75": 0,
+    "-66": 1.7967067833524197e-7,
+    "-60": 1.7762431525625288e-7,
+    "-45": 1.7844286048784852e-7,
+    "-33.8688": 1.7598722479306161e-7,
+    "-10": 1.7967067833524197e-7,
+    "0.5": 1.800799509510398e-7,
+    "41.9028": 1.780335878720507e-7,
+    "52.5": 1.7967067833524197e-7
+   },
+   "latitudes_where_ours_refuses": {
+    "67": {
+     "ours_error_codes": {
+      "POLAR_HOUSES_UNAVAILABLE": 18,
+      "DEGENERATE_QUADRANTS": 1
+     },
+     "reference_returned_error": true,
+     "reference_returned_values": false
+    },
+    "70": {
+     "ours_error_codes": {
+      "POLAR_HOUSES_UNAVAILABLE": 16,
+      "DEGENERATE_QUADRANTS": 3
+     },
+     "reference_returned_error": true,
+     "reference_returned_values": false
+    },
+    "75": {
+     "ours_error_codes": {
+      "DEGENERATE_QUADRANTS": 6,
+      "POLAR_HOUSES_UNAVAILABLE": 13
+     },
+     "reference_returned_error": true,
+     "reference_returned_values": false
+    }
+   }
+  },
+  "regiomontanus": {
+   "code": "R",
+   "cases_compared": 247,
+   "max_abs_cusp_difference_arcsec": 1.800799509510398e-7,
+   "max_by_latitude": {
+    "10": 1.7721504264045507e-7,
+    "30": 1.7721504264045507e-7,
+    "60": 1.7844286048784852e-7,
+    "64": 1.7885213310364634e-7,
+    "66": 1.7721504264045507e-7,
+    "67": 0,
+    "70": 0,
+    "75": 0,
+    "-66": 1.800799509510398e-7,
+    "-60": 1.7762431525625288e-7,
+    "-45": 1.7721504264045507e-7,
+    "-33.8688": 1.7885213310364634e-7,
+    "-10": 1.7967067833524197e-7,
+    "0.5": 1.7885213310364634e-7,
+    "41.9028": 1.7926140571944416e-7,
+    "52.5": 1.7435013432987034e-7
+   },
+   "latitudes_where_ours_refuses": {
+    "67": {
+     "ours_error_codes": {
+      "POLAR_HOUSES_UNAVAILABLE": 18,
+      "DEGENERATE_QUADRANTS": 1
+     },
+     "reference_returned_error": false,
+     "reference_returned_values": true
+    },
+    "70": {
+     "ours_error_codes": {
+      "POLAR_HOUSES_UNAVAILABLE": 16,
+      "DEGENERATE_QUADRANTS": 3
+     },
+     "reference_returned_error": false,
+     "reference_returned_values": true
+    },
+    "75": {
+     "ours_error_codes": {
+      "DEGENERATE_QUADRANTS": 6,
+      "POLAR_HOUSES_UNAVAILABLE": 13
+     },
+     "reference_returned_error": false,
+     "reference_returned_values": true
+    }
+   }
+  },
+  "porphyry": {
+   "code": "O",
+   "cases_compared": 247,
+   "max_abs_cusp_difference_arcsec": 1.7967067833524197e-7,
+   "max_by_latitude": {
+    "10": 1.7598722479306161e-7,
+    "30": 1.7721504264045507e-7,
+    "60": 1.7762431525625288e-7,
+    "64": 1.7885213310364634e-7,
+    "66": 1.7926140571944416e-7,
+    "67": 0,
+    "70": 0,
+    "75": 0,
+    "-66": 1.7762431525625288e-7,
+    "-60": 1.7680577002465725e-7,
+    "-45": 1.7721504264045507e-7,
+    "-33.8688": 1.7885213310364634e-7,
+    "-10": 1.7967067833524197e-7,
+    "0.5": 1.7926140571944416e-7,
+    "41.9028": 1.6943886294029653e-7,
+    "52.5": 1.7762431525625288e-7
+   },
+   "latitudes_where_ours_refuses": {
+    "67": {
+     "ours_error_codes": {
+      "POLAR_HOUSES_UNAVAILABLE": 18,
+      "DEGENERATE_QUADRANTS": 1
+     },
+     "reference_returned_error": false,
+     "reference_returned_values": true
+    },
+    "70": {
+     "ours_error_codes": {
+      "POLAR_HOUSES_UNAVAILABLE": 16,
+      "DEGENERATE_QUADRANTS": 3
+     },
+     "reference_returned_error": false,
+     "reference_returned_values": true
+    },
+    "75": {
+     "ours_error_codes": {
+      "DEGENERATE_QUADRANTS": 6,
+      "POLAR_HOUSES_UNAVAILABLE": 13
+     },
+     "reference_returned_error": false,
+     "reference_returned_values": true
+    }
+   }
+  }
+ },
+ "placidus_house_position": {
+  "reference": "swe_house_pos with system P",
+  "cases": 5616,
+  "compared": 5525,
+  "max_abs_house_position_difference": 9.259760958002516e-9,
+  "ours_refused": {
+   "CIRCUMPOLAR_POSITION_UNAVAILABLE": 91
+  },
+  "note": "The refused cases are circumpolar directions: our function fails closed; the reference returned a value."
+ },
+ "not_established": [
+  "agreement with any source other than the one reference",
+  "houses_pos for systems other than Placidus (the backend only uses P)",
+  "behavior beyond the polar circle where ours refuses"
+ ]
+}
