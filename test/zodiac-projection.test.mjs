@@ -107,6 +107,25 @@ test('returns frozen detached facts, no synodic phase or interpretation prose', 
   assert.throws(() => { fact.zodiac = 'TROPICAL'; }, TypeError);
 });
 
+test('zodiac projection shares the strict Gregorian UTC year and calendar contract', () => {
+  for (const value of [
+    '0000-01-01T00:00:00Z',
+    '0000-02-29T12:00:00Z',
+    '1900-02-29T12:00:00Z',
+    '2026-04-31T12:00:00Z',
+  ]) {
+    fails(() => tropical({ datetimeUtc: value }), 'INVALID_UTC');
+  }
+  for (const value of [
+    '0001-01-01T00:00:00Z',
+    '1600-02-29T23:59:59.999Z',
+    '2000-02-29T12:00:00.001Z',
+    '9999-12-31T23:59:59Z',
+  ]) {
+    assert.equal(tropical({ datetimeUtc: value }).datetimeUtc, value);
+  }
+});
+
 test('malformed input produces typed error', () => {
   for (const v of [null, undefined, '', [], 1, true]) {
     fails(() => projectZodiacLongitude(v), 'INVALID_ZODIAC_INPUT');
