@@ -46,3 +46,12 @@ Do not release, deploy, merge to main or switch an existing chart calculation au
 - Executed **6/6 synthetic tests, PASS** against the exact fetched GitHub source blobs (`src/index.mjs` and `src/lunar-elongation.mjs`) and committed test bodies, using an isolated V8 JavaScript runtime and a small test/assert adapter.
 - This is **not** a native Node.js `node --test` or `npm test` run; those commands and TypeScript consumer compilation remain to be executed after checkout.
 - No scientific JPL ephemeris data, real chart fixtures, UTC source-coherency verification or deployed consumers were used. Status remains `IMPLEMENTED_ISOLATED`.
+
+
+## Boundary precision correction — 2026-11-16
+
+The implementation now compares the normalized directed elongation directly with each exact half-sector boundary. It no longer shifts the value by 22.5° before dividing, which could round a representable value immediately below a boundary onto the boundary itself. Exact ties retain the documented next-sector ownership, including 337.5° → NEW.
+
+Regression coverage checks the immediately adjacent binary64 values below and above **all eight** half-sector boundaries, exact ties, valid sector indices, defined IDs, bounded center deviation and frozen results.
+
+A local Node.js 22.16.0 arithmetic harness executed **28/28 assertions** for the boundary-neighbor and wrap cases. The committed repository test file and full `npm test` were **not run** from a complete checkout of this exact branch; native exact-branch validation remains required.
