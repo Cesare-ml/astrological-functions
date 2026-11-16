@@ -112,3 +112,21 @@ test('malformed input produces typed error', () => {
     fails(() => projectZodiacLongitude(v), 'INVALID_ZODIAC_INPUT');
   }
 });
+
+test('rejects year zero and preserves supported UTC year boundaries for both zodiac modes', () => {
+  const yearZero = '0000-01-01T00:00:00Z';
+  fails(() => tropical({ datetimeUtc: yearZero }), 'INVALID_UTC');
+  fails(() => sidereal({ datetimeUtc: yearZero, ayanamsa: { ...ayanamsa, datetimeUtc: yearZero } }), 'INVALID_UTC');
+  fails(() => sidereal({ ayanamsa: { ...ayanamsa, datetimeUtc: yearZero } }), 'INCOMPATIBLE_AYANAMSA');
+
+  for (const value of [
+    '0001-01-01T00:00:00Z',
+    '2000-02-29T12:34:56Z',
+    '9999-12-31T23:59:59Z',
+  ]) {
+    assert.equal(tropical({ datetimeUtc: value }).datetimeUtc, value);
+    const fact = sidereal({ datetimeUtc: value, ayanamsa: { ...ayanamsa, datetimeUtc: value } });
+    assert.equal(fact.datetimeUtc, value);
+    assert.equal(fact.ayanamsa.datetimeUtc, value);
+  }
+});
