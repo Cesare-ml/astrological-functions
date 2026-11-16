@@ -51,3 +51,61 @@ test('experimental provider boundary accepts only apparent Earth-centered eclipt
     metadata:{center:'EARTH',frame:'J2000',corrections:'GEOMETRIC'}})};
   await assert.rejects(()=>calculateNatalWithProvider({...input,provider:geometric}),e=>e.code==='INCOMPATIBLE_EPHEMERIS');
 });
+
+test('natal provider rejects invalid Gregorian UTC calendar instants before provider I/O', async()=> {
+  const { calculateNatalWithProvider } = await import('../src/index.mjs');
+  let calls = 0;
+  const provider = {
+    getGeocentricEcliptic: async () => {
+      calls += 1;
+      return {
+        longitudeDeg: 12,
+        latitudeDeg: 0,
+        metadata: { center:'EARTH', frame:'ECLIPTIC_OF_DATE', corrections:'APPARENT' },
+      };
+    },
+  };
+  const base = {
+    latitudeDeg: 44.8,
+    longitudeDegEast: 11.9,
+    bodyNames: ['Sun'],
+    provider,
+  };
+
+  for (const datetimeUtc of [
+    '2026-02-29T00:00:00Z',
+    '2026-02-30T00:00:00Z',
+    '2026-04-31T12:00:00Z',
+    '2026-01-01T24:00:00Z',
+    '2026-01-01T12:60:00Z',
+    '2026-01-01T12:00:60Z',
+  ]) {
+    await assert.rejects(
+      () => calculateNatalWithProvider({ ...base, datetimeUtc }),
+      error => error.code === 'INVALID_UTC',
+      datetimeUtc,
+    );
+  }
+  assert.equal(calls, 0, 'invalid UTC values must be rejected before provider I/O');
+});
+
+test('natal provider accepts real leap days, ordinary dates and fractional seconds', async()=> {
+  const { calculateNatalWithProvider } = await import('../src/index.mjs');
+  const provider = {
+    getGeocentricEcliptic: async () => ({
+      longitudeDeg: 12,
+      latitudeDeg: 0,
+      metadata: { center:'EARTH', frame:'ECLIPTIC_OF_DATE', corrections:'APPARENT' },
+    }),
+  };
+  const base = { latitudeDeg: 44.8, longitudeDegEast: 11.9, bodyNames: ['Sun'], provider };
+
+  for (const datetimeUtc of [
+    '2024-02-29T00:00:00Z',
+    '2025-04-30T23:59:59.123456Z',
+    '2026-11-16T12:13:14Z',
+  ]) {
+    const result = await calculateNatalWithProvider({ ...base, datetimeUtc });
+    assert.equal(result.datetimeUtc, datetimeUtc);
+  }
+});
