@@ -22,7 +22,8 @@ function validIdentifier(value) {
 
 /** Inputs include explicit UT1 and TT and a known birth time; no UTC fallback. */
 export function calculateHouseSet(input, provider) {
-  if (!input || typeof input !== 'object' || !provider || typeof provider.calculateHouseAngles !== 'function')
+  if (!input || typeof input !== 'object' || !provider ||
+      (typeof provider !== 'object' && typeof provider !== 'function'))
     throw new AstrologyError('INVALID_INPUT', 'Explicit input and house-angle provider are required');
 
   // Read each request field once before validation/provider I/O.
