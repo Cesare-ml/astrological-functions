@@ -125,17 +125,16 @@ test('ignores untrusted pointIds and facts iterators',()=>{
   const out=indexIntraChartAspects({pointIds,facts});
   assert.equal(out.factCount,1);assert.equal(called,0);
 });
-test('snapshots each numeric fact getter once',()=>{
+test('rejects numeric fact accessors without executing them',()=>{
   const f={pointAId:'A',pointBId:'B',aspectId:'square',
     exactAngleDeg:90,actualAngleDeg:90,signedOrbDeg:0,absoluteOrbDeg:0,configuredMaxOrbDeg:0};
   const reads={};
   for(const key of ['exactAngleDeg','actualAngleDeg','signedOrbDeg','absoluteOrbDeg','configuredMaxOrbDeg']){
     const saved=f[key];reads[key]=0;
-    Object.defineProperty(f,key,{get(){return ++reads[key]===1?saved:NaN;}});
+    Object.defineProperty(f,key,{get(){reads[key]++;return saved;}});
   }
-  const out=indexIntraChartAspects({pointIds:['A','B'],facts:[f]});
-  assert.equal(out.factCount,1);
-  for(const key of Object.keys(reads))assert.equal(reads[key],1);
+  failsWith(()=>indexIntraChartAspects({pointIds:['A','B'],facts:[f]}),'INVALID_ASPECT_FACT');
+  for(const key of Object.keys(reads))assert.equal(reads[key],0);
 });
 test('rejects sparse IDs and facts even with synthetic iterators',()=>{
   const pointIds=new Array(1),facts=new Array(1);
