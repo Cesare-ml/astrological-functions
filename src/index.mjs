@@ -137,9 +137,31 @@ export function calculateCrossAspects({direction,sourcePoints,targetPoints,aspec
  * ecliptic-of-date positions. Current VirgoStars Ephemeris SPK prototype only
  * supplies geometric J2000 vectors and therefore CANNOT satisfy this yet.
  */
+function isValidUtcInstant(datetimeUtc) {
+  if (typeof datetimeUtc !== 'string') return false;
+  const match = /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.(\\d+))?Z$/.exec(datetimeUtc);
+  if (!match) return false;
+
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  if (month < 1 || month > 12 || hour > 23 || minute > 59 || second > 59) return false;
+
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (day < 1 || day > daysInMonth[month - 1]) return false;
+
+  // Keep the platform parser as a final representability check, but never
+  // rely on it for calendar validity: Date.parse normalizes some overflow dates.
+  return Number.isFinite(Date.parse(datetimeUtc));
+}
+
 export async function calculateNatalWithProvider({ datetimeUtc, latitudeDeg, longitudeDegEast, bodyNames, provider }) {
-  if (typeof datetimeUtc !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(datetimeUtc) ||
-      Number.isNaN(Date.parse(datetimeUtc)))
+  if (!isValidUtcInstant(datetimeUtc))
     throw new AstrologyError('INVALID_UTC', 'Explicit ISO UTC instant ending Z is required');
   finite(latitudeDeg, 'latitudeDeg'); finite(longitudeDegEast, 'longitudeDegEast');
   if (latitudeDeg < -90 || latitudeDeg > 90 || longitudeDegEast < -180 || longitudeDegEast > 180)
