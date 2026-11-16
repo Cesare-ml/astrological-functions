@@ -56,7 +56,16 @@ export function calculateLunarElongationSectors(input) {
   const sunLongitudeDeg = normalize360(input.sunLongitudeDeg);
   const moonLongitudeDeg = normalize360(input.moonLongitudeDeg);
   const directedElongationDeg = normalize360(moonLongitudeDeg - sunLongitudeDeg);
-  const sectorIndex = Math.floor(normalize360(directedElongationDeg + 22.5) / 45);
+  // Compare against half-sector cusps directly. Adding 22.5 before the
+  // division can round the representable value immediately below a cusp
+  // onto the cusp (e.g. 22.499999999999996 + 22.5 === 45).
+  // Boundary ties belong to the next sector in increasing-angle direction.
+  const halfSectorBoundaries = [22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5];
+  let sectorIndex = 0;
+  for (let i = 0; i < halfSectorBoundaries.length; i++) {
+    if (directedElongationDeg < halfSectorBoundaries[i]) break;
+    sectorIndex = (i + 1) % SECTOR_IDS.length;
+  }
   const sectorCenterDeg = sectorIndex * 45;
   return Object.freeze({
     contract: 'LunarElongationSectors',
