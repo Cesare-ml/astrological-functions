@@ -30,8 +30,25 @@ const compareId = (a, b) => a < b ? -1 : a > b ? 1 : 0;
 export function indexIntraChartAspects({ pointIds, facts } = {}) {
   if (!Array.isArray(pointIds) || pointIds.length > MAX_POINTS)
     fail('INVALID_ASPECT_INDEX', `pointIds must be an array of at most ${MAX_POINTS}`);
-  if (!Array.isArray(facts) || facts.length > MAX_FACTS)
+  if (!Array.isArray(facts))
     fail('INVALID_ASPECT_INDEX', `facts must be an array of at most ${MAX_FACTS}`);
+
+  // Pin the caller's workload bound once, then detach the complete list of
+  // fact references before reading any caller-controlled fact properties.
+  // A fact getter may mutate the original array (including its length), but
+  // it can neither add work nor make factCount disagree with published edges.
+  const factCount = facts.length;
+  if (factCount > MAX_FACTS)
+    fail('INVALID_ASPECT_INDEX', `facts must be an array of at most ${MAX_FACTS}`);
+  const factSnapshot = [];
+  for (let i = 0; i < factCount; i++) {
+    if (!Object.hasOwn(facts, i))
+      fail('INVALID_ASPECT_FACT', 'facts must have own dense slots');
+    const slot = Object.getOwnPropertyDescriptor(facts, String(i));
+    if (!slot || !Object.hasOwn(slot, 'value'))
+      fail('INVALID_ASPECT_FACT', 'facts must use own data slots; accessor-backed array entries are unsupported');
+    factSnapshot.push(slot.value);
+  }
 
   const graph = new Map();
   for (let i = 0; i < pointIds.length; i++) {
@@ -43,10 +60,8 @@ export function indexIntraChartAspects({ pointIds, facts } = {}) {
   }
 
   const seenFacts = new Set();
-  for (let i = 0; i < facts.length; i++) {
-    if (!Object.hasOwn(facts, i))
-      fail('INVALID_ASPECT_FACT', 'facts must have own dense slots');
-    const fact = facts[i];
+  for (let i = 0; i < factCount; i++) {
+    const fact = factSnapshot[i];
     if (!fact || typeof fact !== 'object' || Array.isArray(fact))
       fail('INVALID_ASPECT_FACT', 'Each aspect fact must be an object');
     // Exactly one field-read for each value: never check one getter result
@@ -86,8 +101,6 @@ export function indexIntraChartAspects({ pointIds, facts } = {}) {
   return Object.freeze({
     contract:'IntraChartAspectIndex',contractVersion:'0.1.0-experimental',
     validationStatus:'CALLER_SUPPLIED_FACTS_NOT_ASTRONOMICALLY_VERIFIED',
-    pointCount:graph.size,factCount:facts.length,nodes:Object.freeze(nodes),
+    pointCount:graph.size,factCount,nodes:Object.freeze(nodes),
   });
 }
-
-
