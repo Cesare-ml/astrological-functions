@@ -7,6 +7,10 @@ import { AstrologyError } from './index.mjs';
 
 const MAX_POINTS = 128;
 const MAX_FACTS = 65536;
+const FACT_FIELDS = Object.freeze([
+  'pointAId', 'pointBId', 'aspectId', 'exactAngleDeg', 'actualAngleDeg',
+  'configuredMaxOrbDeg', 'signedOrbDeg', 'absoluteOrbDeg',
+]);
 
 function fail(code, message) {
   throw new AstrologyError(code, message);
@@ -24,33 +28,61 @@ function finiteRange(value, field, min, max) {
 const compareId = (a, b) => a < b ? -1 : a > b ? 1 : 0;
 
 /**
+ * Read an own enumerable data slot without invoking a caller-supplied getter.
+ * This also rejects holes and accessor-backed array indexes.
+ */
+function readOwnDataSlot(array, index, code, label) {
+  const descriptor = Object.getOwnPropertyDescriptor(array, String(index));
+  if (!descriptor || !Object.hasOwn(descriptor, 'value') || descriptor.enumerable !== true)
+    fail(code, `${label} must contain own enumerable data slots`);
+  return descriptor.value;
+}
+
+/**
+ * Detach every consumed fact value through property descriptors. Destructuring
+ * is deliberately avoided because it would execute getters on untrusted facts.
+ */
+function snapshotFact(fact) {
+  if (!fact || typeof fact !== 'object' || Array.isArray(fact))
+    fail('INVALID_ASPECT_FACT', 'Each aspect fact must be an object');
+
+  const snapshot = {};
+  for (const field of FACT_FIELDS) {
+    const descriptor = Object.getOwnPropertyDescriptor(fact, field);
+    if (!descriptor || !Object.hasOwn(descriptor, 'value') || descriptor.enumerable !== true)
+      fail('INVALID_ASPECT_FACT', `Each aspect fact requires own enumerable data property ${field}`);
+    snapshot[field] = descriptor.value;
+  }
+  return snapshot;
+}
+
+/**
  * Creates bidirectional, read-only point lookup facts without manufacturing
  * A_TO_B/B_TO_A directions or recomputing any geometry.
  */
 export function indexIntraChartAspects({ pointIds, facts } = {}) {
-  if (!Array.isArray(pointIds) || pointIds.length > MAX_POINTS)
+  // Capture the caller's bounded lengths once, before reading any fact fields.
+  // All indexed reads below are descriptor-based and never invoke accessors.
+  const pointCount = Array.isArray(pointIds) ? pointIds.length : -1;
+  const factCount = Array.isArray(facts) ? facts.length : -1;
+  if (pointCount < 0 || pointCount > MAX_POINTS)
     fail('INVALID_ASPECT_INDEX', `pointIds must be an array of at most ${MAX_POINTS}`);
-  if (!Array.isArray(facts) || facts.length > MAX_FACTS)
+  if (factCount < 0 || factCount > MAX_FACTS)
     fail('INVALID_ASPECT_INDEX', `facts must be an array of at most ${MAX_FACTS}`);
 
   const graph = new Map();
-  for (let i = 0; i < pointIds.length; i++) {
-    if (!Object.hasOwn(pointIds, i))
-      fail('INVALID_ASPECT_INDEX', 'pointIds must have own dense slots');
-    const pointId = id(pointIds[i], 'pointId');
+  for (let i = 0; i < pointCount; i++) {
+    const pointId = id(readOwnDataSlot(pointIds, i, 'INVALID_ASPECT_INDEX', 'pointIds'), 'pointId');
     if (graph.has(pointId)) fail('DUPLICATE_POINT', `Duplicate point id: ${pointId}`);
     graph.set(pointId, []);
   }
+  if (facts.length !== factCount)
+    fail('INVALID_ASPECT_INDEX', 'facts array length changed during point validation');
 
   const seenFacts = new Set();
-  for (let i = 0; i < facts.length; i++) {
-    if (!Object.hasOwn(facts, i))
-      fail('INVALID_ASPECT_FACT', 'facts must have own dense slots');
-    const fact = facts[i];
-    if (!fact || typeof fact !== 'object' || Array.isArray(fact))
-      fail('INVALID_ASPECT_FACT', 'Each aspect fact must be an object');
-    // Exactly one field-read for each value: never check one getter result
-    // and publish a different value, or invoke caller array iterators.
+  let indexedFactCount = 0;
+  for (let i = 0; i < factCount; i++) {
+    const fact = snapshotFact(readOwnDataSlot(facts, i, 'INVALID_ASPECT_FACT', 'facts'));
     const {pointAId,pointBId,aspectId,exactAngleDeg,actualAngleDeg,
       configuredMaxOrbDeg,signedOrbDeg,absoluteOrbDeg} = fact;
     const a = id(pointAId, 'pointAId');
@@ -79,14 +111,18 @@ export function indexIntraChartAspects({ pointIds, facts } = {}) {
       absoluteOrbDeg,configuredMaxOrbDeg};
     graph.get(a).push(Object.freeze({otherPointId:b,...base}));
     graph.get(b).push(Object.freeze({otherPointId:a,...base}));
+    indexedFactCount++;
   }
+  if (facts.length !== factCount)
+    fail('INVALID_ASPECT_INDEX', 'facts array length changed during indexing');
+
   const nodes = [...graph.entries()].sort((a, b) => compareId(a[0], b[0])).map(([pointId, connections]) =>
     Object.freeze({pointId,connections: Object.freeze(connections.sort((a, b) =>
       compareId(a.otherPointId, b.otherPointId) || compareId(a.aspectId, b.aspectId)))}));
   return Object.freeze({
     contract:'IntraChartAspectIndex',contractVersion:'0.1.0-experimental',
     validationStatus:'CALLER_SUPPLIED_FACTS_NOT_ASTRONOMICALLY_VERIFIED',
-    pointCount:graph.size,factCount:facts.length,nodes:Object.freeze(nodes),
+    pointCount:graph.size,factCount:indexedFactCount,nodes:Object.freeze(nodes),
   });
 }
 
