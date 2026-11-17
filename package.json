@@ -69,6 +69,10 @@
       "types": "./src/house-systems-extras.d.mts",
       "import": "./src/house-systems-extras.mjs"
     },
+    "./pullen-houses": {
+      "types": "./src/pullen-house-cusps.d.mts",
+      "import": "./src/pullen-house-cusps.mjs"
+    },
     "./vehlow-houses": {
       "types": "./src/vehlow-houses.d.mts",
       "import": "./src/vehlow-houses.mjs"
