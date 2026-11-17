@@ -66,6 +66,14 @@ house angles do not read DE441, and the bridge makes no such claim. No hidden
 Swiss/Porphyry fallback or production integration is added. Current tests
 exercise a *mock of the real binding interface*, not real Rust numerical output.
 
+An additional opt-in **manual real-addon smoke runner** is available at
+`scripts/verify-native-house-bridge.mjs`. It enforces an explicitly supplied
+clean upstream checkout, source commit and exact native-addon SHA-256 before
+loading the binding. It attempts 23 methods and openly blocks Sunshine until
+a separate authentic apparent Sun source exists. See
+[manual Node verification](docs/NATIVE_NODE_HOUSE_SMOKE.md): running the script
+is **not** proof of scientific parity or reproducible native build provenance.
+
 Version: `0.1.0-dev`. The package stays `"private": true` to prevent accidental npm publishing, independently of GitHub repository visibility. There is **no stable API or compatibility commitment yet**.
 
 ## Architecture and safety

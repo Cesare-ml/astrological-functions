@@ -219,3 +219,18 @@ with a fake implementing the published binding *interface*, not Rust results.
 
 No Swiss import, fallback to another house method, native-addon auto-load,
 production consumer change, publish or merge is part of this draft.
+
+### Twelfth isolated batch (stacked on PR #216): executable native smoke preflight
+
+The opt-in `scripts/verify-native-house-bridge.mjs` requires a **clean, pinned**
+upstream Git checkout and a matching SHA-256 of its locally compiled native
+addon before importing `createHouseAngleProvider()`. It then attempts 23
+methods against an actual native provider and writes a JSON receipt to stdout,
+failing nonzero if a route fails. **Sunshine is recorded as blocked** until
+a separately validated, apparent geocentric Sun declination is provided; the
+runner will not invent one. This runner was *not run against a real native
+binary* in the current environment, which lacks Rust and the compiled addon.
+Its local tests verify only CLI and preflight behavior with fake file bytes.
+Even a successful actual native run is structural evidence only; method parity,
+measured timescales, build origin and full polar tolerances remain open gates.
+See [manual runner instructions](NATIVE_NODE_HOUSE_SMOKE.md).
