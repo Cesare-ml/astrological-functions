@@ -85,3 +85,9 @@ Run `node scripts/audit-native-house-latitudes.mjs --help` for CLI help.
 
 The grid's local tests use synthetic mock astronomy only; no actual Rust addon
 or published polar reference was executed during this development increment.
+
+The first later **owner-supplied real Windows addon audit** is summarized in
+[the 17 November native receipt review](NATIVE_NODE_HOUSE_REAL_RUN_2026-11-17.md).
+It recorded 141/161 canonical-shaped results, 20 errors, and identified a
+shared high-latitude quadrant precondition. That receipt is structural
+evidence, not an independently calibrated astronomical reference.
