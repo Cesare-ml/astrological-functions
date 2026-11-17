@@ -9,6 +9,11 @@ The owner has raised **both** of the following to the highest implementation pri
 
 **Non-negotiable gates:** keep the original VirgoStars Rust ephemeris as the only astronomy engine, no Swiss source/fallback, no hidden Porphyry polar substitution, no GitHub Actions, no npm/production release or merge without exact-tree tests and explicit owner review. A method is not complete merely because a source file or draft PR exists. Priorities do not override licensing, provenance or safety checks.
 
+The next stacked draft after #213 introduces a typed, opt-in 24-method selector
+without replacing any existing API, including Gauquelin's separate 36-sector
+result. Its synthetic dispatch/type tests support consumer wiring but do not
+raise any scientific, polar or provider-integration validation status.
+
 ## Verified integration status — 14 November 2026
 
 - **`main` is IMPLEMENTED_ISOLATED, not production-ready.** PR #1 introduced the private pure-math Node ESM prototype; [PR #50](https://github.com/Cesare-ml/astrological-functions/pull/50) was squash-merged on 14 November 2026 (commit `c8eec4c53a0ec077b1859bb4ce1706feb1b72e7e`) to preserve binary64 precision around 360° and signed angular separations.

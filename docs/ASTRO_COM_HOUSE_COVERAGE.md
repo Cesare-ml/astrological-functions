@@ -128,3 +128,34 @@ After these seven draft batches: **7** existing experimental methods on `main`, 
 For inverted/polar 12-cusp geometry where the ordinary forward assignment contract cannot represent results, the experimental function fails closed with typed unavailability instead of returning fake or silently modified cusps. Full polar handling and independent south-hemisphere reference comparisons remain pending.
 
 **Inventory coverage after eight draft batches:** **7** existing experimental house methods on `main` and **17** further method implementations in dependent draft branches = **24 of 24 Astro.com selector IDs represented in experimental code**. This is not completion of the P0 validation, polar parity, Rust provider, consumer integration, licensing or release gates.
+
+### Ninth isolated batch (stacked on PR #213): one opt-in selector for all 24 IDs
+
+`astrological-functions/astro-com-house-selector` exposes:
+
+- `ASTRO_COM_HOUSE_SYSTEM_IDS`: an immutable array in the official selector order (24 distinct IDs, no `Default (Placidus)` duplicate).
+- `ASTRO_COM_HOUSE_METHODS`: per-method descriptors with `resultKind`, `validationStatus: 'IMPLEMENTED_ISOLATED'`, and the additional apparent Sun declination requirement for `SUNSHINE`. These flags do **not** imply method-specific polar availability or reference accuracy.
+- `calculateAstroComHouseMethod({ houseSystem, input })`: a strictly validated dispatch to the corresponding **existing** geometry function. TypeScript consumers receive a discriminated `AstroComHouseMethodRequest` union, so each selected ID requires its specific original input shape. Returned result contracts, provenance, errors, and UTC formatting are preserved unchanged.
+
+```ts
+import {calculateAstroComHouseMethod} from 'astrological-functions/astro-com-house-selector';
+import type {PorphyryHouseInput} from 'astrological-functions/porphyry-houses';
+
+// "input" is provided by the caller after obtaining validated, versioned
+// angles/source from VirgoStars Ephemeris. It is not calculated by this library.
+declare const input: PorphyryHouseInput;
+const result = calculateAstroComHouseMethod({houseSystem: 'PORPHYRY', input});
+```
+
+The `GAUQUELIN_36` request returns its separate `GauquelinSectorBoundaries`
+contract with `sectorBoundariesDeg.length === 36`, **never** a twelve-cusp
+house result. Planet-specific true-body sector positions still use the separate
+`locateGauquelinBodySector` API with versioned supplied equatorial coordinates.
+
+There is no default method, automatic conversion between `ascendantDeg` and
+`ascendantLongitudeDeg`, substitute for missing Sun declination, synthetic
+ephemeris provider, or hidden polar/Porphyry fallback. An unrecognized ID or
+malformed request fails with `AstrologyError`. Method-specific failures pass
+through intact. The test grid exercises all 24 dispatch routes with **synthetic**
+geometry only. Real Rust/DE441 parity and full Astro.com reference validation
+remain blockers; this work stays a draft, not a production integration.
