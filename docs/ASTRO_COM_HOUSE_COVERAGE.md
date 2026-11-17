@@ -8,13 +8,13 @@ Official references:
 - [Astro.com house-system explanations](https://www.astro.com/faq/fq_fh_owhouse_e.htm)
 - [Astrodienst/Swiss Ephemeris documentation, §6.2](https://www.astro.com/swisseph-download/doc/swisseph.pdf) — specification/reference only, **do not port or copy its source**.
 
-`main` status is a repository inventory, **not** proof of production/astronomical accuracy. `THIS_PR` entries belong to draft PR #206, `STACKED_PR` to draft PR #207 (based on #206), and `STACKED_PR_2` to this third draft batch (based on #207). None is counted on `main` until reviewed and merged.
+`main` status is a repository inventory, **not** proof of production/astronomical accuracy. `THIS_PR` entries belong to draft PR #206, `STACKED_PR` to draft PR #207 (based on #206), `STACKED_PR_2` to draft PR #208 (based on #207), and `STACKED_PR_3` to the current fourth draft batch based on #208. None is counted on `main` until reviewed and merged.
 
 | Astro.com selector method | Canonical ID | Implementation status | Required next validation or design |
 | --- | --- | --- | --- |
 | Placidus | `PLACIDUS` | `MAIN_EXPERIMENTAL` | High-latitude, full Rust/DE441 parity and non-convergence |
 | Koch | `KOCH` | `MAIN_EXPERIMENTAL` | Polar restrictions, reference fixtures |
-| Campanus | `CAMPANUS` | `PENDING` | Prime-vertical projection, upper/lower hemisphere geometry |
+| Campanus | `CAMPANUS` | `STACKED_PR_3` | Prime-vertical geometry; independent north/south fixture grid |
 | Regiomontanus | `REGIOMONTANUS` | `MAIN_EXPERIMENTAL` | Reference comparisons incl. south/polar latitudes |
 | equal | `EQUAL_ASCENDANT` | `MAIN_EXPERIMENTAL` | Provider ASC pin, consumer parity |
 | equal (midheaven) | `EQUAL_MIDHEAVEN` | `THIS_PR` | MC provenance, reference fixtures; ASC need not be cusp 1 |
@@ -23,11 +23,11 @@ Official references:
 | whole (1=Aries) | `WHOLE_ARIES` | `THIS_PR` | Fixed Aries origin in the declared tropical/sidereal basis |
 | Meridian | `MERIDIAN` | `STACKED_PR_2` | Equatorial division projected by right ascension; independent MC fixture parity |
 | Porphyry | `PORPHYRY` | `MAIN_EXPERIMENTAL` | Nondegenerate axes and reference parity |
-| Alcabitius | `ALCABITIUS` | `PENDING` | Ascendant diurnal-arc trisection and poles |
+| Alcabitius | `ALCABITIUS` | `STACKED_PR_3` | Ascendant diurnal-arc trisection; polar/non-rising arcs |
 | Krusinski-Pisa-Goelzer | `KRUSINSKI_PISA_GOELZER` | `PENDING` | Ascendant–zenith circle with polar constraints |
 | Azimuth | `AZIMUTH` | `PENDING` | Horizon directional sectors; eastern cusp semantics |
 | Morinus | `MORINUS` | `STACKED_PR_2` | Equatorial-to-ecliptic projection; distinguish Meridian, independent fixtures |
-| Polich-Page | `POLICH_PAGE` | `PENDING` | Topocentric-style thirds and high latitudes |
+| Polich-Page | `POLICH_PAGE` | `STACKED_PR_3` | Topocentric-style thirds; reversed high-latitude ordering not yet supported |
 | APC | `APC` | `PENDING` | Declination parallel arcs; do not force opposite cusps |
 | Pullen SD (Neo-Porphyry) | `PULLEN_SD` | `STACKED_PR` | Sinusoidal delta, small quadrants and zero-width special placement |
 | Pullen SR | `PULLEN_SR` | `STACKED_PR` | Positive sinusoidal ratio, wrap and normalization |
@@ -77,4 +77,14 @@ Track each of these groups to `VALIDATED_LOCAL`, then `BACKEND_SHADOW_TESTED`/`S
 
 No formula infers astronomical ARMC, ASC, MC, obliquity or a temporal model; these must be supplied by the externally validated astronomy engine. The available regression suite is synthetic, **not** independent Astro.com numerical parity. Extreme latitude/degenerate ASC behavior, real Rust/DE441 comparison and consumer parity remain blocking validation gates.
 
-After these three draft batches: **7** existing experimental methods on `main`, **8** additional methods in stacked draft branches, **9** methods still missing. The count is implementation coverage, not scientific or release validation.
+### Fourth isolated batch (stacked on PR #208)
+
+`src/diurnal-house-cusps.mjs` adds three additional, independently distinguishable geometric methods under the opt-in typed ESM `./diurnal-houses` subpath:
+
+- **Campanus**: trisects the prime vertical into 30° arcs and intersects ecliptic with great circles through the north/south horizon points. The supplied ASC/MC are checked against ARMC, latitude and obliquity.
+- **Alcabitius**: derives the Ascendant's semi-diurnal and semi-nocturnal *equatorial* arcs from supplied geometry, trisects those arcs and converts the resulting right ascensions to ecliptic cusps. It rejects non-rising and degenerate arc cases.
+- **Polich-Page**: uses distinct intermediate polar heights `atan(tan(latitude)/3)` and `atan(2*tan(latitude)/3)`, not Regiomontanus's formula, to construct house-circle intersections with the ecliptic.
+
+The three methods share strict timezone, source/frame, known birth time, angle-consistency and immutable result requirements, **but not one another's cusp algorithms**. The existing forward 12-cusp position contract deliberately rejects inverted/reversed geometries (including some extreme southern latitudes): this is an **explicit unsupported case**, not evidence that Polich-Page's conventional polar behavior is fully supported. No silent Porphyry substitute exists. Real provider, high-latitude and independent Astro.com numeric comparison remain gates.
+
+After these four draft batches: **7** existing experimental methods on `main`, **11** additional methods in stacked draft branches, **6** methods still missing. This is **isolated implementation coverage only**, not release or scientific validation.

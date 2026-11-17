@@ -77,6 +77,10 @@
       "types": "./src/axial-house-cusps.d.mts",
       "import": "./src/axial-house-cusps.mjs"
     },
+    "./diurnal-houses": {
+      "types": "./src/diurnal-house-cusps.d.mts",
+      "import": "./src/diurnal-house-cusps.mjs"
+    },
     "./vehlow-houses": {
       "types": "./src/vehlow-houses.d.mts",
       "import": "./src/vehlow-houses.mjs"
