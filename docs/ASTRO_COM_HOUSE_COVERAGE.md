@@ -159,3 +159,36 @@ malformed request fails with `AstrologyError`. Method-specific failures pass
 through intact. The test grid exercises all 24 dispatch routes with **synthetic**
 geometry only. Real Rust/DE441 parity and full Astro.com reference validation
 remain blockers; this work stays a draft, not a production integration.
+
+### Tenth isolated batch (stacked on PR #214): one pinned angle-provider route
+
+`astrological-functions/astro-com-house-provider` adds the async
+`calculateAstroComHouseFromProvider(request, provider)` composition contract.
+The caller explicitly selects a canonical method and supplies:
+
+- a real UTC instant with seconds, a known birth time, UT1 and TT Julian days;
+- nonpolar geographic latitude and east longitude, with **no** automatic timezone/UT1/TT conversion;
+- expected `engineVersion`, `kernelSetId` and `timeModel` identities;
+- a synchronous/asynchronous injected `calculateHouseAngles` callback returning
+  matching observer, epoch, identity and the exact experimental
+  `IAU2006_2000B_APPROXIMATE_SIDEREAL_TIME` model with finite ARMC, ASC, MC and
+  true obliquity;
+- for **Sunshine only**, an independent apparent geocentric Sun declination
+  whose UTC, engine/kernel/time model and correction source pass Sunshine's
+  existing strict validation.
+
+The adapter builds each of the 24 **original** method-specific input contracts;
+the astronomical provenance remains attached to the output alongside the
+original house result. Unavailable polar geometry and bad provider metadata
+fail closed. No single unrequested house method is evaluated; an unavailable
+Placidus computation therefore cannot block a requested Porphyry calculation.
+The opt-in adapter does **not** replace the existing five-house `./house-set`
+prototype or the natal/chart interfaces.
+
+This initial adapter explicitly covers **modern UTC instants**: UT1 is checked
+to within two seconds of the UTC day count and TT must belong to the same
+calendar day, without making either conversion internally. Historical epochs
+with larger time-scale differences require a reviewed versioned policy before
+admission. All tests use synthetic caller-provided angles, not an independently
+validated VirgoStars Rust/DE441 adapter. No production/shadow integration,
+polar convention or reference accuracy status has been promoted.

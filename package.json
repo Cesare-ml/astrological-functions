@@ -101,6 +101,10 @@
       "types": "./src/astro-com-house-selector.d.mts",
       "import": "./src/astro-com-house-selector.mjs"
     },
+    "./astro-com-house-provider": {
+      "types": "./src/astro-com-house-provider.d.mts",
+      "import": "./src/astro-com-house-provider.mjs"
+    },
     "./vehlow-houses": {
       "types": "./src/vehlow-houses.d.mts",
       "import": "./src/vehlow-houses.mjs"
