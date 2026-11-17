@@ -7,6 +7,7 @@
  */
 import { AstrologyError, normalize360, signedAngularDistance, locateLongitudeInHouses } from './index.mjs';
 import { calculatePorphyryHouseCusps } from './porphyry-houses.mjs';
+import { expectedRisingAscendantDeg } from './house-ascendant-orientation.mjs';
 
 const RAD = Math.PI / 180;
 const DEG = 180 / Math.PI;
@@ -63,8 +64,8 @@ function validated(input) {
   const theta=armcDeg*RAD, epsilon=input.trueObliquityDeg*RAD;
   const latitude=base.source.observer.latitudeDeg*RAD;
   const expectedMc=eclipticAtRa(armcDeg,epsilon);
-  const expectedAsc=normalize360(Math.atan2(-Math.cos(theta),
-    Math.sin(epsilon)*Math.tan(latitude)+Math.cos(epsilon)*Math.sin(theta))*DEG+180);
+  const expectedAsc=expectedRisingAscendantDeg(armcDeg,
+    input.trueObliquityDeg,base.source.observer.latitudeDeg);
   if(!near(base.angles.midheavenDeg,expectedMc)||!near(base.angles.ascendantDeg,expectedAsc))
     fail('INCONSISTENT_ANGLES','ASC and MC must agree with ARMC, latitude and obliquity');
 

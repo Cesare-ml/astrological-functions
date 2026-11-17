@@ -129,6 +129,20 @@ For inverted/polar 12-cusp geometry where the ordinary forward assignment contra
 
 **Inventory coverage after eight draft batches:** **7** existing experimental house methods on `main` and **17** further method implementations in dependent draft branches = **24 of 24 Astro.com selector IDs represented in experimental code**. This is not completion of the P0 validation, polar parity, Rust provider, consumer integration, licensing or release gates.
 
+### Isolated north-polar rising-Ascendant consistency regression — 18 November 2026
+
+The draft upstream Rust fix [VirgoStars-Ephemeris PR #596](https://github.com/Cesare-ml/VirgoStars-Ephemeris/pull/596) corrects a polar case in which the traditional horizon-intersection formula selected the **setting** ecliptic point as Ascendant. Its automated Rust/Node CI is green, but the upstream PR is not merged or installed into an independently verified native-addon build.
+
+Five isolated house-method modules previously recalculated that same traditional branch when validating external source angles. Their eight affected methods were Campanus, Regiomontanus, Alcabitius, Krusinski–Pisa–Goelzer, Azimuth, Polich–Page, APC, and Albategnius. The new shared *internal validation* geometry chooses the rising intersection without performing date-dependent astronomy or replacing the caller's Rust angles. It does **not** alter any method's cusp algorithm or implicitly choose Porphyry at high latitude.
+
+At the owner's **synthetic** 80° N scenario (ARMC 292.95347186375847°, true obliquity 23.437676823739082°, rising ASC 344.5489205114233°, MC 291.23482098822°), the isolated outcome after this validation change is:
+
+- **3 structurally valid 12-cusp outputs:** Alcabitius, Krusinski–Pisa–Goelzer and Azimuth.
+- **5 explicit unavailable outcomes:** Campanus, Regiomontanus, Polich–Page and APC (`HOUSE_GEOMETRY_UNAVAILABLE`); Albategnius (`ALBATEGNIUS_HOUSES_UNAVAILABLE`).
+- **0 misleading `INCONSISTENT_ANGLES` results** among those eight when the corrected rising Ascendant is supplied.
+
+This is a consistency/availability check, **not** independent Astro.com cusp parity. All eight methods still require method-specific scientific references at polar latitudes, verified native source/installed binary identity, and explicit consumer acceptance before production usage. The original seven-latitude receipt predates the upstream polar fix and must not be represented as a new binary result. Track final validation in [astrological-functions issue #223](https://github.com/Cesare-ml/astrological-functions/issues/223).
+
 ### Ninth isolated batch (stacked on PR #213): one opt-in selector for all 24 IDs
 
 `astrological-functions/astro-com-house-selector` exposes:
