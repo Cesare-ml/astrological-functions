@@ -8,7 +8,7 @@ Official references:
 - [Astro.com house-system explanations](https://www.astro.com/faq/fq_fh_owhouse_e.htm)
 - [Astrodienst/Swiss Ephemeris documentation, §6.2](https://www.astro.com/swisseph-download/doc/swisseph.pdf) — specification/reference only, **do not port or copy its source**.
 
-`main` status is a repository inventory, **not** proof of production/astronomical accuracy. `THIS_PR` entries belong to draft PR #206, `STACKED_PR` to #207, `STACKED_PR_2` to #208, `STACKED_PR_3` to #209, `STACKED_PR_4` to #210, and `STACKED_PR_5` to the sixth draft batch based on #210. Each batch depends on the previous PR and none is counted on `main` until reviewed and merged.
+`main` status is a repository inventory, **not** proof of production/astronomical accuracy. `THIS_PR` entries belong to draft PR #206, `STACKED_PR` to #207, `STACKED_PR_2` to #208, `STACKED_PR_3` to #209, `STACKED_PR_4` to #210, `STACKED_PR_5` to #211, and `STACKED_PR_6` to the seventh draft batch based on #211. Each batch depends on the previous PR and none is counted on `main` until reviewed and merged.
 
 | Astro.com selector method | Canonical ID | Implementation status | Required next validation or design |
 | --- | --- | --- | --- |
@@ -34,7 +34,7 @@ Official references:
 | Sripati | `SRIPATI` | `THIS_PR` | Midpoint of preceding/current Porphyry cusps; reference parity |
 | Carter poli-equatorial | `CARTER_POLI_EQUATORIAL` | `STACKED_PR_2` | Ascendant RA anchor; MC need not be cusp 10; independent fixture parity |
 | Sunshine | `SUNSHINE` | `STACKED_PR_5` | Externally sourced apparent Sun declination; collapsed polar arcs not yet supported |
-| Gauquelin sectors | `GAUQUELIN_36` | `PENDING` | **36 sectors**, clockwise; specialized planetary house positions |
+| Gauquelin sectors | `GAUQUELIN_36` | `STACKED_PR_6` | **36 sectors**, clockwise; ecliptic cusp divisions and actual body position distinct, high-latitude Ludwig/reference parity |
 | Albategnius | `ALBATEGNIUS` | `PENDING` | Independent specification, implementation and reference fixtures |
 
 ## P0-E — all experimental functionality
@@ -106,3 +106,15 @@ Both require pinned topocentric of-date input angles, obliquity, ARMC, observer,
 Both preserve the known ASC/IC/DSC/MC axis cusps while allowing **non-opposite intermediate cusps**, as required by their definitions. Ordinary forward 12-house assignment is supported only where both declination arcs are nondegenerate and the Sun/Ascendant actually rises and sets. The documented Astro.com coincident-cusp polar behavior of Sunshine requires a distinct placement/result contract and is **not implemented** here: this experimental version returns typed unavailability rather than a fake success or Porphyry fallback. Real Rust Sun provider and independent numeric Astro.com parity are pending.
 
 After these six draft batches: **7** existing experimental methods on `main`, **15** additional methods in stacked unmerged draft branches, **2** methods still missing: Gauquelin 36-sector and Albategnius. This is **isolated implementation coverage only**, not release or scientific validation.
+
+### Seventh isolated batch (stacked on PR #211)
+
+The experimental `./gauquelin-sectors` subpath adds **Gauquelin's 36 clockwise sectors**, kept distinct from all 12-house result and placement contracts:
+
+- `calculateGauquelinSectors` numerically inverts the ecliptic points' Placidus semi-arc positions to return **36 boundary longitudes**, with 1 rising (ASC), 10 upper meridian (MC), 19 setting (DSC), 28 lower meridian (IC). It does not equate 36 sectors to equal zodiac longitude spans.
+- `locateGauquelinEclipticSector` returns the fractional clockwise sector of an ecliptic longitude with celestial latitude set to zero, and `locateGauquelinBodySector` uses independently supplied **apparent geocentric equatorial-of-date right ascension and declination**, including the effect of nonzero celestial latitude. The external body position must match the house angle engine, kernel, time model and UTC instant. Neither function computes astronomy.
+- Sector placement includes a named Gauquelin plus/minus zone based on the conventional plus sectors: 36–3, 9–12, 19–21, 28–30. This is a *historical statistical category*, not an interpretation or predictive claim.
+
+The first version requires ordinary rising/setting arcs for all cusp points and the requested body. The polar Otto Ludwig method used in one reference variant is **not yet supported**, nor are event-time disk-center rise/set algorithms with/without refraction. Inputs beyond the supported geometry return typed unavailability, never an equal-sector or Porphyry fallback. External Astro.com/Swiss test comparisons and Rust provider integration still gate release.
+
+After these seven draft batches: **7** existing experimental methods on `main`, **16** additional implementations in draft branches, **1** remaining implementation target, Albategnius. This is not evidence of scientific parity or production readiness.

@@ -89,6 +89,10 @@
       "types": "./src/declination-arc-house-cusps.d.mts",
       "import": "./src/declination-arc-house-cusps.mjs"
     },
+    "./gauquelin-sectors": {
+      "types": "./src/gauquelin-sectors.d.mts",
+      "import": "./src/gauquelin-sectors.mjs"
+    },
     "./vehlow-houses": {
       "types": "./src/vehlow-houses.d.mts",
       "import": "./src/vehlow-houses.mjs"
