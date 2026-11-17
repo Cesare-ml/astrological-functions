@@ -113,6 +113,7 @@ export async function runNativeHouseSmoke(options) {
   });
   const results = [];
   const failures = [];
+  let angles = null;
   for (const houseSystem of ASTRO_COM_HOUSE_SYSTEM_IDS) {
     if (houseSystem === 'SUNSHINE') continue; // Never synthesize apparent Sun declination.
     try {
@@ -127,6 +128,16 @@ export async function runNativeHouseSmoke(options) {
           !valuesDeg.every(Number.isFinite)) {
         throw new Error('E_NATIVE_SMOKE_SHAPE: incorrect method, count or nonfinite output');
       }
+      const extractedAngles = Object.freeze({
+        model: out.angleSource.model, armcDeg: out.angleSource.armcDeg,
+        ascendantDeg: out.angleSource.ascendantDeg,
+        midheavenDeg: out.angleSource.midheavenDeg,
+        trueObliquityDeg: out.angleSource.trueObliquityDeg,
+      });
+      if (angles && Object.keys(angles).some(key => angles[key] !== extractedAngles[key])) {
+        throw new Error('E_NATIVE_SMOKE_DRIFT: source angles changed between house-method calls');
+      }
+      angles = extractedAngles;
       results.push({houseSystem, valuesDeg});
     } catch (error) {
       failures.push({houseSystem, code: error.code ?? 'E_NATIVE_SMOKE_CALC',
@@ -142,6 +153,7 @@ export async function runNativeHouseSmoke(options) {
       nativeAddonSha256: files.nativeAddonSha256, kernelContext: options.kernelContext,
       kernelRole: 'CALLER_CONTEXT_ONLY_HOUSE_ANGLES_DO_NOT_READ_DE441'},
     fixture: HOUSE_SMOKE_FIXTURE,
+    angles,
     attempted: ASTRO_COM_HOUSE_SYSTEM_IDS.length - 1,
     passed: results.length, failed: failures.length,
     blocked: [{houseSystem: 'SUNSHINE',
