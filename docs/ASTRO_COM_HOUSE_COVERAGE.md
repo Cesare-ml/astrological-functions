@@ -8,7 +8,7 @@ Official references:
 - [Astro.com house-system explanations](https://www.astro.com/faq/fq_fh_owhouse_e.htm)
 - [Astrodienst/Swiss Ephemeris documentation, §6.2](https://www.astro.com/swisseph-download/doc/swisseph.pdf) — specification/reference only, **do not port or copy its source**.
 
-`main` status is a repository inventory, **not** proof of production/astronomical accuracy. `THIS_PR` entries belong to draft PR #206; `STACKED_PR` entries are an additional branch dependent on that PR. Neither is counted on `main` until reviewed and merged.
+`main` status is a repository inventory, **not** proof of production/astronomical accuracy. `THIS_PR` entries belong to draft PR #206, `STACKED_PR` to draft PR #207 (based on #206), and `STACKED_PR_2` to this third draft batch (based on #207). None is counted on `main` until reviewed and merged.
 
 | Astro.com selector method | Canonical ID | Implementation status | Required next validation or design |
 | --- | --- | --- | --- |
@@ -21,18 +21,18 @@ Official references:
 | Vehlow | `VEHLOW` | `MAIN_EXPERIMENTAL` | Separate legacy `egizia`/houses_pos parity |
 | whole signs | `WHOLE_SIGN` | `MAIN_EXPERIMENTAL` | Explicit rising sign and zodiac frame |
 | whole (1=Aries) | `WHOLE_ARIES` | `THIS_PR` | Fixed Aries origin in the declared tropical/sidereal basis |
-| Meridian | `MERIDIAN` | `PENDING` | Equatorial division projected by right ascension |
+| Meridian | `MERIDIAN` | `STACKED_PR_2` | Equatorial division projected by right ascension; independent MC fixture parity |
 | Porphyry | `PORPHYRY` | `MAIN_EXPERIMENTAL` | Nondegenerate axes and reference parity |
 | Alcabitius | `ALCABITIUS` | `PENDING` | Ascendant diurnal-arc trisection and poles |
 | Krusinski-Pisa-Goelzer | `KRUSINSKI_PISA_GOELZER` | `PENDING` | Ascendant–zenith circle with polar constraints |
 | Azimuth | `AZIMUTH` | `PENDING` | Horizon directional sectors; eastern cusp semantics |
-| Morinus | `MORINUS` | `PENDING` | Equatorial-to-ecliptic projection; distinguish Meridian |
+| Morinus | `MORINUS` | `STACKED_PR_2` | Equatorial-to-ecliptic projection; distinguish Meridian, independent fixtures |
 | Polich-Page | `POLICH_PAGE` | `PENDING` | Topocentric-style thirds and high latitudes |
 | APC | `APC` | `PENDING` | Declination parallel arcs; do not force opposite cusps |
 | Pullen SD (Neo-Porphyry) | `PULLEN_SD` | `STACKED_PR` | Sinusoidal delta, small quadrants and zero-width special placement |
 | Pullen SR | `PULLEN_SR` | `STACKED_PR` | Positive sinusoidal ratio, wrap and normalization |
 | Sripati | `SRIPATI` | `THIS_PR` | Midpoint of preceding/current Porphyry cusps; reference parity |
-| Carter poli-equatorial | `CARTER_POLI_EQUATORIAL` | `PENDING` | Ascendant RA anchor; MC need not be cusp 10 |
+| Carter poli-equatorial | `CARTER_POLI_EQUATORIAL` | `STACKED_PR_2` | Ascendant RA anchor; MC need not be cusp 10; independent fixture parity |
 | Sunshine | `SUNSHINE` | `PENDING` | Rust-supplied Sun declination; polar day/night policies |
 | Gauquelin sectors | `GAUQUELIN_36` | `PENDING` | **36 sectors**, clockwise; specialized planetary house positions |
 | Albategnius | `ALBATEGNIUS` | `PENDING` | Independent specification, implementation and reference fixtures |
@@ -67,4 +67,14 @@ Track each of these groups to `VALIDATED_LOCAL`, then `BACKEND_SHADOW_TESTED`/`S
 
 `src/pullen-house-cusps.mjs` implements **Pullen Sinusoidal Delta** and **Pullen Sinusoidal Ratio** from their published three-house width relationships, on top of the validated local Porphyry quadrant producer. The Delta method uses nonnegative side/middle/side spans and explicitly reports a zero-width middle house when a quadrant is at most 30°; the ordinary 12-cusp locator is intentionally **not** claimed compatible with repeated cusps. The Ratio method solves its independent positive width ratio using bounded bisection, preserving valid widths even for narrow quadrants. Both have an opt-in typed ESM `./pullen-houses` subpath and synthetic regressions; neither has yet passed an independent real-world reference fixture grid.
 
-After these two draft batches: **7** existing experimental methods on `main`, **5** additional methods in stacked draft branches, **12** methods still missing. The count is implementation coverage, not scientific or release validation.
+### Third isolated batch (stacked on PR #207)
+
+`src/axial-house-cusps.mjs` implements three distinct right-ascension methods with explicit pinned angle provenance and opt-in `./axial-houses` typed ESM export:
+
+- **Meridian**: 12 equal RA steps, crossing the ecliptic at those RA values, anchored to ARMC so cusp 10 is the caller-provided MC (checked).
+- **Morinus**: 12 equal RA points on the *equator* projected directly into the ecliptic plane. This is mathematically different from Meridian; it deliberately does not bind cusp 1/10 to ASC/MC.
+- **Carter poli-equatorial**: equal RA steps of ecliptic intersections anchored to the RA of the caller-provided ASC, rather than ARMC. Cusp 1 agrees with ASC; cusp 10 need not agree with MC. Exact geographic poles are rejected for Carter.
+
+No formula infers astronomical ARMC, ASC, MC, obliquity or a temporal model; these must be supplied by the externally validated astronomy engine. The available regression suite is synthetic, **not** independent Astro.com numerical parity. Extreme latitude/degenerate ASC behavior, real Rust/DE441 comparison and consumer parity remain blocking validation gates.
+
+After these three draft batches: **7** existing experimental methods on `main`, **8** additional methods in stacked draft branches, **9** methods still missing. The count is implementation coverage, not scientific or release validation.
