@@ -66,6 +66,47 @@ test('selective provider calculation does not fail because another method is pol
     {calculateHouseAngles: () => polarAngles}), error => error instanceof AstrologyError);
 });
 
+test('documented polar semi-arc failures are method-specific before shared quadrant rejection', async () => {
+  // Observed polar angle geometry from the owner-supplied real Rust audit.
+  // This exercises error classification only, NOT independent numeric parity.
+  const northAngles = {...angles, latitudeDeg: 80,
+    armcDeg: 292.95347186375847, ascendantDeg: 164.5489205114233,
+    midheavenDeg: 291.23482098822, trueObliquityDeg: 23.437676823739082};
+  const northRequest = {...request, latitudeDeg: 80};
+  const provider = {calculateHouseAngles: () => northAngles};
+  for (const [houseSystem, code] of [
+    ['PLACIDUS', 'POLAR_HOUSES_UNAVAILABLE'],
+    ['KOCH', 'POLAR_HOUSES_UNAVAILABLE'],
+    ['GAUQUELIN_36', 'GAUQUELIN_CUSPS_UNAVAILABLE'],
+  ]) {
+    await assert.rejects(calculateAstroComHouseFromProvider(
+      {...northRequest, houseSystem}, provider), fail(code));
+  }
+  const southAngles = {...northAngles, latitudeDeg: -80,
+    ascendantDeg: 7.16881630295217};
+  for (const [houseSystem, code] of [
+    ['PLACIDUS', 'POLAR_HOUSES_UNAVAILABLE'],
+    ['KOCH', 'POLAR_HOUSES_UNAVAILABLE'],
+    ['GAUQUELIN_36', 'GAUQUELIN_CUSPS_UNAVAILABLE'],
+  ]) {
+    await assert.rejects(calculateAstroComHouseFromProvider(
+      {...northRequest, latitudeDeg: -80, houseSystem},
+      {calculateHouseAngles: () => southAngles}), fail(code));
+  }
+  // No invented availability for the other methods: Porphyry still fails
+  // closed because its forward quadrant contract is not satisfied here.
+  await assert.rejects(calculateAstroComHouseFromProvider(
+    {...northRequest, houseSystem: 'PORPHYRY'}, provider), fail('DEGENERATE_QUADRANTS'));
+  assert.equal((await calculateAstroComHouseFromProvider(
+    {...northRequest, houseSystem: 'WHOLE_SIGN'}, provider)).result.houseSystem, 'WHOLE_SIGN');
+
+  // A bad provider cannot masquerade as a legitimate polar error.
+  await assert.rejects(calculateAstroComHouseFromProvider(
+    {...northRequest, houseSystem: 'PLACIDUS'},
+    {calculateHouseAngles: () => ({...northAngles, timeModel: 'UNPINNED'})}),
+  fail('INCOMPATIBLE_ANGLE_SOURCE'));
+});
+
 test('provider identity, frame model and observer/epoch must all match exactly', async () => {
   for (const change of [
     {kernelSetId: 'DIFFERENT_KERNEL'}, {timeModel: 'INFERRED_TIME'},
