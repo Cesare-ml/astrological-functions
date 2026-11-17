@@ -11,6 +11,16 @@ const EXPECTED_MODEL = 'IAU2006_2000B_APPROXIMATE_SIDEREAL_TIME';
 const INPUT_KEYS = new Set(['houseSystem', 'datetimeUtc', 'birthTimeKnown',
   'ut1JulianDay', 'ttJulianDay', 'latitudeDeg', 'longitudeDegEast', 'expectedProvider', 'sun']);
 const IDENTITIES = ['engineVersion', 'kernelSetId', 'timeModel'];
+// These three semi-arc methods have documented polar-circle limits. Check
+// their availability only AFTER the native angle provider has been validated:
+// the shared Porphyry quadrant precondition can otherwise obscure the actual
+// method-specific failure on inverted high-latitude axes. This does not
+// authorize a Porphyry fallback or classify other house methods as unavailable.
+const POLAR_SEMIARC_METHOD_ERRORS = Object.freeze({
+  PLACIDUS: 'POLAR_HOUSES_UNAVAILABLE',
+  KOCH: 'POLAR_HOUSES_UNAVAILABLE',
+  GAUQUELIN_36: 'GAUQUELIN_CUSPS_UNAVAILABLE',
+});
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) &&
   (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null);
 const identifier = value => typeof value === 'string' && value.length > 0 && value.length <= 128 &&
@@ -89,6 +99,13 @@ function verifyAngles(angles, input) {
     trueObliquityDeg: angles.trueObliquityDeg });
 }
 
+function rejectDocumentedPolarSemiArc(houseSystem, latitudeDeg, trueObliquityDeg) {
+  const code = POLAR_SEMIARC_METHOD_ERRORS[houseSystem];
+  if (code && Math.abs(latitudeDeg) >= 90 - trueObliquityDeg) {
+    ERROR(code, `${houseSystem} semi-arc houses are undefined at or beyond the polar circle`);
+  }
+}
+
 function methodInput(houseSystem, request, angleSource, datetimeUtc) {
   const {ascendantDeg, midheavenDeg, armcDeg, trueObliquityDeg} = angleSource;
   const {latitudeDeg, longitudeDegEast, expectedProvider} = request;
@@ -136,6 +153,7 @@ export async function calculateAstroComHouseFromProvider(request, provider) {
   const geometry = await provider.calculateHouseAngles({ut1JulianDay, ttJulianDay,
     latitudeDeg, longitudeDegEast});
   const angleSource = verifyAngles(geometry, request);
+  rejectDocumentedPolarSemiArc(request.houseSystem, latitudeDeg, angleSource.trueObliquityDeg);
   const result = calculateAstroComHouseMethod({houseSystem: request.houseSystem,
     input: methodInput(request.houseSystem, request, angleSource, request.datetimeUtc)});
   return Object.freeze({contract: 'AstroComProviderHouseResult',
