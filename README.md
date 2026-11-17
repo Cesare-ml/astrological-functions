@@ -45,6 +45,15 @@ uses **36 clockwise sectors**, not 12 houses. See
 [house-method coverage](docs/ASTRO_COM_HOUSE_COVERAGE.md) for pending polar,
 provider, scientific parity, and consumer validation.
 
+The further opt-in `astrological-functions/astro-com-house-provider` subpath
+accepts one named house system and a **caller-injected** (sync or async) angle
+provider. It checks explicit UTC, UT1, TT, observer and pinned engine/kernel/
+time-model identities before forwarding the geometry to the selector. The
+provider must already supply real angles and versioned provenance; this is a
+consumer wiring contract, **not** a built-in Rust bridge or proof of DE441
+accuracy. Sunshine still requires a separate, pinned apparent solar
+declination. See the experimental adapter contract and tests for details.
+
 Version: `0.1.0-dev`. The package stays `"private": true` to prevent accidental npm publishing, independently of GitHub repository visibility. There is **no stable API or compatibility commitment yet**.
 
 ## Architecture and safety

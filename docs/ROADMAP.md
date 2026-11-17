@@ -14,6 +14,12 @@ without replacing any existing API, including Gauquelin's separate 36-sector
 result. Its synthetic dispatch/type tests support consumer wiring but do not
 raise any scientific, polar or provider-integration validation status.
 
+The subsequent tenth isolated draft builds a version-pinned injected house-angle
+provider adapter for the 24-method selector, with strict UTC/UT1/TT, observer,
+engine/kernel/time-model and optional apparent-Sun matching. This is an
+**experimental consumer contract using synthetic angle fixtures**; it does not
+close the real Rust/DE441 or full Astro.com parity gate.
+
 ## Verified integration status — 14 November 2026
 
 - **`main` is IMPLEMENTED_ISOLATED, not production-ready.** PR #1 introduced the private pure-math Node ESM prototype; [PR #50](https://github.com/Cesare-ml/astrological-functions/pull/50) was squash-merged on 14 November 2026 (commit `c8eec4c53a0ec077b1859bb4ce1706feb1b72e7e`) to preserve binary64 precision around 360° and signed angular separations.
