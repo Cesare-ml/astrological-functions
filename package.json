@@ -93,6 +93,10 @@
       "types": "./src/gauquelin-sectors.d.mts",
       "import": "./src/gauquelin-sectors.mjs"
     },
+    "./albategnius-houses": {
+      "types": "./src/albategnius-house-cusps.d.mts",
+      "import": "./src/albategnius-house-cusps.mjs"
+    },
     "./vehlow-houses": {
       "types": "./src/vehlow-houses.d.mts",
       "import": "./src/vehlow-houses.mjs"
