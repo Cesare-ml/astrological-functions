@@ -8,7 +8,7 @@ Official references:
 - [Astro.com house-system explanations](https://www.astro.com/faq/fq_fh_owhouse_e.htm)
 - [Astrodienst/Swiss Ephemeris documentation, §6.2](https://www.astro.com/swisseph-download/doc/swisseph.pdf) — specification/reference only, **do not port or copy its source**.
 
-`main` status is a repository inventory, **not** proof of production/astronomical accuracy. `THIS_PR` entries belong to draft PR #206, `STACKED_PR` to draft PR #207 (based on #206), `STACKED_PR_2` to draft PR #208 (based on #207), and `STACKED_PR_3` to the current fourth draft batch based on #208. None is counted on `main` until reviewed and merged.
+`main` status is a repository inventory, **not** proof of production/astronomical accuracy. `THIS_PR` entries belong to draft PR #206, `STACKED_PR` to draft PR #207 (based on #206), `STACKED_PR_2` to draft PR #208 (based on #207), `STACKED_PR_3` to draft PR #209 (based on #208), and `STACKED_PR_4` to the fifth draft batch based on #209. None is counted on `main` until reviewed and merged.
 
 | Astro.com selector method | Canonical ID | Implementation status | Required next validation or design |
 | --- | --- | --- | --- |
@@ -24,8 +24,8 @@ Official references:
 | Meridian | `MERIDIAN` | `STACKED_PR_2` | Equatorial division projected by right ascension; independent MC fixture parity |
 | Porphyry | `PORPHYRY` | `MAIN_EXPERIMENTAL` | Nondegenerate axes and reference parity |
 | Alcabitius | `ALCABITIUS` | `STACKED_PR_3` | Ascendant diurnal-arc trisection; polar/non-rising arcs |
-| Krusinski-Pisa-Goelzer | `KRUSINSKI_PISA_GOELZER` | `PENDING` | Ascendant–zenith circle with polar constraints |
-| Azimuth | `AZIMUTH` | `PENDING` | Horizon directional sectors; eastern cusp semantics |
+| Krusinski-Pisa-Goelzer | `KRUSINSKI_PISA_GOELZER` | `STACKED_PR_4` | Ascendant–zenith great-circle trisection projected via RA; polar limits, real fixtures |
+| Azimuth | `AZIMUTH` | `STACKED_PR_4` | Horizon directional sectors; first cusp at eastern Antivertex, not ASC; real fixtures |
 | Morinus | `MORINUS` | `STACKED_PR_2` | Equatorial-to-ecliptic projection; distinguish Meridian, independent fixtures |
 | Polich-Page | `POLICH_PAGE` | `STACKED_PR_3` | Topocentric-style thirds; reversed high-latitude ordering not yet supported |
 | APC | `APC` | `PENDING` | Declination parallel arcs; do not force opposite cusps |
@@ -87,4 +87,13 @@ No formula infers astronomical ARMC, ASC, MC, obliquity or a temporal model; the
 
 The three methods share strict timezone, source/frame, known birth time, angle-consistency and immutable result requirements, **but not one another's cusp algorithms**. The existing forward 12-cusp position contract deliberately rejects inverted/reversed geometries (including some extreme southern latitudes): this is an **explicit unsupported case**, not evidence that Polich-Page's conventional polar behavior is fully supported. No silent Porphyry substitute exists. Real provider, high-latitude and independent Astro.com numeric comparison remain gates.
 
-After these four draft batches: **7** existing experimental methods on `main`, **11** additional methods in stacked draft branches, **6** methods still missing. This is **isolated implementation coverage only**, not release or scientific validation.
+### Fifth isolated batch (stacked on PR #209)
+
+`src/horizon-house-cusps.mjs` adds independent `KRUSINSKI_PISA_GOELZER` and `AZIMUTH` geometries under the typed opt-in ESM subpath `./horizon-houses`:
+
+- **Krusinski–Pisa–Goelzer**: split the 90° great-circle arc from the real Ascendant to local zenith into three equal steps (and the rest of the great circle into 12). Project each division point along its celestial meridian/right ascension onto the ecliptic. Cusp 1 equals Ascendant, cusp 10 equals MC in supported forward-order geometry.
+- **Azimuth (Horizontal)**: split the actual horizon into twelve 30° directions, then intersect their zenith–nadir vertical circles with the ecliptic. Cusp 1 is the **east-direction Antivertex**, not the Ascendant; cusp 10 is MC in supported ordinary geometry.
+
+Both require pinned topocentric of-date input angles, obliquity, ARMC, observer, known time and named source/time model. They check consistency against the external axes; no astronomy is generated. Reversed or undefined polar houses deliberately fail rather than being replaced by another method. Synthetic regression tests do **not** establish Astro.com comparison parity. The new methods are still `0.1.0-experimental` until real reference and consumer integration gates are cleared.
+
+After these five draft batches: **7** existing experimental methods on `main`, **13** additional methods in stacked unmerged draft branches, **4** methods still missing: APC, Sunshine, Gauquelin 36-sector and Albategnius. This is **isolated implementation coverage only**, not release or scientific validation.
