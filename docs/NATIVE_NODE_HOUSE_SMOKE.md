@@ -47,7 +47,9 @@ source produced the binary or that the compilation was reproducible.
   is explicitly blocked because it requires independently sourced genuine
   apparent geocentric solar declination; this script does **not** synthesize it.
 - The receipt contains full cusp/sector values to support subsequent manual
-  comparison. It does not itself compare against external scientific tables.
+  comparison, plus the four native source angles. It does not itself compare
+  against external scientific tables. See
+  [the offline numerical comparison protocol](NATIVE_NODE_HOUSE_REFERENCE.md).
 - The script never catches a method failure and substitutes Porphyry or another
   house method. Failed methods appear under `failures` and produce exit code 1.
 - The `kernelContext` flag is only a caller-supplied comparison label; the

@@ -234,3 +234,16 @@ Its local tests verify only CLI and preflight behavior with fake file bytes.
 Even a successful actual native run is structural evidence only; method parity,
 measured timescales, build origin and full polar tolerances remain open gates.
 See [manual runner instructions](NATIVE_NODE_HOUSE_SMOKE.md).
+
+### Thirteenth isolated batch (stacked on PR #217): offline angular parity receipts
+
+`scripts/compare-native-house-receipt.mjs` compares a **successful real native**
+smoke receipt against caller-provided, separately cited numerical references.
+It checks all four house-angle fields and 23 non-Sunshine method arrays with
+explicit per-method angular tolerances, without rotating cusp indices or
+fabricating missing values. Unavailable references and discrepancies fail the
+command, including at the wraparound seam. The result expressly marks its
+source assertions **unaudited** even when every numeric residual is within
+range. Only synthetic self-check fixtures have been exercised locally; no real
+Rust-to-reference parity is claimed. See
+[the source and convention contract](NATIVE_NODE_HOUSE_REFERENCE.md).

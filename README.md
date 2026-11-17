@@ -74,6 +74,13 @@ a separate authentic apparent Sun source exists. See
 [manual Node verification](docs/NATIVE_NODE_HOUSE_SMOKE.md): running the script
 is **not** proof of scientific parity or reproducible native build provenance.
 
+The further offline `scripts/compare-native-house-receipt.mjs` accepts a
+real-addon smoke receipt and separately sourced numerical references, checks
+UTC/UT1/TT/observer identity and circular cusp residuals, and never upgrades a
+caller-asserted match into scientific certification. It requires all 23
+non-Sunshine methods and four source angles for exit 0; Sunshine remains a
+blocked gate. See [reference comparison protocol](docs/NATIVE_NODE_HOUSE_REFERENCE.md).
+
 Version: `0.1.0-dev`. The package stays `"private": true` to prevent accidental npm publishing, independently of GitHub repository visibility. There is **no stable API or compatibility commitment yet**.
 
 ## Architecture and safety
