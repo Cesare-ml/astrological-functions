@@ -105,6 +105,10 @@
       "types": "./src/astro-com-house-provider.d.mts",
       "import": "./src/astro-com-house-provider.mjs"
     },
+    "./virgostars-node-house-bridge": {
+      "types": "./src/virgostars-node-house-bridge.d.mts",
+      "import": "./src/virgostars-node-house-bridge.mjs"
+    },
     "./vehlow-houses": {
       "types": "./src/vehlow-houses.d.mts",
       "import": "./src/vehlow-houses.mjs"

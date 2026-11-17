@@ -20,6 +20,14 @@ engine/kernel/time-model and optional apparent-Sun matching. This is an
 **experimental consumer contract using synthetic angle fixtures**; it does not
 close the real Rust/DE441 or full Astro.com parity gate.
 
+The eleventh isolated draft adds an opt-in structural bridge for the actual
+VirgoStars-Ephemeris `bindings/node` house-angle return shape. Source commit,
+installed addon digest and a kernel-context label are **caller-asserted**,
+because the native API does not expose them. Its mock-native tests cannot pass
+the scientific Rust parity gate; next priority is an exact installed-addon
+integration test with independently verified binary provenance and external
+reference fixtures for all methods, including polar failures.
+
 ## Verified integration status — 14 November 2026
 
 - **`main` is IMPLEMENTED_ISOLATED, not production-ready.** PR #1 introduced the private pure-math Node ESM prototype; [PR #50](https://github.com/Cesare-ml/astrological-functions/pull/50) was squash-merged on 14 November 2026 (commit `c8eec4c53a0ec077b1859bb4ce1706feb1b72e7e`) to preserve binary64 precision around 360° and signed angular separations.
