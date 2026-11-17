@@ -81,6 +81,10 @@
       "types": "./src/diurnal-house-cusps.d.mts",
       "import": "./src/diurnal-house-cusps.mjs"
     },
+    "./horizon-houses": {
+      "types": "./src/horizon-house-cusps.d.mts",
+      "import": "./src/horizon-house-cusps.mjs"
+    },
     "./vehlow-houses": {
       "types": "./src/vehlow-houses.d.mts",
       "import": "./src/vehlow-houses.mjs"
