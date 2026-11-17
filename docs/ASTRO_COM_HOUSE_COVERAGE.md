@@ -192,3 +192,30 @@ with larger time-scale differences require a reviewed versioned policy before
 admission. All tests use synthetic caller-provided angles, not an independently
 validated VirgoStars Rust/DE441 adapter. No production/shadow integration,
 polar convention or reference accuracy status has been promoted.
+
+### Eleventh isolated batch (stacked on PR #215): actual Node binding shape
+
+`astrological-functions/virgostars-node-house-bridge` accepts the direct
+`createHouseAngleProvider()` object from the official
+`Cesare-ml/VirgoStars-Ephemeris/bindings/node/index.js` API (the model
+`IAU2006_2000B_APPROXIMATE_SIDEREAL_TIME` and explicit UT1/TT/observer). It
+provides the three exact identity fields demanded by the #215 composition
+contract, then forwards only the original four geometry fields and the source
+coordinates, checking the model, epoch, observer and finite angles before use.
+The bridge does not import or copy the upstream implementation.
+
+**Important provenance limit:** the upstream binding currently returns neither
+its Git commit nor a native-addon digest or kernel identity. The bridge requires
+the caller to supply a 40-character upstream commit SHA and independently
+verified 64-character addon SHA-256. Their *format is validated*, not their
+truthfulness; metadata are marked `CALLER_ASSERTED_BINARY_IDENTITY_NOT_INDEPENDENTLY_VERIFIED`
+on `attestation`. `engineVersion` is a label derived from the caller-asserted
+commit, **not** a binary-certified version. The requested `kernelSetId` is an
+external coordination label for a separate apparent-Sun provider; the Node
+house-angle path does not compute positions from DE441. Sunshine still needs
+the separately pinned real apparent Sun declination. Strict scientific parity
+and actual native-addon invocation remain untested. All 24 routes are checked
+with a fake implementing the published binding *interface*, not Rust results.
+
+No Swiss import, fallback to another house method, native-addon auto-load,
+production consumer change, publish or merge is part of this draft.

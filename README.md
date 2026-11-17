@@ -50,9 +50,21 @@ accepts one named house system and a **caller-injected** (sync or async) angle
 provider. It checks explicit UTC, UT1, TT, observer and pinned engine/kernel/
 time-model identities before forwarding the geometry to the selector. The
 provider must already supply real angles and versioned provenance; this is a
-consumer wiring contract, **not** a built-in Rust bridge or proof of DE441
+consumer wiring contract, **not** proof of DE441
 accuracy. Sunshine still requires a separate, pinned apparent solar
 declination. See the experimental adapter contract and tests for details.
+
+The separate opt-in `astrological-functions/virgostars-node-house-bridge`
+adapts the *actual* `createHouseAngleProvider()` return shape published by
+`Cesare-ml/VirgoStars-Ephemeris/bindings/node/index.js` to that provider
+contract. It **does not** install, load, authenticate or compile the Rust native
+addon: the caller must obtain the provider directly from its own dependency,
+verify the exact source commit and installed addon SHA-256 independently, and
+pass those as explicit **caller assertions**. The upstream Node API does not
+return binary provenance. `kernelSetId` is an external matching-context label:
+house angles do not read DE441, and the bridge makes no such claim. No hidden
+Swiss/Porphyry fallback or production integration is added. Current tests
+exercise a *mock of the real binding interface*, not real Rust numerical output.
 
 Version: `0.1.0-dev`. The package stays `"private": true` to prevent accidental npm publishing, independently of GitHub repository visibility. There is **no stable API or compatibility commitment yet**.
 
