@@ -61,6 +61,40 @@ independent reference matrix. `scientificallyCertified` remains **false**.
    given the actual receipt's obliquity `23.437676823739082°`. Their errors
    must not be automatically labeled expected polar unavailability.
 
+### Follow-up: astronomical rising/setting branch (offline diagnosis)
+
+The receipt's +80° native Ascendant is not merely a questionable house-cusp
+convention. From the reported ARMC `292.95347186375847°`, obliquity
+`23.437676823739082°`, and Ascendant `164.5489205114233°`, independent
+ecliptic-to-equatorial *horizon geometry* gives an altitude indistinguishable
+from zero but a **negative** horizon-crossing derivative, approximately
+`−0.1375669287`: the point is **setting**. Its opposite longitude,
+`344.5489205114233°`, is **rising** with positive derivative. The six other
+synthetic observer latitudes in the receipt have positive derivatives.
+
+Use the new read-only offline diagnostic against the same owner's receipt:
+
+```powershell
+node scripts/audit-native-house-angle-orientation.mjs --receipt house-latitudes-local.json
+```
+
+It accepts the original Windows PowerShell UTF-16LE/BOM JSON without manual
+transcoding, prints each latitude's `RISING_BRANCH`, `SETTING_BRANCH`,
+`NOT_ON_HORIZON`, `TANGENT_INDETERMINATE` or `SOURCE_ANGLES_MISSING` status,
+and exits `2` whenever review is required (`1` for invalid input, `0` for
+all seven rising). Add `--json` for machine-readable output. The opposite
+longitude is only an **analytic diagnostic candidate**: it is not a corrected
+provider result, an optional fallback, a scientific parity reference or a
+production-safe house position. The script reconstructs no ephemerides,
+sidereal time or house cusps and is **never called by runtime source code**.
+
+The upstream follow-up is tracked in
+[`VirgoStars-Ephemeris` issue #594](https://github.com/Cesare-ml/VirgoStars-Ephemeris/issues/594).
+The Rust `angles_from_armc` implementation and its extra-angle branch
+choices need dedicated independent verification across both polar hemispheres.
+Only after correcting and rebuilding that upstream binary should downstream
+method-specific polar conventions and `INCONSISTENT_ANGLES` be revisited.
+
 ## Follow-up code and remaining gates
 
 The follow-up experimental provider adapter classifies the **three documented
