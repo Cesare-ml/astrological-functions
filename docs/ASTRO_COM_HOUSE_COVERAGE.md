@@ -8,7 +8,7 @@ Official references:
 - [Astro.com house-system explanations](https://www.astro.com/faq/fq_fh_owhouse_e.htm)
 - [Astrodienst/Swiss Ephemeris documentation, §6.2](https://www.astro.com/swisseph-download/doc/swisseph.pdf) — specification/reference only, **do not port or copy its source**.
 
-`main` status is a repository inventory, **not** proof of production/astronomical accuracy. `THIS_PR` entries belong to draft PR #206, `STACKED_PR` to draft PR #207 (based on #206), `STACKED_PR_2` to draft PR #208 (based on #207), `STACKED_PR_3` to draft PR #209 (based on #208), and `STACKED_PR_4` to the fifth draft batch based on #209. None is counted on `main` until reviewed and merged.
+`main` status is a repository inventory, **not** proof of production/astronomical accuracy. `THIS_PR` entries belong to draft PR #206, `STACKED_PR` to #207, `STACKED_PR_2` to #208, `STACKED_PR_3` to #209, `STACKED_PR_4` to #210, and `STACKED_PR_5` to the sixth draft batch based on #210. Each batch depends on the previous PR and none is counted on `main` until reviewed and merged.
 
 | Astro.com selector method | Canonical ID | Implementation status | Required next validation or design |
 | --- | --- | --- | --- |
@@ -28,12 +28,12 @@ Official references:
 | Azimuth | `AZIMUTH` | `STACKED_PR_4` | Horizon directional sectors; first cusp at eastern Antivertex, not ASC; real fixtures |
 | Morinus | `MORINUS` | `STACKED_PR_2` | Equatorial-to-ecliptic projection; distinguish Meridian, independent fixtures |
 | Polich-Page | `POLICH_PAGE` | `STACKED_PR_3` | Topocentric-style thirds; reversed high-latitude ordering not yet supported |
-| APC | `APC` | `PENDING` | Declination parallel arcs; do not force opposite cusps |
+| APC | `APC` | `STACKED_PR_5` | Ascendant declination parallel; non-opposite cusps, polar reference parity |
 | Pullen SD (Neo-Porphyry) | `PULLEN_SD` | `STACKED_PR` | Sinusoidal delta, small quadrants and zero-width special placement |
 | Pullen SR | `PULLEN_SR` | `STACKED_PR` | Positive sinusoidal ratio, wrap and normalization |
 | Sripati | `SRIPATI` | `THIS_PR` | Midpoint of preceding/current Porphyry cusps; reference parity |
 | Carter poli-equatorial | `CARTER_POLI_EQUATORIAL` | `STACKED_PR_2` | Ascendant RA anchor; MC need not be cusp 10; independent fixture parity |
-| Sunshine | `SUNSHINE` | `PENDING` | Rust-supplied Sun declination; polar day/night policies |
+| Sunshine | `SUNSHINE` | `STACKED_PR_5` | Externally sourced apparent Sun declination; collapsed polar arcs not yet supported |
 | Gauquelin sectors | `GAUQUELIN_36` | `PENDING` | **36 sectors**, clockwise; specialized planetary house positions |
 | Albategnius | `ALBATEGNIUS` | `PENDING` | Independent specification, implementation and reference fixtures |
 
@@ -96,4 +96,13 @@ The three methods share strict timezone, source/frame, known birth time, angle-c
 
 Both require pinned topocentric of-date input angles, obliquity, ARMC, observer, known time and named source/time model. They check consistency against the external axes; no astronomy is generated. Reversed or undefined polar houses deliberately fail rather than being replaced by another method. Synthetic regression tests do **not** establish Astro.com comparison parity. The new methods are still `0.1.0-experimental` until real reference and consumer integration gates are cleared.
 
-After these five draft batches: **7** existing experimental methods on `main`, **13** additional methods in stacked unmerged draft branches, **4** methods still missing: APC, Sunshine, Gauquelin 36-sector and Albategnius. This is **isolated implementation coverage only**, not release or scientific validation.
+### Sixth isolated batch (stacked on PR #210)
+
+`src/declination-arc-house-cusps.mjs` exposes two separate experimental methods via the typed `./declination-arc-houses` ESM subpath:
+
+- **APC**: derives the parallel declination from the caller-provided Ascendant and true obliquity, divides six positions above and below the horizon on that parallel into the corresponding two sets of house arcs, and projects through north/south horizon points onto the ecliptic.
+- **Sunshine**: uses the same geometric operation but **a different source parallel**: an independently supplied, versioned, apparent Earth-centered Sun declination in equatorial-of-date coordinates. The Sun input must match the requested instant and the house angle engine/kernel/time-model identifiers. It never computes or guesses the solar position itself.
+
+Both preserve the known ASC/IC/DSC/MC axis cusps while allowing **non-opposite intermediate cusps**, as required by their definitions. Ordinary forward 12-house assignment is supported only where both declination arcs are nondegenerate and the Sun/Ascendant actually rises and sets. The documented Astro.com coincident-cusp polar behavior of Sunshine requires a distinct placement/result contract and is **not implemented** here: this experimental version returns typed unavailability rather than a fake success or Porphyry fallback. Real Rust Sun provider and independent numeric Astro.com parity are pending.
+
+After these six draft batches: **7** existing experimental methods on `main`, **15** additional methods in stacked unmerged draft branches, **2** methods still missing: Gauquelin 36-sector and Albategnius. This is **isolated implementation coverage only**, not release or scientific validation.
