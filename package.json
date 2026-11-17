@@ -65,6 +65,10 @@
       "types": "./src/house-set.d.mts",
       "import": "./src/house-set.mjs"
     },
+    "./house-systems-extras": {
+      "types": "./src/house-systems-extras.d.mts",
+      "import": "./src/house-systems-extras.mjs"
+    },
     "./vehlow-houses": {
       "types": "./src/vehlow-houses.d.mts",
       "import": "./src/vehlow-houses.mjs"
