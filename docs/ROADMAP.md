@@ -44,6 +44,14 @@ at the 0°/360° seam. Its numeric status never certifies the authenticity or
 independence of caller-supplied references; only synthetic self-check tests have
 run so far. See [reference comparison protocol](NATIVE_NODE_HOUSE_REFERENCE.md).
 
+The next isolated diagnostic tracks native method availability across seven
+synthetic latitudes (80°S to 80°N) and all 23 non-Sunshine house IDs. It also
+corrects a receipt-versus-input mistake in the original smoke runner: the
+fixture's `id` must not be forwarded to the strict provider. The grid reports
+every method failure for **manual** interpretation and does not independently
+validate polar behavior, astronomical angles or native binary origin. See
+[latitude-grid protocol](NATIVE_NODE_HOUSE_LATITUDE_GRID.md).
+
 ## Verified integration status — 14 November 2026
 
 - **`main` is IMPLEMENTED_ISOLATED, not production-ready.** PR #1 introduced the private pure-math Node ESM prototype; [PR #50](https://github.com/Cesare-ml/astrological-functions/pull/50) was squash-merged on 14 November 2026 (commit `c8eec4c53a0ec077b1859bb4ce1706feb1b72e7e`) to preserve binary64 precision around 360° and signed angular separations.

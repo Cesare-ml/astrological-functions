@@ -7,7 +7,8 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {parseNativeHouseOptions, circularErrorArcsec, HOUSE_SMOKE_FIXTURE,
-  verifyNativeAddonPreflight} from '../scripts/verify-native-house-bridge.mjs';
+  houseSmokeCalculationRequest, verifyNativeAddonPreflight} from '../scripts/verify-native-house-bridge.mjs';
+import {calculateAstroComHouseFromProvider} from '../src/astro-com-house-provider.mjs';
 
 const args = ['--checkout', '/some/pinned/checkout', '--expected-commit', 'a'.repeat(40),
   '--expected-addon-sha256', 'b'.repeat(64), '--kernel-context', 'HOUSE_ANGLES_NO_KERNEL'];
@@ -30,6 +31,21 @@ test('angles compare across wrap without treating 359.999 and 0.001 as 360 apart
   assert.equal(circularErrorArcsec(0, 180), 648000);
   assert.throws(() => circularErrorArcsec(NaN, 42), /E_REFERENCE_ANGLE/);
   assert.ok(HOUSE_SMOKE_FIXTURE.ttJulianDay > HOUSE_SMOKE_FIXTURE.ut1JulianDay);
+});
+
+test('smoke fixture ID stays in receipt, never leaks into strict provider calculation', async () => {
+  const expectedProvider = {engineVersion: 'SYNTHETIC',
+    kernelSetId: 'NO_KERNEL', timeModel: 'TEST_EXPLICIT_UT1_TT'};
+  const request = houseSmokeCalculationRequest('WHOLE_ARIES', expectedProvider);
+  assert.equal(HOUSE_SMOKE_FIXTURE.id, 'J2000_NOON_40N_SYNTHETIC_TIMESCALES');
+  assert.equal(Object.hasOwn(request, 'id'), false);
+  assert.ok(Object.isFrozen(request));
+  const out = await calculateAstroComHouseFromProvider(request,
+    {calculateHouseAngles: input => ({...input, ...expectedProvider,
+      model: 'IAU2006_2000B_APPROXIMATE_SIDEREAL_TIME',
+      armcDeg: 61, ascendantDeg: 127, midheavenDeg: 65, trueObliquityDeg: 23.44})});
+  assert.equal(out.houseSystem, 'WHOLE_ARIES');
+  assert.equal(out.result.cuspsDeg.length, 12);
 });
 
 test('native addon preflight checks checkout HEAD, clean tree, actual bytes and repo paths', t => {
