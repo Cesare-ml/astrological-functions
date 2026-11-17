@@ -8,7 +8,7 @@ Official references:
 - [Astro.com house-system explanations](https://www.astro.com/faq/fq_fh_owhouse_e.htm)
 - [Astrodienst/Swiss Ephemeris documentation, §6.2](https://www.astro.com/swisseph-download/doc/swisseph.pdf) — specification/reference only, **do not port or copy its source**.
 
-`main` status is a repository inventory, **not** proof of production/astronomical accuracy. New entries in this branch are marked `THIS_PR`, and must not be counted on `main` before review and merge.
+`main` status is a repository inventory, **not** proof of production/astronomical accuracy. `THIS_PR` entries belong to draft PR #206; `STACKED_PR` entries are an additional branch dependent on that PR. Neither is counted on `main` until reviewed and merged.
 
 | Astro.com selector method | Canonical ID | Implementation status | Required next validation or design |
 | --- | --- | --- | --- |
@@ -29,8 +29,8 @@ Official references:
 | Morinus | `MORINUS` | `PENDING` | Equatorial-to-ecliptic projection; distinguish Meridian |
 | Polich-Page | `POLICH_PAGE` | `PENDING` | Topocentric-style thirds and high latitudes |
 | APC | `APC` | `PENDING` | Declination parallel arcs; do not force opposite cusps |
-| Pullen SD (Neo-Porphyry) | `PULLEN_SD` | `PENDING` | Sinusoidal delta, small quadrants and zero-width policy |
-| Pullen SR | `PULLEN_SR` | `PENDING` | Positive sinusoidal ratio, wrap and normalization |
+| Pullen SD (Neo-Porphyry) | `PULLEN_SD` | `STACKED_PR` | Sinusoidal delta, small quadrants and zero-width special placement |
+| Pullen SR | `PULLEN_SR` | `STACKED_PR` | Positive sinusoidal ratio, wrap and normalization |
 | Sripati | `SRIPATI` | `THIS_PR` | Midpoint of preceding/current Porphyry cusps; reference parity |
 | Carter poli-equatorial | `CARTER_POLI_EQUATORIAL` | `PENDING` | Ascendant RA anchor; MC need not be cusp 10 |
 | Sunshine | `SUNSHINE` | `PENDING` | Rust-supplied Sun declination; polar day/night policies |
@@ -62,3 +62,9 @@ Track each of these groups to `VALIDATED_LOCAL`, then `BACKEND_SHADOW_TESTED`/`S
 ### First isolated batch in this branch
 
 `src/house-systems-extras.mjs` provides `calculateEqualMidheavenHouseCusps`, `calculateWholeAriesHouseCusps` and `calculateSripatiHouseCusps` with `.d.mts` declarations, synthetic regression cases and one explicit `./house-systems-extras` ESM subpath. These reuse validated local geometry and do not require or pretend to compute astronomy. Their contracts deliberately retain `0.1.0-experimental` until independent method/reference and consumer gates pass.
+
+### Second isolated batch (stacked on PR #206)
+
+`src/pullen-house-cusps.mjs` implements **Pullen Sinusoidal Delta** and **Pullen Sinusoidal Ratio** from their published three-house width relationships, on top of the validated local Porphyry quadrant producer. The Delta method uses nonnegative side/middle/side spans and explicitly reports a zero-width middle house when a quadrant is at most 30°; the ordinary 12-cusp locator is intentionally **not** claimed compatible with repeated cusps. The Ratio method solves its independent positive width ratio using bounded bisection, preserving valid widths even for narrow quadrants. Both have an opt-in typed ESM `./pullen-houses` subpath and synthetic regressions; neither has yet passed an independent real-world reference fixture grid.
+
+After these two draft batches: **7** existing experimental methods on `main`, **5** additional methods in stacked draft branches, **12** methods still missing. The count is implementation coverage, not scientific or release validation.
