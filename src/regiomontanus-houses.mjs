@@ -1,6 +1,7 @@
 /** Experimental Regiomontanus equatorial-division cusp geometry. */
 import { AstrologyError, normalize360, locateLongitudeInHouses } from './index.mjs';
 import { calculatePorphyryHouseCusps } from './porphyry-houses.mjs';
+import { expectedRisingAscendantDeg } from './house-ascendant-orientation.mjs';
 
 const rad = Math.PI / 180;
 const fail = (code, message) => { throw new AstrologyError(code, message); };
@@ -24,7 +25,8 @@ export function calculateRegiomontanusHouseCusps(input) {
     return normalize360(Math.atan2(y,x) / rad + 180);
   };
   const asc = base.angles.ascendantDeg, mc = base.angles.midheavenDeg;
-  const expectedAsc = intersection(theta, latitude);
+  const expectedAsc = expectedRisingAscendantDeg(theta,
+    trueObliquityDeg, base.source.observer.latitudeDeg);
   const expectedMc = normalize360(Math.atan2(Math.sin(theta*rad), Math.cos(theta*rad)*Math.cos(epsilon))/rad);
   if (Math.abs(signed(asc-expectedAsc)) > 1e-6 || Math.abs(signed(mc-expectedMc)) > 1e-6) fail('INCONSISTENT_ANGLES', 'Ascendant and MC must match ARMC, latitude and obliquity');
   const pole11 = Math.atan(Math.tan(latitude)/2);
@@ -33,6 +35,12 @@ export function calculateRegiomontanusHouseCusps(input) {
   const c2=intersection(theta+30,pole12), c3=intersection(theta+60,pole11);
   const opposite=x=>normalize360(x+180);
   const cuspsDeg=Object.freeze([asc,c2,c3,base.angles.icDeg,opposite(c11),opposite(c12),opposite(asc),opposite(c2),opposite(c3),mc,c11,c12]);
-  locateLongitudeInHouses(asc,cuspsDeg);
+  try {
+    locateLongitudeInHouses(asc,cuspsDeg);
+  } catch (error) {
+    if (error instanceof AstrologyError && error.code === 'INVALID_CUSPS')
+      fail('HOUSE_GEOMETRY_UNAVAILABLE', 'Regiomontanus cusps cannot form ordered zodiac houses at this latitude');
+    throw error;
+  }
   return Object.freeze({contract:'RegiomontanusHouseCusps',contractVersion:'0.1.0-experimental',houseSystem:'REGIOMONTANUS',datetimeUtc:base.datetimeUtc,angles:base.angles,armcDeg:theta,trueObliquityDeg,cuspsDeg,source:base.source,validation:'CALLER_ASSERTED_ANGLES_NOT_INDEPENDENTLY_VERIFIED'});
 }
