@@ -28,6 +28,14 @@ the scientific Rust parity gate; next priority is an exact installed-addon
 integration test with independently verified binary provenance and external
 reference fixtures for all methods, including polar failures.
 
+The subsequent twelfth draft provides a **manual native-addon smoke runner**
+with Git HEAD, clean tree and SHA-256 byte preflight. In the current Linux
+environment Rust/the compiled addon are absent, so only preflight/CLI tests
+were run. The runner attempts 23 methods and explicitly blocks Sunshine pending
+a genuine apparent Sun declination; passing a structural native smoke receipt
+would still **not** establish upstream binary build origin or scientific parity.
+See [the manual runner protocol](NATIVE_NODE_HOUSE_SMOKE.md).
+
 ## Verified integration status — 14 November 2026
 
 - **`main` is IMPLEMENTED_ISOLATED, not production-ready.** PR #1 introduced the private pure-math Node ESM prototype; [PR #50](https://github.com/Cesare-ml/astrological-functions/pull/50) was squash-merged on 14 November 2026 (commit `c8eec4c53a0ec077b1859bb4ce1706feb1b72e7e`) to preserve binary64 precision around 360° and signed angular separations.
