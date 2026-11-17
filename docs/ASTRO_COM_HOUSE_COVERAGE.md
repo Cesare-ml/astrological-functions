@@ -8,7 +8,7 @@ Official references:
 - [Astro.com house-system explanations](https://www.astro.com/faq/fq_fh_owhouse_e.htm)
 - [Astrodienst/Swiss Ephemeris documentation, §6.2](https://www.astro.com/swisseph-download/doc/swisseph.pdf) — specification/reference only, **do not port or copy its source**.
 
-`main` status is a repository inventory, **not** proof of production/astronomical accuracy. `THIS_PR` entries belong to draft PR #206, `STACKED_PR` to #207, `STACKED_PR_2` to #208, `STACKED_PR_3` to #209, `STACKED_PR_4` to #210, `STACKED_PR_5` to #211, and `STACKED_PR_6` to the seventh draft batch based on #211. Each batch depends on the previous PR and none is counted on `main` until reviewed and merged.
+`main` status is a repository inventory, **not** proof of production/astronomical accuracy. `THIS_PR` entries belong to draft PR #206, `STACKED_PR` to #207, `STACKED_PR_2` to #208, `STACKED_PR_3` to #209, `STACKED_PR_4` to #210, `STACKED_PR_5` to #211, `STACKED_PR_6` to #212, and `STACKED_PR_7` to the eighth draft batch based on #212. Each batch depends on the previous PR and none is counted on `main` until reviewed and merged.
 
 | Astro.com selector method | Canonical ID | Implementation status | Required next validation or design |
 | --- | --- | --- | --- |
@@ -35,7 +35,7 @@ Official references:
 | Carter poli-equatorial | `CARTER_POLI_EQUATORIAL` | `STACKED_PR_2` | Ascendant RA anchor; MC need not be cusp 10; independent fixture parity |
 | Sunshine | `SUNSHINE` | `STACKED_PR_5` | Externally sourced apparent Sun declination; collapsed polar arcs not yet supported |
 | Gauquelin sectors | `GAUQUELIN_36` | `STACKED_PR_6` | **36 sectors**, clockwise; ecliptic cusp divisions and actual body position distinct, high-latitude Ludwig/reference parity |
-| Albategnius | `ALBATEGNIUS` | `PENDING` | Independent specification, implementation and reference fixtures |
+| Albategnius | `ALBATEGNIUS` | `STACKED_PR_7` | Prime-vertical declination bands and independently published Astrodienst tables, polar and consumer parity |
 
 ## P0-E — all experimental functionality
 
@@ -118,3 +118,13 @@ The experimental `./gauquelin-sectors` subpath adds **Gauquelin's 36 clockwise s
 The first version requires ordinary rising/setting arcs for all cusp points and the requested body. The polar Otto Ludwig method used in one reference variant is **not yet supported**, nor are event-time disk-center rise/set algorithms with/without refraction. Inputs beyond the supported geometry return typed unavailability, never an equal-sector or Porphyry fallback. External Astro.com/Swiss test comparisons and Rust provider integration still gate release.
 
 After these seven draft batches: **7** existing experimental methods on `main`, **16** additional implementations in draft branches, **1** remaining implementation target, Albategnius. This is not evidence of scientific parity or production readiness.
+
+### Eighth isolated batch (stacked on PR #212): all 24 selector IDs represented experimentally
+
+`./albategnius-houses` implements the independently specified great-circle construction: declination bands at **one-third and two-thirds of geographic latitude**, their intersections with the **prime vertical**, and projections through north/south horizon points onto the ecliptic. Equatorial latitude is handled using the continuous one-third/two-thirds limit, not a 0/0 division. The eight intermediate cusps are not substituted from Campanus, Regiomontanus or another house system.
+
+**Independent numerical fixtures:** [Astrodienst official Albategnius tables](https://www.astro.com/swisseph/htn_J_e.pdf), for ARMC 0h00m and the printed 1 January 2000 mean obliquity 23°26′21″. Their published *rounded minutes* for geographic latitudes 0°N, 20°N, 40°N are compared with calculated ASC, cusp 11, cusp 12, cusp 2, cusp 3. Because the tables are rounded and use a fixed mean obliquity, this provides an independent geometry check but is **not** blanket apparent-of-date/Rust provider validation.
+
+For inverted/polar 12-cusp geometry where the ordinary forward assignment contract cannot represent results, the experimental function fails closed with typed unavailability instead of returning fake or silently modified cusps. Full polar handling and independent south-hemisphere reference comparisons remain pending.
+
+**Inventory coverage after eight draft batches:** **7** existing experimental house methods on `main` and **17** further method implementations in dependent draft branches = **24 of 24 Astro.com selector IDs represented in experimental code**. This is not completion of the P0 validation, polar parity, Rust provider, consumer integration, licensing or release gates.
