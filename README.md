@@ -87,6 +87,12 @@ from 80° S to 80° N (161 attempts). It never reclassifies a polar method error
 as a validated expected failure, nor infers scientific parity from shaped
 output. See [latitude-grid audit](docs/NATIVE_NODE_HOUSE_LATITUDE_GRID.md).
 
+The opt-in `scripts/compare-native-house-latitudes.mjs` subsequently compares
+that receipt to **caller-sourced** numeric and method-availability references,
+requiring 161 method expectations and seven independent angle sets for a
+complete result. A matched error code is never automatically scientific proof.
+See [latitude reference protocol](docs/NATIVE_NODE_HOUSE_LATITUDE_COMPARISON.md).
+
 Version: `0.1.0-dev`. The package stays `"private": true` to prevent accidental npm publishing, independently of GitHub repository visibility. There is **no stable API or compatibility commitment yet**.
 
 ## Architecture and safety

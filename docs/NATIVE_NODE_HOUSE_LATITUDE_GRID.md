@@ -77,7 +77,9 @@ Run `node scripts/audit-native-house-latitudes.mjs --help` for CLI help.
 3. Collect independently sourced numeric references matching zodiac, observer,
    UTC/UT1/TT and cusp numbering. The existing
    [offline comparator](NATIVE_NODE_HOUSE_REFERENCE.md) handles the 40°N case;
-   extend reference coverage to this grid deliberately.
+   the opt-in [latitude-grid comparison](NATIVE_NODE_HOUSE_LATITUDE_COMPARISON.md)
+   accepts per-case method and angular references, while refusing to treat
+   generic runtime errors as documented polar unavailability.
 4. Keep `IMPLEMENTED_ISOLATED` and no backend/Desktop/Mobile rollout until
    scientific, licensing and consumer QA gates pass.
 
