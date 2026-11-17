@@ -52,6 +52,14 @@ every method failure for **manual** interpretation and does not independently
 validate polar behavior, astronomical angles or native binary origin. See
 [latitude-grid protocol](NATIVE_NODE_HOUSE_LATITUDE_GRID.md).
 
+A dependent isolated comparator adds independently documented **per-case**
+numeric or unavailable expectations for this 7 × 23 grid. It cannot claim
+scientific parity without all 161 method references and seven angular reference
+sets, and rejects generic program errors as polar availability evidence. Even
+matching caller-supplied values remains `IMPLEMENTED_ISOLATED` until original
+source independence and Rust native build provenance have been reviewed. See
+[latitude-grid comparison](NATIVE_NODE_HOUSE_LATITUDE_COMPARISON.md).
+
 ## Verified integration status — 14 November 2026
 
 - **`main` is IMPLEMENTED_ISOLATED, not production-ready.** PR #1 introduced the private pure-math Node ESM prototype; [PR #50](https://github.com/Cesare-ml/astrological-functions/pull/50) was squash-merged on 14 November 2026 (commit `c8eec4c53a0ec077b1859bb4ce1706feb1b72e7e`) to preserve binary64 precision around 360° and signed angular separations.
