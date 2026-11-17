@@ -58,6 +58,12 @@ export function circularErrorArcsec(actual, expected) {
   return Math.abs(diff) * 3600;
 }
 
+export function houseSmokeCalculationRequest(houseSystem, expectedProvider) {
+  // `id` is evidence metadata, explicitly forbidden by the provider request.
+  const {id: _fixtureId, ...calculationFixture} = HOUSE_SMOKE_FIXTURE;
+  return Object.freeze({...calculationFixture, houseSystem, expectedProvider});
+}
+
 function git(checkout, ...args) {
   return execFileSync('git', ['-C', checkout, ...args],
     {encoding: 'utf8', timeout: 10000, stdio: ['ignore', 'pipe', 'pipe']}).trim();
@@ -117,9 +123,8 @@ export async function runNativeHouseSmoke(options) {
   for (const houseSystem of ASTRO_COM_HOUSE_SYSTEM_IDS) {
     if (houseSystem === 'SUNSHINE') continue; // Never synthesize apparent Sun declination.
     try {
-      const out = await calculateAstroComHouseFromProvider({
-        ...HOUSE_SMOKE_FIXTURE, houseSystem, expectedProvider: provider.expectedProvider,
-      }, provider);
+      const out = await calculateAstroComHouseFromProvider(
+        houseSmokeCalculationRequest(houseSystem, provider.expectedProvider), provider);
       const valuesDeg = houseSystem === 'GAUQUELIN_36'
         ? out.result.sectorBoundariesDeg : out.result.cuspsDeg;
       const expectedCount = houseSystem === 'GAUQUELIN_36' ? 36 : 12;

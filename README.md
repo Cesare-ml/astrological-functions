@@ -81,6 +81,12 @@ caller-asserted match into scientific certification. It requires all 23
 non-Sunshine methods and four source angles for exit 0; Sunshine remains a
 blocked gate. See [reference comparison protocol](docs/NATIVE_NODE_HOUSE_REFERENCE.md).
 
+A separate manual `scripts/audit-native-house-latitudes.mjs` records the real
+addon output or explicit errors for 23 methods at **seven synthetic latitudes**
+from 80° S to 80° N (161 attempts). It never reclassifies a polar method error
+as a validated expected failure, nor infers scientific parity from shaped
+output. See [latitude-grid audit](docs/NATIVE_NODE_HOUSE_LATITUDE_GRID.md).
+
 Version: `0.1.0-dev`. The package stays `"private": true` to prevent accidental npm publishing, independently of GitHub repository visibility. There is **no stable API or compatibility commitment yet**.
 
 ## Architecture and safety
