@@ -97,6 +97,10 @@
       "types": "./src/albategnius-house-cusps.d.mts",
       "import": "./src/albategnius-house-cusps.mjs"
     },
+    "./astro-com-house-selector": {
+      "types": "./src/astro-com-house-selector.d.mts",
+      "import": "./src/astro-com-house-selector.mjs"
+    },
     "./vehlow-houses": {
       "types": "./src/vehlow-houses.d.mts",
       "import": "./src/vehlow-houses.mjs"

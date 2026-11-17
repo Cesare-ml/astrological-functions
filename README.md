@@ -36,6 +36,15 @@ Expected output: `340 1 20`.
 
 `astrological-functions` exposes root math primitives and experimental subpaths `/dodecatemoria`, `/dodecatemoria-batch`, `/zodiac-decan-facts`, `/porphyry-houses`, `/placidus-houses`, `/regiomontanus-houses`, `/koch-houses`, `/house-set`, and `/vehlow-houses`. Their precise contracts and unsupported conditions are defined in the respective source/declaration files. Some exports have no root-level declaration coverage; do not assume a complete TypeScript API.
 
+The **stacked experimental house-method drafts** additionally expose the opt-in
+typed subpath `astrological-functions/astro-com-house-selector`. It lists the
+24 distinct Astro.com methods, preserves each method's exact input contract,
+and returns its original result without an astronomical engine or implicit
+fallback. The `Default (Placidus)` UI label is not an additional ID. Gauquelin
+uses **36 clockwise sectors**, not 12 houses. See
+[house-method coverage](docs/ASTRO_COM_HOUSE_COVERAGE.md) for pending polar,
+provider, scientific parity, and consumer validation.
+
 Version: `0.1.0-dev`. The package stays `"private": true` to prevent accidental npm publishing, independently of GitHub repository visibility. There is **no stable API or compatibility commitment yet**.
 
 ## Architecture and safety
