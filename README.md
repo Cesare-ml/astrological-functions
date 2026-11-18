@@ -61,6 +61,15 @@ limits but **never marks an unreviewed archive event as an available new Moon**
 for the Arabic parts. See
 [Regolo recorded lunar-event diagnostics](docs/REGOLO_P0_MOON_EVENT_CANDIDATE.md).
 
+An additional **manual offline lunar reference comparator**,
+`scripts/compare-regolo-moon-reference.mjs`, accepts that diagnostic receipt
+and a separately sourced conjunction timestamp plus geocentric Sun/Moon
+longitudes at the **same recorded candidate epoch**. It measures event-time
+and circular angular errors under justified tolerances, without authenticating
+the reference or lifting the unavailable Moon gate. Initial tests use only
+synthetic reference values; see the
+[reference-input contract](docs/REGOLO_P0_MOON_EVENT_CANDIDATE.md#offline-independent-reference-comparison-next-validation-gate).
+
 **Not included:** natal chart interpretations, user accounts, private birth records, databases, API credentials, frontend graphics, NASA/JPL kernels, or production VirgoStars services. Proposed interfaces described in `docs/CONTRACTS.md` are not necessarily shipped APIs.
 
 ## Try the source locally

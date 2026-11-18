@@ -67,6 +67,17 @@ anchors block even candidate computation. No real Rust/P0 binary was loaded
 here; only mocked contract tests have run. See
 [Regolo recorded-Moon candidate audit](REGOLO_P0_MOON_EVENT_CANDIDATE.md).
 
+**Regolo independent lunar reference comparator (18 November 2026):**
+`scripts/compare-regolo-moon-reference.mjs` performs a manual/offline
+comparison of a candidate receipt to separately sourced conjunction UTC and
+geocentric apparent Sun/Moon positions at the **recorded candidate epoch**.
+It reports microsecond-aware timing and circular longitude residuals under
+justified thresholds, without authenticating external reference claims or
+unlocking `NEW_MOON` parts. Ten synthetic tests passed; the real native
+addon, independent astronomical measurements and reviewed P0 archive coverage
+remain the outstanding gates. See the
+[reference protocol](REGOLO_P0_MOON_EVENT_CANDIDATE.md#offline-independent-reference-comparison-next-validation-gate).
+
 The next stacked draft after #213 introduces a typed, opt-in 24-method selector
 without replacing any existing API, including Gauquelin's separate 36-sector
 result. Its synthetic dispatch/type tests support consumer wiring but do not
