@@ -20,6 +20,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $runner = Join-Path $PSScriptRoot 'run-native-house-latitude-regression.mjs'
+$verifier = Join-Path $PSScriptRoot 'verify-native-house-regression-bundle.mjs'
 
 if ([string]::IsNullOrWhiteSpace($EphemerisCheckout)) {
     $EphemerisCheckout = Join-Path (Split-Path -Parent $repoRoot) 'VirgoStars-Ephemeris'
@@ -69,6 +70,14 @@ if (-not $CheckOnly -and ($nativeExit -eq 0 -or $nativeExit -eq 2)) {
     $bundle = Join-Path $OutputDirectory 'house-regression-bundle.json'
     if (-not (Test-Path -LiteralPath $bundle -PathType Leaf)) {
         throw "Runner completed but portable evidence is missing: $bundle"
+    }
+    if (-not (Test-Path -LiteralPath $verifier -PathType Leaf)) {
+        throw "Offline bundle verifier is missing: $verifier"
+    }
+    Write-Host 'Verifying complete portable evidence and displaying its read-only triage...'
+    & node $verifier --bundle $bundle --expected-commit $ExpectedCommit.ToLowerInvariant() --expected-baseline-sha256 $ExpectedBaselineSha256.ToLowerInvariant() --triage
+    if ($LASTEXITCODE -ne 0) {
+        throw 'The portable bundle failed independent offline consistency checks; do not attach as validated evidence.'
     }
     Write-Host "Attach only this file for review: $bundle"
     if ($nativeExit -eq 2) {
