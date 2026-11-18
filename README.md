@@ -112,6 +112,10 @@ Its additional `house-regression-bundle.json` consolidates both full receipts,
 the exact original baseline bytes, the smoke/orientation/version diagnostics,
 a full 161-method independent-reference review queue and their SHA-256
 checksums in **one portable file**.
+Reports are assembled and cross-checked in memory before any evidence JSON is
+written; the seven file outputs then use exclusive-create semantics. A separate
+synthetic end-to-end test exercises this exact writing and offline verification
+path, without claiming a real Rust build was executed.
 The runner also refuses a successful build that appears to have left a stale
 preexisting native addon untouched, or a symlinked native output path; the
 check does not establish reproducible build provenance.
