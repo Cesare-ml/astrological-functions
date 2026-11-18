@@ -117,6 +117,15 @@ node scripts/verify-native-house-regression-bundle.mjs `
   --expected-baseline-sha256 $oldReceiptSha256
 ```
 
+For a concise read-only report to inspect or paste into a human code review,
+append `--triage` to the same command. The default JSON response is unchanged.
+The triage view prints all seven latitude cases with old/new method return
+counts, recovered/new failures, Ascendant branch and angle shifts, prioritized
+method changes (first 24 with a total count), native addon digest identity,
+and how many independent method/angle references are still missing. It checks
+the entire bundle **before** showing any results, and explicitly identifies
+the evidence as internal consistency only, not a scientific certification.
+
 The verifier recomputes all 161 method comparisons and the Ascendant branch
 diagnostic, checks **the original 160 KB Windows UTF-16LE baseline file hash
 and parsed contents**, the six report hashes, the two optionally pinned
