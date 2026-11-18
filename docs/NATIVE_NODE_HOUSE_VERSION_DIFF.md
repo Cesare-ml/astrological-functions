@@ -117,7 +117,13 @@ All six report objects and the portable bundle are now assembled and verified
 smoke, incomplete 161-method grid, inconsistent summary or incorrect bundle
 cannot leave a misleading partial set of JSON reports. Only then are the seven
 files created with exclusive-create semantics; an already populated output
-directory is refused. The end-to-end evidence-write path is tested using
+directory is refused. Before reporting success, the runner also reads back all
+seven files and checks their bytes against the verified in-memory versions.
+If a disk/write/read-back failure interrupts the operation, a partial output
+directory may remain for investigation; **do not attach it as validated
+evidence**, and use a different fresh output directory for another run. This
+is not an atomic filesystem transaction. The end-to-end evidence-write path
+is tested using
 **synthetic data only** (including the offline verifier and non-overwrite rule),
 not a substitute for a real Windows Rust execution.
 
