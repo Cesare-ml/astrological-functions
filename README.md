@@ -105,7 +105,8 @@ orientation check and complete before/after report. It never switches Git
 revisions or overwrites old receipts, and still requires a real owner-run
 Windows native build and independent method references before release.
 Its additional `house-regression-bundle.json` consolidates both full receipts,
-the exact original baseline bytes, all three diagnostics and their SHA-256
+the exact original baseline bytes, the smoke/orientation/version diagnostics,
+a full 161-method independent-reference review queue and their SHA-256
 checksums in **one portable file**.
 Use `scripts/verify-native-house-regression-bundle.mjs --bundle PATH` to
 recompute the 161-method diff and horizon audit **offline, without Rust**;
