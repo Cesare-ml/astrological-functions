@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync, spawnSync} from 'node:child_process';
-import {existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -53,8 +54,10 @@ function setup() {
     'commit', '-qm', 'synthetic pinned checkout');
   const old = path.join(folder, 'before.json');
   writeFileSync(old, `\uFEFF${JSON.stringify(baseline())}`, 'utf16le');
+  const expectedBaselineSha256 = createHash('sha256').update(readFileSync(old)).digest('hex');
   const outDir = path.join(folder, 'new-receipts');
   return {folder, checkout, baseline: old, outDir,
+    expectedBaselineSha256,
     expectedCommit: git(checkout, 'rev-parse', 'HEAD'),
     kernelContext: 'HOUSE_ANGLES_NO_KERNEL'};
 }
@@ -65,6 +68,7 @@ test('single-command runner validates fully pinned clean repo and UTF-16LE basel
     const options = parseNativeRegressionOptions([
       '--checkout', fixture.checkout, '--expected-commit', fixture.expectedCommit,
       '--baseline', fixture.baseline, '--out-dir', fixture.outDir,
+      '--expected-baseline-sha256', fixture.expectedBaselineSha256,
       '--kernel-context', fixture.kernelContext]);
     const selected = preflightNativeRegression(options);
     assert.equal(selected.baseline.attempted, 161);
@@ -84,17 +88,22 @@ test('preflight refuses unpinned/dirty checkout, changed context and occupied ou
   const base = parseNativeRegressionOptions([
     '--checkout', fixture.checkout, '--expected-commit', fixture.expectedCommit,
     '--baseline', fixture.baseline, '--out-dir', fixture.outDir,
+    '--expected-baseline-sha256', fixture.expectedBaselineSha256,
     '--kernel-context', fixture.kernelContext]);
   try {
     assert.throws(() => preflightNativeRegression({...base,
       expectedCommit: 'f'.repeat(40)}), /E_NATIVE_REGRESSION_COMMIT/);
     assert.throws(() => preflightNativeRegression({...base,
       kernelContext: 'WRONG_CONTEXT'}), /E_NATIVE_REGRESSION_CONTEXT/);
+    assert.throws(() => preflightNativeRegression({...base,
+      expectedBaselineSha256: 'a'.repeat(64)}), /E_NATIVE_REGRESSION_BASELINE_SHA256/);
     const reusedSource = baseline();
     reusedSource.ephemeris.upstreamCommitSha = fixture.expectedCommit;
     const reusedBaseline = path.join(fixture.folder, 'same-commit.json');
     writeFileSync(reusedBaseline, JSON.stringify(reusedSource));
-    assert.throws(() => preflightNativeRegression({...base, baseline: reusedBaseline}),
+    assert.throws(() => preflightNativeRegression({...base, baseline: reusedBaseline,
+      expectedBaselineSha256: createHash('sha256').update(readFileSync(reusedBaseline))
+        .digest('hex')}),
       /E_NATIVE_REGRESSION_UNCHANGED_COMMIT/);
     mkdirSync(fixture.outDir);
     writeFileSync(path.join(fixture.outDir, 'keep-user-file.txt'), 'do not touch');
