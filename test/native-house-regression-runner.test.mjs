@@ -338,6 +338,9 @@ test('Windows launcher delegates to pinned native runner and has an explicit no-
   assert.match(source, /'--kernel-context', 'HOUSE_ANGLES_NO_KERNEL'/);
   assert.match(source, /'--check-only'/);
   assert.match(source, /'house-regression-bundle\.json'/);
+  assert.match(source, /verify-native-house-regression-bundle\.mjs/);
+  assert.match(source, /--bundle \$bundle --expected-commit \$ExpectedCommit\.ToLowerInvariant\(\) --expected-baseline-sha256 \$ExpectedBaselineSha256\.ToLowerInvariant\(\) --triage/);
+  assert.match(source, /if \(\$LASTEXITCODE -ne 0\)/);
   assert.match(source, /if \(-not \$CheckOnly\)/);
   assert.doesNotMatch(source, /&\s*git\s+(?:checkout|pull|merge|reset)/i);
 });
