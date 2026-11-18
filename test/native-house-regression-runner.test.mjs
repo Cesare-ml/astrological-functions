@@ -13,7 +13,7 @@ import {LATITUDE_AUDIT_CASES} from '../scripts/audit-native-house-latitudes.mjs'
 import {assembleNativeHouseRegressionEvidence, assertNativeAddonBuildUpdated,
   assertPinnedNativeSource,
   parseNativeRegressionOptions, preflightNativeRegression, saveNativeHouseRegressionEvidence,
-  snapshotNativeAddon} from
+  snapshotNativeAddon, verifySavedNativeHouseRegressionEvidence} from
   '../scripts/run-native-house-latitude-regression.mjs';
 import {NATIVE_HOUSE_BUNDLE_FILES, verifyNativeHouseRegressionBundle} from
   '../scripts/verify-native-house-regression-bundle.mjs';
@@ -330,6 +330,8 @@ test('synthetic evidence flows through assembly, all seven files and offline ver
 
     const saved = saveNativeHouseRegressionEvidence(options.outDir, evidence);
     assert.equal(readdirSync(options.outDir).length, 7);
+    assert.equal(verifySavedNativeHouseRegressionEvidence(options.outDir, evidence).filesChecked,
+      7);
     assert.equal(saved.auditFile, path.join(options.outDir, 'house-latitudes-new.json'));
     assert.equal(saved.bundleFile, path.join(options.outDir, 'house-regression-bundle.json'));
     for (const [key, filename] of Object.entries(NATIVE_HOUSE_BUNDLE_FILES)) {
@@ -346,6 +348,12 @@ test('synthetic evidence flows through assembly, all seven files and offline ver
       /E_NATIVE_REGRESSION_OUTPUT/);
     assert.deepEqual(JSON.parse(readFileSync(saved.bundleFile, 'utf8')), portable,
       'a repeated execution must not overwrite the previous report');
+    const corruptedReport = path.join(options.outDir, NATIVE_HOUSE_BUNDLE_FILES.smoke);
+    writeFileSync(corruptedReport, '{"tampered":true}\n');
+    assert.throws(() => verifySavedNativeHouseRegressionEvidence(options.outDir, evidence),
+      /E_NATIVE_REGRESSION_PERSIST/);
+    assert.deepEqual(JSON.parse(readFileSync(saved.bundleFile, 'utf8')), portable,
+      'verification failure must not silently overwrite or remove the portable bundle');
   } finally {
     rmSync(fixture.folder, {recursive: true, force: true});
   }
