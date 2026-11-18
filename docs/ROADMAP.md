@@ -46,6 +46,15 @@ conformance does not certify Rust event times, binary provenance or the
 accuracy of caller-provided birth-chart positions. See
 [Regolo Node rise/set bridge](REGOLO_RISE_SET_NODE_BRIDGE.md).
 
+**Regolo native smoke preflight (18 November 2026):** a new explicit operator
+command verifies a pinned upstream checkout, the exact Node `.node` binary
+SHA-256 and an existing DE441 file hash *before* opening the Rust binding.
+It then checks two reproducible synthetic daylight/nighttime Regolo examples
+and emits the actual event times and validation scope in JSON. Local CLI,
+digest and mock-engine tests are present; the native binary is not available
+in this workspace, so **no real Rust execution or astronomical parity is
+claimed**. The independent full lunar event/longitude source remains open.
+
 The next stacked draft after #213 introduces a typed, opt-in 24-method selector
 without replacing any existing API, including Gauquelin's separate 36-sector
 result. Its synthetic dispatch/type tests support consumer wiring but do not

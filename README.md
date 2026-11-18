@@ -47,6 +47,12 @@ are **not authenticated by injection**; live Rust scientific parity and the
 latest preceding new-Moon solver remain open gates. See
 [the Regolo Node rise/set adapter](docs/REGOLO_RISE_SET_NODE_BRIDGE.md).
 
+The same adapter now has a manual `scripts/verify-native-regolo-lots.mjs`
+smoke entrypoint with strict upstream source/Node-addon/DE441 byte checks.
+It never fetches a kernel, runs against synthetic birth positions and issues
+only a **structural** receipt until an independently referenced astronomical
+comparison is performed. See the native smoke instructions in the adapter doc.
+
 **Not included:** natal chart interpretations, user accounts, private birth records, databases, API credentials, frontend graphics, NASA/JPL kernels, or production VirgoStars services. Proposed interfaces described in `docs/CONTRACTS.md` are not necessarily shipped APIs.
 
 ## Try the source locally

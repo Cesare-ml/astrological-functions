@@ -101,3 +101,68 @@ crossings, validate leap-second/DUT1 provenance, establish a versioned
 new-Moon event producer, check physical natal positions and Ascendant/house
 provenance, run strict typechecking plus Desktop/Mobile/backend shadow tests.
 No npm publication, production switch, GitHub Actions or automatic merge.
+
+## Repeatable native-addon smoke (operator must run locally)
+
+`scripts/verify-native-regolo-lots.mjs` now supplies the **missing native-run
+recipe**, without building or downloading the Rust engine or DE441. It uses
+the same strict checkout HEAD/native-addon digest preflight as the existing
+house-method runner and separately streams the DE441 file through SHA-256.
+Only after both byte identities are verified does it open the real Node
+`Engine`. It runs two **synthetic natal charts** for Rome (a November midday
+and nighttime), expects coarse `DAY`/`NIGHT` results, and confirms 9 kleroi,
+92 part entries and explicit unavailable new-Moon-dependent parts. It saves
+no birth data and returns a JSON receipt with actual solar event Julian dates.
+
+From **PowerShell** on a Windows machine with the upstream Rust Node binding
+already built:
+
+```powershell
+cd D:\GitHub\VirgoStars-Ephemeris
+git rev-parse HEAD
+Get-FileHash .\bindings\node\native\virgostars_ephemeris.node -Algorithm SHA256
+Get-FileHash 'D:\GitHub\virgo-stars\database\effemeridi\astrodienst\de441.eph' -Algorithm SHA256
+
+cd D:\GitHub\astrological-functions
+node scripts/verify-native-regolo-lots.mjs `
+  --checkout 'D:\GitHub\VirgoStars-Ephemeris' `
+  --expected-commit 'INSERT_VERIFIED_40_HEX_HEAD' `
+  --expected-addon-sha256 'INSERT_VERIFIED_64_HEX_ADDON' `
+  --de441 'D:\GitHub\virgo-stars\database\effemeridi\astrodienst\de441.eph' `
+  --expected-de441-sha256 'INSERT_VERIFIED_64_HEX_KERNEL' `
+  --time-model 'INSERT_EXPLICIT_TIME_POLICY_ID' `
+  --dut1-seconds 'INSERT_SOURCED_UT1_MINUS_UTC_SECONDS'
+```
+
+Use an explicitly sourced UT1−UTC estimate for the two 2026 fixtures (it must
+lie within ±1 second), and record its provenance separately. The script does
+not guess this Earth-rotation correction or claim the source time policy is
+authenticated. A SHA-256 match proves the **bytes being read**, not how the
+native binary was compiled or that DE441 bytes independently match NASA's
+original release.
+
+**Current execution evidence:** the command-line parser, streaming digest
+preflight, synthetic day/night execution and failure paths have dedicated
+local unit tests. The real native smoke is **PENDING**, because the current
+execution environment has neither the compiled `.node` addon nor DE441.
+Even a successful native smoke proves the requested code path executes; the
+independent astronomical reference comparison remains a separate gate.
+
+To check its preconditions without loading any native code:
+
+```sh
+node scripts/verify-native-regolo-lots.mjs --help
+node --test test/verify-native-regolo-lots.test.mjs
+```
+
+### New-Moon event status
+
+The separate `VirgoStars-Event-Ephemeris` Python-first archive exposes a
+latest **recorded** Moon synod anchor via `new_moon.cycle_start_utc`, but its
+documentation explicitly records unreviewed coverage and two historical
+one-year discontinuities (1919 and 2018). It supplies a timestamp, **not**
+the independently verified apparent tropical Moon longitude needed by these
+Regolo parts. A future adapter must require matched archive SHA/source-row
+identity, explicit continuity at birth, an independently validated Sun–Moon
+conjunction and a `VirgoStars-Ephemeris` longitude at the event timestamp;
+without all these it must return `UNAVAILABLE`, not a fabricated longitude.
