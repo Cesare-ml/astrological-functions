@@ -5,6 +5,14 @@
   "type": "module",
   "exports": {
     ".": "./src/index.mjs",
+    "./regolo-kleroi": {
+      "types": "./src/regolo-kleroi.d.mts",
+      "import": "./src/regolo-kleroi.mjs"
+    },
+    "./regolo-arabic-parts": {
+      "types": "./src/regolo-arabic-parts.d.mts",
+      "import": "./src/regolo-arabic-parts.mjs"
+    },
     "./dodecatemoria": {
       "types": "./src/dodecatemoria-methods.d.mts",
       "import": "./src/dodecatemoria-methods.mjs"

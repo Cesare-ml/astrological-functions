@@ -9,6 +9,15 @@ The owner has raised **both** of the following to the highest implementation pri
 
 **Non-negotiable gates:** keep the original VirgoStars Rust ephemeris as the only astronomy engine, no Swiss source/fallback, no hidden Porphyry polar substitution, no GitHub Actions, no npm/production release or merge without exact-tree tests and explicit owner review. A method is not complete merely because a source file or draft PR exists. Priorities do not override licensing, provenance or safety checks.
 
+**Regolo lots extraction, 18 November 2026:** An isolated opt-in draft now
+contains the nine kleroi found in `Regolo-Alpha-Leonis` and the entire
+92-entry legacy Arabic-part catalog (15 essential and twelve Abū Maʿshar
+groups totalling 77). Formula descriptions and a known 134°/14° Cancer
+discrepancy remain traceable to the pinned source. The math needs independent
+legacy fixture parity, scholarly source verification, authentic sect/new-Moon
+data and downstream typed/consumer validation before any production use.
+See [Regolo kleroi and Arabic parts](REGOLO_KLEROI_AND_ARABIC_PARTS.md).
+
 The next stacked draft after #213 introduces a typed, opt-in 24-method selector
 without replacing any existing API, including Gauquelin's separate 36-sector
 result. Its synthetic dispatch/type tests support consumer wiring but do not

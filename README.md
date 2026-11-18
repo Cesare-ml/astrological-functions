@@ -10,6 +10,17 @@ The current `main` branch includes pure-math utilities for angular normalization
 
 The separate [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) Rust project is the **only intended source for astronomy**. This package must not duplicate orbital computation, import Swiss Ephemeris source or silently substitute a lower-accuracy engine. An experimental provider boundary and real-DE441 integration tests do **not** establish full astronomical accuracy or production parity.
 
+The opt-in experimental `./regolo-kleroi` and `./regolo-arabic-parts`
+subpaths independently reconstruct **nine Regolo kleroi** and **92 named
+legacy Arabic-part entries** (15 essential and 77 in twelve grouped lists)
+from `Cesare-ml/Regolo-Alpha-Leonis`. They require an explicit known birth
+time, Ascendant, zodiac and day/night sect; optional missing house/MC/DS/new
+Moon inputs produce **unavailable** dependent parts, never fabricated longitudes.
+The legacy navigation part's caption **14° Cancer** contradicts its executed
+**134°** value and is flagged rather than silently changed. These formulas
+remain `IMPLEMENTED_ISOLATED`, not historical source validation or production
+integration. See [the Regolo lot compatibility contract](docs/REGOLO_KLEROI_AND_ARABIC_PARTS.md).
+
 **Not included:** natal chart interpretations, user accounts, private birth records, databases, API credentials, frontend graphics, NASA/JPL kernels, or production VirgoStars services. Proposed interfaces described in `docs/CONTRACTS.md` are not necessarily shipped APIs.
 
 ## Try the source locally
