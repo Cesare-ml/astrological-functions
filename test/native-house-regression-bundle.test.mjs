@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
 import {mkdtempSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
@@ -47,6 +48,7 @@ function makeGrid(fresh) {
 
 function makeBundle() {
   const baseline = makeGrid(false);
+  const rawBaseline = Buffer.from(`\uFEFF${JSON.stringify(baseline)}`, 'utf16le');
   const nativeGrid = makeGrid(true);
   const smoke = {contract: 'VirgoStarsNativeHouseSmokeV1',
     status: 'NATIVE_ADDON_EXECUTED_STRUCTURAL_ONLY',
@@ -70,7 +72,7 @@ function makeBundle() {
     nativeBuildOriginIndependentlyVerified: false,
     independentMethodParityVerified: false,
     expectedSourceCommitSha: commitSha(true), nativeAddonSha256: addonSha(true),
-    baselineReceiptSha256: 'a'.repeat(64),
+    baselineReceiptSha256: createHash('sha256').update(rawBaseline).digest('hex'),
     baselinePassed: baseline.passed, baselineFailed: baseline.failed,
     currentPassed: nativeGrid.passed, currentFailed: nativeGrid.failed,
     attempted: 161, smokePassed: smoke.passed, smokeFailed: smoke.failed,
@@ -86,7 +88,9 @@ function makeBundle() {
     key => [key, canonicalReportSha256(reports[key])]));
   return {contract: 'VirgoStarsNativeHouseRegressionEvidenceV1',
     scientificallyCertified: false, independentlyVerifiedBuildProvenance: false,
-    comparisonToIndependentReferences: false, reports, reportSha256};
+    comparisonToIndependentReferences: false,
+    baselineSource: {rawBytesBase64: rawBaseline.toString('base64')},
+    reports, reportSha256};
 }
 
 test('portable bundle checks hashes and recomputes 161-method diff and polar rising', () => {
@@ -96,6 +100,7 @@ test('portable bundle checks hashes and recomputes 161-method diff and polar ris
   assert.equal(output.status, 'INTERNAL_CONSISTENCY_VERIFIED_NOT_CERTIFIED');
   assert.equal(output.attempted, 161);
   assert.equal(output.reportHashesChecked, 5);
+  assert.equal(output.originalBaselineSha256Checked, true);
   assert.equal(output.flaggedAscendants, 0);
   assert.equal(output.scientificallyCertified, false);
   assert.equal(output.nativeBuildOriginIndependentlyVerified, false);
@@ -130,7 +135,16 @@ test('even re-hashed fabricated orientation or method report is rejected', () =>
   assert.throws(() => verifyNativeHouseRegressionBundle(duplicate), /E_NATIVE_BUNDLE_SMOKE/);
   const wrongFixture = makeBundle();
   wrongFixture.reports.baseline.scenarios[3].fixture.ttJulianDay += 1;
-  assert.throws(() => verifyNativeHouseRegressionBundle(wrongFixture), /E_LATITUDE_COMPARE_FIXTURE/);
+  assert.throws(() => verifyNativeHouseRegressionBundle(wrongFixture), /E_NATIVE_BUNDLE_BASELINE/);
+  const rawTamper = makeBundle();
+  rawTamper.baselineSource.rawBytesBase64 = Buffer.from('a fabricated old receipt').toString('base64');
+  assert.throws(() => verifyNativeHouseRegressionBundle(rawTamper), /E_NATIVE_BUNDLE_BASELINE/);
+  const rehashedWrongBaseline = makeBundle();
+  rehashedWrongBaseline.reports.summary.baselineReceiptSha256 = 'a'.repeat(64);
+  rehashedWrongBaseline.reportSha256.summary =
+    canonicalReportSha256(rehashedWrongBaseline.reports.summary);
+  assert.throws(() => verifyNativeHouseRegressionBundle(rehashedWrongBaseline),
+    /E_NATIVE_BUNDLE_BASELINE/);
 });
 
 test('CLI accepts a single Windows UTF-16LE/BOM portable file without Rust', () => {
@@ -143,6 +157,18 @@ test('CLI accepts a single Windows UTF-16LE/BOM portable file without Rust', () 
     const run = spawnSync(process.execPath, [script, '--bundle', receipt], {encoding: 'utf8'});
     assert.equal(run.status, 0, run.stderr);
     assert.equal(JSON.parse(run.stdout).reportHashesChecked, 5);
+    const pinned = spawnSync(process.execPath, [script, '--bundle', receipt,
+      '--expected-commit', 'c'.repeat(40), '--expected-baseline-sha256',
+      makeBundle().reports.summary.baselineReceiptSha256], {encoding: 'utf8'});
+    assert.equal(pinned.status, 0, pinned.stderr);
+    const wrongCommit = spawnSync(process.execPath, [script, '--bundle', receipt,
+      '--expected-commit', 'd'.repeat(40)], {encoding: 'utf8'});
+    assert.equal(wrongCommit.status, 1);
+    assert.match(wrongCommit.stderr, /E_NATIVE_BUNDLE_EXPECTED_COMMIT/);
+    const wrongBaseline = spawnSync(process.execPath, [script, '--bundle', receipt,
+      '--expected-baseline-sha256', 'a'.repeat(64)], {encoding: 'utf8'});
+    assert.equal(wrongBaseline.status, 1);
+    assert.match(wrongBaseline.stderr, /E_NATIVE_BUNDLE_EXPECTED_BASELINE/);
     const missing = spawnSync(process.execPath, [script], {encoding: 'utf8'});
     assert.equal(missing.status, 1);
     assert.match(missing.stderr, /E_NATIVE_BUNDLE_OPTIONS/);
