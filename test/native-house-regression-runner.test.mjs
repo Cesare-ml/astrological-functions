@@ -18,8 +18,10 @@ import {assembleNativeHouseRegressionEvidence, assertNativeAddonBuildUpdated,
   '../scripts/run-native-house-latitude-regression.mjs';
 import {NATIVE_HOUSE_BUNDLE_FILES, verifyNativeHouseRegressionBundle} from
   '../scripts/verify-native-house-regression-bundle.mjs';
-import {createNativeHouseReviewWorksheetCsv, reviewCsvCell} from
+import {createNativeHouseReviewWorksheetCsv, NATIVE_HOUSE_REVIEW_COLUMNS, reviewCsvCell} from
   '../scripts/export-native-house-review-worksheet.mjs';
+import {createNativeHouseReferenceFromWorksheet, parseNativeHouseReviewCsv} from
+  '../scripts/import-native-house-review-worksheet.mjs';
 
 function baseline() {
   const methods = ASTRO_COM_HOUSE_SYSTEM_IDS.filter(id => id !== 'SUNSHINE');
@@ -70,6 +72,13 @@ function setup() {
     expectedCommit: git(checkout, 'rev-parse', 'HEAD'),
     kernelContext: 'HOUSE_ANGLES_NO_KERNEL'};
 }
+
+test('worksheet CSV parser preserves quoted metadata and rejects malformed records', () => {
+  assert.deepEqual(parseNativeHouseReviewCsv('\uFEFF"name","note"\r\n"a""b","line 1\r\nline 2"\r\n'),
+    [['name', 'note'], ['a"b', 'line 1\r\nline 2']]);
+  assert.throws(() => parseNativeHouseReviewCsv('"unterminated'), /E_NATIVE_WORKSHEET_CSV/);
+  assert.throws(() => parseNativeHouseReviewCsv('"a"junk,b'), /E_NATIVE_WORKSHEET_CSV/);
+});
 
 test('single-command runner validates fully pinned clean repo and UTF-16LE baseline', () => {
   const fixture = setup();
@@ -376,11 +385,79 @@ test('synthetic evidence flows through assembly, all seven files and offline ver
     assert.equal(worksheetRows.length, 169, 'one header, 161 methods and seven angle rows');
     assert.equal(worksheetRows.filter(row => row.startsWith('"METHOD",')).length, 161);
     assert.equal(worksheetRows.filter(row => row.startsWith('"ANGLES",')).length, 7);
-    assert.ok(worksheetRows.slice(1).every(row => row.endsWith(',"","","","","",""')),
+    assert.ok(worksheetRows.slice(1).every(row => row.endsWith(',"","","","","","","","","",""')),
       'independent source, expectation and review fields must stay empty');
     assert.equal(reviewCsvCell('=HYPERLINK("https://invalid.example")'),
       '"\'=HYPERLINK(""https://invalid.example"")"');
     assert.equal(reviewCsvCell(-80), '"-80"', 'signed numeric latitudes must be preserved');
+    assert.equal(reviewCsvCell('-80'), '"-80"', 'CSV editor round trips keep numeric latitudes');
+
+    const emptyReview = createNativeHouseReferenceFromWorksheet(portable, worksheet);
+    assert.equal(emptyReview.comparison.methodsCompared, 0);
+    assert.equal(emptyReview.comparison.missingMethodReferences.length, 161);
+    assert.equal(emptyReview.comparison.missingAngleReferences.length, 7);
+    const worksheetCells = parseNativeHouseReviewCsv(worksheet);
+    assert.equal(worksheetCells.length, 169);
+    const index = name => NATIVE_HOUSE_REVIEW_COLUMNS.indexOf(name);
+    const fillSource = row => {
+      row[index('reference_source_title')] = 'SYNTHETIC_TEST_REFERENCE_NOT_SCIENTIFIC';
+      row[index('reference_source_url')] = 'https://example.invalid/test-only';
+      row[index('reference_source_acquired_utc')] = '2026-11-18T12:00:00Z';
+      row[index('reference_source_convention')] = 'SYNTHETIC_TEST_ONLY_NO_INDEPENDENCE';
+      row[index('reference_expected_availability')] = 'AVAILABLE';
+      row[index('reference_tolerance_arcsec')] = '1.5';
+      row[index('reference_tolerance_rationale')] = 'Synthetic regression parser fixture';
+    };
+    fillSource(worksheetCells[1]);
+    worksheetCells[1][index('reference_expected_values_degrees')] =
+      Array.from({length: 12}, (_, i) => i * 30 + 0.5).join(';');
+    const angleRow = worksheetCells.find(row => row[0] === 'ANGLES');
+    fillSource(angleRow);
+    angleRow[index('reference_expected_values_degrees')] = '292;7;291;23.4';
+    const filledReview = `\uFEFF${worksheetCells.map(row =>
+      row.map(reviewCsvCell).join(',')).join('\r\n')}\r\n`;
+    const reviewed = createNativeHouseReferenceFromWorksheet(portable, filledReview);
+    assert.equal(reviewed.comparison.methodsCompared, 1);
+    assert.equal(reviewed.comparison.angleComparisons.length, 1);
+    assert.equal(reviewed.comparison.missingMethodReferences.length, 160);
+    assert.equal(reviewed.comparison.missingAngleReferences.length, 6);
+    assert.equal(reviewed.comparison.status, 'NUMERICAL_OR_AVAILABILITY_MISMATCH');
+    assert.equal(reviewed.reference.scenarios[0].methods[0].valuesDeg[0], 0.5,
+      'only a reviewer-supplied numeric value may become a JSON expectation');
+    const incompleteReview = filledReview.replace('Synthetic regression parser fixture', '');
+    assert.throws(() => createNativeHouseReferenceFromWorksheet(portable, incompleteReview),
+      /E_NATIVE_WORKSHEET_TOLERANCE/);
+    const repeatedIdentity = worksheetCells.map(row => row.slice());
+    repeatedIdentity[2].splice(0, 4, ...repeatedIdentity[1].slice(0, 4));
+    const duplicateCsv = repeatedIdentity.map(row => row.map(reviewCsvCell).join(',')).join('\r\n');
+    assert.throws(() => createNativeHouseReferenceFromWorksheet(portable, duplicateCsv),
+      /E_NATIVE_WORKSHEET_IDENTITY/);
+    const spoofedObserved = worksheetCells.map(row => row.slice());
+    spoofedObserved[1][index('observed_outcome')] = 'SCIENTIFICALLY_VERIFIED';
+    assert.throws(() => createNativeHouseReferenceFromWorksheet(portable,
+      spoofedObserved.map(row => row.map(reviewCsvCell).join(',')).join('\r\n')),
+    /E_NATIVE_WORKSHEET_OBSERVED/);
+    const importedJsonPath = `${options.outDir}-independent-references-REVIEWED.json`;
+    const filledCsvPath = `${options.outDir}-review-COMPLETED.csv`;
+    writeFileSync(filledCsvPath, filledReview);
+    const importArgs = ['scripts/import-native-house-review-worksheet.mjs', '--bundle', saved.bundleFile,
+        '--worksheet', filledCsvPath, '--out', importedJsonPath,
+        '--expected-commit', options.expectedCommit,
+        '--expected-baseline-sha256', fixture.expectedBaselineSha256];
+    const importRun = spawnSync(process.execPath, importArgs, {encoding: 'utf8'});
+    assert.equal(importRun.status, 0, importRun.stderr);
+    assert.deepEqual(JSON.parse(readFileSync(importedJsonPath, 'utf8')), reviewed.reference);
+    assert.equal(JSON.parse(importRun.stdout).methodsEntered, 1);
+    const importRepeat = spawnSync(process.execPath, importArgs, {encoding: 'utf8'});
+    assert.equal(importRepeat.status, 1, 'a reviewer cannot overwrite an earlier reference set');
+    assert.match(importRepeat.stderr, /EEXIST/);
+    const importWrongPin = path.join(fixture.folder, 'wrong-import-pin.json');
+    const importWrong = spawnSync(process.execPath,
+      [...importArgs.slice(0, -1), 'f'.repeat(64)].map(arg =>
+        arg === importedJsonPath ? importWrongPin : arg), {encoding: 'utf8'});
+    assert.equal(importWrong.status, 1);
+    assert.match(importWrong.stderr, /E_NATIVE_WORKSHEET_BASELINE/);
+    assert.equal(existsSync(importWrongPin), false);
 
     const worksheetPath = `${options.outDir}-review-worksheet.csv`;
     const worksheetArgs = [
