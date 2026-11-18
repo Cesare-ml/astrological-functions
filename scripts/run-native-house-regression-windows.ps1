@@ -18,6 +18,11 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# PowerShell 7.3+ can promote a native exit code 2 to a terminating error when
+# PSNativeCommandUseErrorActionPreference is enabled. Our runner deliberately
+# uses 2 for VALID evidence that still needs scientific review, so inspect
+# $LASTEXITCODE explicitly on both Windows PowerShell 5.1 and PowerShell 7+.
+$PSNativeCommandUseErrorActionPreference = $false
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $runner = Join-Path $PSScriptRoot 'run-native-house-latitude-regression.mjs'
 $verifier = Join-Path $PSScriptRoot 'verify-native-house-regression-bundle.mjs'
@@ -48,12 +53,15 @@ if (-not $CheckOnly) {
     Get-Command cargo -ErrorAction Stop | Out-Null
 }
 
+$expectedCommitLower = $ExpectedCommit.ToLowerInvariant()
+$expectedBaselineLower = $ExpectedBaselineSha256.ToLowerInvariant()
+
 $arguments = @(
     $runner,
     '--checkout', $EphemerisCheckout,
-    '--expected-commit', $ExpectedCommit.ToLowerInvariant(),
+    '--expected-commit', $expectedCommitLower,
     '--baseline', $BaselineReceipt,
-    '--expected-baseline-sha256', $ExpectedBaselineSha256.ToLowerInvariant(),
+    '--expected-baseline-sha256', $expectedBaselineLower,
     '--out-dir', $OutputDirectory,
     '--kernel-context', 'HOUSE_ANGLES_NO_KERNEL'
 )
@@ -75,7 +83,7 @@ if (-not $CheckOnly -and ($nativeExit -eq 0 -or $nativeExit -eq 2)) {
         throw "Offline bundle verifier is missing: $verifier"
     }
     Write-Host 'Verifying complete portable evidence and displaying its read-only triage...'
-    & node $verifier --bundle $bundle --expected-commit $ExpectedCommit.ToLowerInvariant() --expected-baseline-sha256 $ExpectedBaselineSha256.ToLowerInvariant() --triage
+    & node $verifier --bundle $bundle --expected-commit $expectedCommitLower --expected-baseline-sha256 $expectedBaselineLower --triage
     if ($LASTEXITCODE -ne 0) {
         throw 'The portable bundle failed independent offline consistency checks; do not attach as validated evidence.'
     }
