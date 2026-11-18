@@ -5,6 +5,10 @@
   "type": "module",
   "exports": {
     ".": "./src/index.mjs",
+    "./monomeric-cross": {
+      "types": "./src/monomeric-cross.d.mts",
+      "import": "./src/monomeric-cross.mjs"
+    },
     "./dodecatemoria": {
       "types": "./src/dodecatemoria-methods.d.mts",
       "import": "./src/dodecatemoria-methods.mjs"
