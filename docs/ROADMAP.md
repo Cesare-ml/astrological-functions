@@ -112,6 +112,15 @@ birth/event time-scale conversion or new-Moon availability. The Regolo
 `NEW_MOON` gate remains closed; see
 [manual native and reference protocol](REGOLO_MOON_CONJUNCTION_SEARCH.md#operator-only-native-rustde441-execution-no-p0-dependency).
 
+**Numerical conjunction robustness sweep (18 November 2026):** 128
+deterministic synthetic Moon cycles (1600–2200 date boundaries, variable
+relative angular motion, different zodiac origins and 1–12-hour samples)
+now check latest-conjunction recovery, alongside a rotation invariance and
+an opposition-only anti-false-positive test. The solver also rejects
+upstream JPL-tagged results carrying incompatible heliocentric,
+no-aberration/no-deflection or equatorial flags. This is a **numerical
+robustness test**, not real native/JPL or independent event-time evidence.
+
 The next stacked draft after #213 introduces a typed, opt-in 24-method selector
 without replacing any existing API, including Gauquelin's separate 36-sector
 result. Its synthetic dispatch/type tests support consumer wiring but do not

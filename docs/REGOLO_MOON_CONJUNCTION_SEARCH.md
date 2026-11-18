@@ -34,7 +34,10 @@ The caller supplies:
 - The engine's named `expectedTimeSourcePolicy`; per-epoch numeric Delta-T
   suffixes may vary, but each Sun/Moon pair at the same UT1 instant must
   expose identical time-source text. Unsupported result flags, broken
-  coordinates, time-source drift and native errors fail closed.
+  coordinates, time-source drift and native errors fail closed. In particular
+  the source is rejected if the upstream flags report heliocentric,
+  uncorrected deflection/aberration or equatorial coordinates despite the
+  requested apparent geocentric ecliptic-of-date `flags=0` call.
 - An explicit lookback of **30–35 days**, sampling interval **1–12 hours**,
   bisection tolerance **0.01–60 seconds**, **10–96** maximum bisection
   iterations and residual tolerance (strictly positive, at most **0.1°**).
@@ -112,6 +115,11 @@ Synthetic tests exercise the latest-of-two crossings, sign wrapping at
 time/iteration non-convergence, numeric per-epoch Delta-T suffixes, strict
 epoch/source failures, ESM exports and the existing nine kleroi/92 Arabic
 part integration with `NEW_MOON` still unavailable.
+
+A separate deterministic 128-cycle sweep exercises eccentric synthetic
+Moon-minus-Sun motion across 1600–2200 sample epochs, 1/3/6/12-hour sampling,
+different zodiac origins and Gregorian leap boundaries. This expands
+**algorithmic test coverage only**; it supplies no astronomical observations.
 
 Before enabling a real preceding new Moon, independently execute this solver
 with a source-pinned and hashed native Rust/DE441 addon for diverse dates,

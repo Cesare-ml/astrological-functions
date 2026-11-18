@@ -9,6 +9,10 @@ const PIN_KEYS = ['engineId', 'engineVersion', 'kernelSetId', 'timeModelId'];
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const UTC = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?Z$/;
 const JD_UNIX = 2440587.5;
+// The upstream Node binding exposes these documented SEFLG values. Passing
+// flags=0 must not return heliocentric, no-deflection, no-aberration or
+// equatorial coordinates disguised as the requested apparent ecliptic frame.
+const INCOMPATIBLE_RETURN_FLAGS = 8 | 512 | 1024 | 2048;
 
 const fail = (code, message) => { throw new AstrologyError(code, message); };
 const plain = x => x !== null && typeof x === 'object' && !Array.isArray(x) &&
@@ -58,6 +62,7 @@ function observe(engine, jdUt, policy) {
         Math.abs(result.xx[1]) > 90 ||
         !Number.isFinite(result.xx[2]) || result.xx[2] <= 0 ||
         !Number.isSafeInteger(result.rflag) || (result.rflag & 1) !== 1 ||
+        (result.rflag & INCOMPATIBLE_RETURN_FLAGS) !== 0 ||
         !validTimeSource(result.timeSource, policy)) {
       fail('INCOMPATIBLE_POSITION_SOURCE',
         'Sun/Moon must be apparent geocentric ecliptic-of-date with matching pinned time policy and JPL flags');

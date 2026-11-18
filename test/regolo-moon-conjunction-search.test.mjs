@@ -113,6 +113,10 @@ test('unexpected native flags, invalid distances, source-policy drift and errors
   const {engine} = syntheticEngine(birthJdUt - 5);
   reject({calcUt(jd,body) {return {...engine.calcUt(jd,body,0), rflag: 0};}},
     {}, 'INCOMPATIBLE_POSITION_SOURCE');
+  for (const forbiddenFlag of [8, 512, 1024, 2048]) {
+    reject({calcUt(jd, body) {return {...engine.calcUt(jd, body, 0),
+      rflag: 1 | forbiddenFlag};}}, {}, 'INCOMPATIBLE_POSITION_SOURCE');
+  }
   reject({calcUt(jd,body) {const x=engine.calcUt(jd,body,0);return {...x,
     xx: [x.xx[0], 0, -1, 0, 0, 0]};}}, {}, 'INCOMPATIBLE_POSITION_SOURCE');
   reject({calcUt(jd,body) {return {...engine.calcUt(jd,body,0),

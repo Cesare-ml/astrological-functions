@@ -92,6 +92,11 @@ real installed addon and DE441 before invoking the search; an independent
 conjunction times and positions under declared tolerances without claiming
 scientific certification. Both commands are prepared and mock-tested; a
 real native run and independent astronomical reference are still outstanding.
+An additional deterministic **128-cycle synthetic stress sweep** now checks
+the solver across historical date boundaries, variable longitude rates,
+multiple sampling intervals and zodiac-frame rotation. It also explicitly
+rejects mismatched native heliocentric/equatorial/uncorrected return flags;
+none of these mathematical checks closes real DE441 validation.
 
 **Not included:** natal chart interpretations, user accounts, private birth records, databases, API credentials, frontend graphics, NASA/JPL kernels, or production VirgoStars services. Proposed interfaces described in `docs/CONTRACTS.md` are not necessarily shipped APIs.
 
