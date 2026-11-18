@@ -19,6 +19,8 @@ import {auditNativeHouseAngleOrientation} from './audit-native-house-angle-orien
 import {validateNativeLatitudeAudit} from './compare-native-house-latitudes.mjs';
 import {diffNativeHouseLatitudes, readNativeLatitudeDiffReceipt} from
   './diff-native-house-latitudes.mjs';
+import {NATIVE_HOUSE_BUNDLE_FILES, verifyNativeHouseRegressionBundle} from
+  './verify-native-house-regression-bundle.mjs';
 
 const fail = (code, message) => {throw new Error(`${code}: ${message}`);};
 const sha40 = value => typeof value === 'string' && /^[a-f\d]{40}$/i.test(value);
@@ -85,6 +87,10 @@ export function preflightNativeRegression(options) {
   validateNativeLatitudeAudit(baseline);
   if (baseline.ephemeris.kernelContext !== options.kernelContext) {
     fail('E_NATIVE_REGRESSION_CONTEXT', 'Baseline declared kernel context differs from selected label');
+  }
+  if (baseline.ephemeris.upstreamCommitSha === options.expectedCommit) {
+    fail('E_NATIVE_REGRESSION_UNCHANGED_COMMIT',
+      'Selected Rust commit is identical to the historical baseline; choose the corrected PR SHA');
   }
   if (options.outDir === options.baseline) {
     fail('E_NATIVE_REGRESSION_OUTPUT', 'Output directory cannot be the baseline receipt');
@@ -156,10 +162,22 @@ export async function runNativeHouseLatitudeRegression(options) {
     sameAddonDigest: comparison.sameAddonDigest,
     files: ['house-latitudes-new.json', 'house-smoke-new.json',
       'house-angle-orientation.json', 'house-latitudes-version-diff.json',
-      'house-regression-summary.json'],
+      'house-regression-summary.json', 'house-regression-bundle.json'],
     note: 'Structural and version evidence only; not independent scientific validation.'});
   exclusiveJson(options.outDir, 'house-regression-summary.json', summary);
-  return Object.freeze({summary, auditFile});
+  const reports = Object.freeze({baseline: selected.baseline, nativeGrid: audit,
+    smoke, orientation, versionDiff: comparison, summary});
+  const reportSha256 = Object.freeze(Object.fromEntries(
+    Object.entries(NATIVE_HOUSE_BUNDLE_FILES).map(([key, file]) =>
+      [key, sha256(path.join(options.outDir, file))])));
+  const bundle = Object.freeze({contract: 'VirgoStarsNativeHouseRegressionEvidenceV1',
+    scientificallyCertified: false,
+    independentlyVerifiedBuildProvenance: false,
+    comparisonToIndependentReferences: false,
+    reports, reportSha256});
+  verifyNativeHouseRegressionBundle(bundle);
+  const bundleFile = exclusiveJson(options.outDir, 'house-regression-bundle.json', bundle);
+  return Object.freeze({summary, auditFile, bundleFile});
 }
 
 export const HELP_TEXT = `One-shot manual, local VirgoStars house regression (Windows or Linux):
@@ -174,6 +192,9 @@ Checks exact Git HEAD, clean tracked sources, the full 161-case baseline,
 and an empty/absent output directory BEFORE running npm run build (cargo).
 Builds the Rust addon, verifies installed bytes, then saves a new full 161-case
 receipt, 23-method smoke, rising-branch analysis, before/after diff and summary.
+Also exports a single self-contained house-regression-bundle.json with all
+source receipts and checksums; verify it offline with
+  node scripts/verify-native-house-regression-bundle.mjs --bundle FILE
 It never switches/pulls branches, installs npm dependencies, downloads kernels,
 overwrites existing files, or claims scientific or reproducible-build parity.
 Exit 0: completed, no method/orientation concerns; 2: saved valid evidence with
@@ -187,12 +208,13 @@ async function main() {
       process.stdout.write(`${HELP_TEXT}\n`);
       return;
     }
-    const {summary, auditFile} = await runNativeHouseLatitudeRegression(options);
+    const {summary, auditFile, bundleFile} = await runNativeHouseLatitudeRegression(options);
     process.stdout.write(`Saved ${summary.attempted} real-native cases to ${auditFile}\n` +
       `Old ${summary.baselinePassed}/${summary.attempted}; new ` +
       `${summary.currentPassed}/${summary.attempted}; recovered ` +
       `${summary.errorToSuccess}, new failures ${summary.successToError}; ` +
       `ASC flags ${summary.ascendantBranchesFlagged}.\n` +
+      `Single portable report to share: ${bundleFile}\n` +
       `${summary.status}; no scientific or method-parity certification.\n`);
     if (summary.status === 'MANUAL_METHOD_REVIEW_REQUIRED') process.exitCode = 2;
   } catch (caught) {
