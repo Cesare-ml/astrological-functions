@@ -104,6 +104,10 @@ automates the **explicitly pinned local** Rust Node addon build, grid, smoke,
 orientation check and complete before/after report. It never switches Git
 revisions or overwrites old receipts, and still requires a real owner-run
 Windows native build and independent method references before release.
+Its `--check-only` mode checks pinned source/receipt identity without compiling
+or creating files. On Windows, the optional
+`scripts/run-native-house-regression-windows.ps1` supplies a guided launcher,
+generates a unique Git-ignored evidence directory and prints the file to attach.
 Its additional `house-regression-bundle.json` consolidates both full receipts,
 the exact original baseline bytes, the smoke/orientation/version diagnostics,
 a full 161-method independent-reference review queue and their SHA-256
