@@ -36,7 +36,8 @@ export function parseNativeRegressionOptions(argv) {
     checkout: {type: 'string'}, 'expected-commit': {type: 'string'},
     baseline: {type: 'string'}, 'expected-baseline-sha256': {type: 'string'},
     'out-dir': {type: 'string'},
-    'kernel-context': {type: 'string'}, help: {type: 'boolean'},
+    'kernel-context': {type: 'string'}, 'check-only': {type: 'boolean'},
+    help: {type: 'boolean'},
   }});
   if (values.help) return {help: true};
   if (!fileName(values.checkout) || !sha40(values['expected-commit']) ||
@@ -52,7 +53,8 @@ export function parseNativeRegressionOptions(argv) {
     baseline: path.resolve(values.baseline),
     expectedBaselineSha256: values['expected-baseline-sha256']?.toLowerCase(),
     outDir: path.resolve(values['out-dir']),
-    kernelContext: values['kernel-context']});
+    kernelContext: values['kernel-context'],
+    checkOnly: values['check-only'] === true});
 }
 
 function command(cmd, args, options = {}) {
@@ -207,11 +209,13 @@ export const HELP_TEXT = `One-shot manual, local VirgoStars house regression (Wi
     --baseline PATH_TO_OLD_141_OF_161_RECEIPT \\
     --expected-baseline-sha256 ORIGINAL_64_HEX_BASELINE_SHA256 \\
     --out-dir NEW_EMPTY_EVIDENCE_DIRECTORY \\
-    --kernel-context HOUSE_ANGLES_NO_KERNEL
+    --kernel-context HOUSE_ANGLES_NO_KERNEL [--check-only]
 
 Checks exact externally pinned Git HEAD, clean tracked sources, the original
 baseline bytes hash (if provided), the full 161-case baseline,
 and an empty/absent output directory BEFORE running npm run build (cargo).
+--check-only performs that read-only preflight and prints the selected exact
+source/baseline identities; it never compiles or creates the output folder.
 Builds the Rust addon, verifies installed bytes, then saves a new full 161-case
 receipt, 23-method smoke, rising-branch analysis, before/after diff, a full
 161-method human scientific review queue and summary.
@@ -229,6 +233,21 @@ async function main() {
     const options = parseNativeRegressionOptions(process.argv.slice(2));
     if (options.help) {
       process.stdout.write(`${HELP_TEXT}\n`);
+      return;
+    }
+    if (options.checkOnly) {
+      const selected = preflightNativeRegression(options);
+      process.stdout.write(`${JSON.stringify({
+        contract: 'VirgoStarsNativeHouseRegressionPreflightV1',
+        status: 'INPUTS_CHECKED_NO_BUILD_OR_WRITES',
+        sourceCommitSha: options.expectedCommit,
+        baselineReceiptSha256: selected.baselineSha256,
+        baselinePassed: selected.baseline.passed,
+        baselineFailed: selected.baseline.failed,
+        attempted: selected.baseline.attempted,
+        plannedOutputDirectory: options.outDir,
+        scientificallyCertified: false,
+      }, null, 2)}\n`);
       return;
     }
     const {summary, auditFile, bundleFile} = await runNativeHouseLatitudeRegression(options);
