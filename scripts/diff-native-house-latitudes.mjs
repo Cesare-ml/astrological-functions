@@ -105,13 +105,12 @@ export function diffNativeHouseLatitudes(before, after) {
     ...transitions, scenarios});
 }
 
-/** Handle default PowerShell's UTF-16LE/BOM redirection as well as UTF-8. */
-export function readNativeLatitudeDiffReceipt(filename) {
-  const stat = statSync(filename);
-  if (!stat.isFile() || stat.size === 0 || stat.size > MAX_RECEIPT_BYTES) {
-    fail('E_LATITUDE_DIFF_FILE', `JSON receipt must be nonempty and <= ${MAX_RECEIPT_BYTES} bytes`);
+/** Decode original receipt bytes without losing Windows UTF-16LE/BOM identity. */
+export function parseNativeLatitudeDiffReceiptBytes(
+  bytes, filename = 'receipt.json', maxBytes = MAX_RECEIPT_BYTES) {
+  if (!Buffer.isBuffer(bytes) || bytes.length === 0 || bytes.length > maxBytes) {
+    fail('E_LATITUDE_DIFF_FILE', `JSON receipt must be nonempty and <= ${maxBytes} bytes`);
   }
-  const bytes = readFileSync(filename);
   const utf16le = bytes[0] === 0xff && bytes[1] === 0xfe;
   const json = (utf16le ? bytes.toString('utf16le') : bytes.toString('utf8'))
     .replace(/^\uFEFF/, '');
@@ -120,6 +119,15 @@ export function readNativeLatitudeDiffReceipt(filename) {
   } catch {
     fail('E_LATITUDE_DIFF_JSON', `Invalid UTF-8 or UTF-16LE/BOM JSON receipt: ${path.basename(filename)}`);
   }
+}
+
+/** Handle default PowerShell's UTF-16LE/BOM redirection as well as UTF-8. */
+export function readNativeLatitudeDiffReceipt(filename, maxBytes = MAX_RECEIPT_BYTES) {
+  const stat = statSync(filename);
+  if (!stat.isFile() || stat.size === 0 || stat.size > maxBytes) {
+    fail('E_LATITUDE_DIFF_FILE', `JSON receipt must be nonempty and <= ${maxBytes} bytes`);
+  }
+  return parseNativeLatitudeDiffReceiptBytes(readFileSync(filename), filename, maxBytes);
 }
 
 export const HELP_TEXT = `Offline, full-grid version-to-version diagnostic (7 latitudes × 23 methods).
