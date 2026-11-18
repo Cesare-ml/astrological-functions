@@ -14,6 +14,13 @@ The separate [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephe
 
 ## Try the source locally
 
+The opt-in `astrological-functions/historical-house-bridge` accepts explicit
+UT1 and TT from the caller and the long-term experimental VirgoStars Node
+angle provider. It returns Porphyry, Placidus, Regiomontanus or Koch cusps;
+it does not invent UTC or substitute polar house systems. The provider exists
+on the corresponding VirgoStars-Ephemeris feature branch until merged. See
+[historical house bridge](docs/HISTORICAL_HOUSE_BRIDGE.md).
+
 Requirements: **Node.js >=20** and npm. The repository is not published as an npm package; do not run `npm publish`.
 
 ```sh

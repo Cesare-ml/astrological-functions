@@ -52,8 +52,12 @@ function validateSource(source) {
  */
 export function calculatePorphyryHouseCusps(input) {
   if (!record(input)) fail('INVALID_INPUT', 'Porphyry input object is required');
-  const { datetimeUtc: datetime, ascendantDeg, midheavenDeg, source: inputSource } = input;
-  const datetimeUtc = validateUtc(datetime);
+  const { datetimeUtc: datetime, epochUt1JulianDay, ascendantDeg, midheavenDeg, source: inputSource } = input;
+  const historical = epochUt1JulianDay !== undefined;
+  if (historical && (datetime !== undefined || !finite(epochUt1JulianDay))) {
+    fail('INVALID_INPUT', 'Supply either a finite UT1 epoch or UTC datetime');
+  }
+  const time = historical ? {epochUt1JulianDay} : {datetimeUtc: validateUtc(datetime)};
   if (!finite(ascendantDeg) || !finite(midheavenDeg)) {
     fail('INVALID_ANGLES', 'Finite Ascendant and Midheaven ecliptic longitudes required');
   }
@@ -83,7 +87,7 @@ export function calculatePorphyryHouseCusps(input) {
     contract: 'PorphyryHouseCusps',
     contractVersion: '0.1.0-experimental',
     houseSystem: 'PORPHYRY',
-    datetimeUtc,
+    ...time,
     angles: Object.freeze({ascendantDeg: asc, icDeg: ic, descendantDeg: dsc, midheavenDeg: mc}),
     cuspsDeg: frozenCusps,
     quadrantSpansDeg: Object.freeze(arcs),
