@@ -104,7 +104,9 @@ The output directory must be **new or empty**. This command:
    clean tracked source tree immediately after the build and again before
    saving evidence, refusing a report if source changes during the run.
 3. Hashes and preflights the compiled `.node` binary, runs the real 7 × 23
-   grid and 23-method smoke, then analyzes the rising horizon branch.
+   grid and 23-method smoke, then analyzes the rising horizon branch. Before
+   accepting evidence it hashes the `.node` again and refuses a changed or
+   missing binary, in addition to rechecking the tracked Rust source.
 4. Saves **six separate JSON reports** without overwriting any prior file:
    `house-latitudes-new.json`, `house-smoke-new.json`,
    `house-angle-orientation.json`, `house-latitudes-version-diff.json`,
