@@ -47,6 +47,7 @@ test('manifest rejects duplicates, unsourced DUT1, personal labels and invalid t
     {...input, extra: 'silently accepted'},
     {...input, cases: []},
     {...input, cases: [...input.cases, input.cases[0]]},
+    replace('LEAP_PERIOD', 'id', 123),
     replace('LEAP_PERIOD', 'id', '../private-file'),
     replace('LEAP_PERIOD', 'birthDut1Seconds', '0.0'),
     replace('LEAP_PERIOD', 'birthDut1Seconds', 1.5),

@@ -132,6 +132,17 @@ Scientific/source-origin certification and availability of Regolo
 `NEW_MOON` lots remain blocked. See
 [batch run instructions](REGOLO_MOON_CONJUNCTION_SEARCH.md#multi-epoch-native-smoke-with-one-de441-preflight).
 
+**Independent multi-epoch comparison gate (18 November 2026):** an offline
+companion `compare-regolo-conjunction-batch.mjs` now checks the native
+multi-date report against a versioned reference manifest. Every native
+case needs one matching reference ID or an explicit null; invalid/missing
+reference cases, missing native roots and independently measured time/
+longitude mismatches are counted distinctly. It audits source identity,
+UTC/DUT1 links and report counts, but **cannot authenticate reference
+independence**. All comparator tests are fabricated synthetic data; no real
+Rust/DE441 or source-independent observational parity has been obtained.
+See [full-batch comparison protocol](REGOLO_MOON_CONJUNCTION_SEARCH.md#compare-the-full-batch-against-independent-references).
+
 The next stacked draft after #213 introduces a typed, opt-in 24-method selector
 without replacing any existing API, including Gauquelin's separate 36-sector
 result. Its synthetic dispatch/type tests support consumer wiring but do not

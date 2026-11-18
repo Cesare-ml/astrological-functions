@@ -349,3 +349,66 @@ candidates are found.
 node --test test/verify-native-regolo-conjunction-batch.test.mjs
 node scripts/verify-native-regolo-conjunction-batch.mjs --help
 ```
+
+### Compare the full batch against independent references
+
+After saving the native batch, use
+`scripts/compare-regolo-conjunction-batch.mjs` to compare every case against
+its *own* independently supplied reference. This avoids accidentally
+cross-matching the conjunction of one test date to another date. The offline
+comparator checks the native batch's source/kernel/addon pins, counts, case
+IDs, UTC and DUT1 consistency before comparing any values.
+
+Prepare a **separate** `conjunction-batch-references.json` manifest with
+**exactly one entry per native `results[].id`**. Initially `reference: null`
+explicitly means no independently validated data has been provided yet:
+
+```json
+{
+  "contract": "RegoloIndependentConjunctionBatchReferencesV1",
+  "references": [
+    {"id": "EPOCH_2000_LEAP_BOUNDARY", "reference": null},
+    {"id": "EPOCH_2026_RECENT", "reference": null}
+  ]
+}
+```
+
+Replace a `null` with a complete
+`RegoloIndependentConjunctionReferenceV1` object following the exact
+single-date contract [above](#independent-numerical-comparison-separate-from-recorded-p0-comparison).
+The reference must document an **independent** apparent geocentric
+ecliptic-of-date Sun–Moon longitude-conjunction JD UT1 and both independent
+Sun/Moon longitudes evaluated at the **exact JD UT1 of the corresponding
+native candidate**. Never fill a reference by copying the candidate's
+time or positions: that would manufacture an agreement. Provenance URLs
+are recorded but are **not automatically authenticated**.
+
+```powershell
+node scripts/compare-regolo-conjunction-batch.mjs `
+  --batch '.\conjunction-batch-audit.json' `
+  --references '.\conjunction-batch-references.json' > conjunction-batch-comparison.json
+if ($LASTEXITCODE -ne 0) {
+  Write-Warning 'At least one reference is missing, invalid, mismatched or lacks a native candidate'
+}
+```
+
+The `RegoloConjunctionBatchComparisonV1` report contains each case's
+timing error, angular residuals and individual status, as well as totals
+and maximum observed errors. Cases without a native candidate are reported
+as `NATIVE_CANDIDATE_UNAVAILABLE`; missing references and structurally
+invalid references are reported **separately**, and a mismatch in one date
+does not erase successful comparisons for other dates. Missing, duplicate
+or unrelated reference IDs and mismatched native binary/time-source
+identities fail closed. Exit 0 requires **all cases** to match the
+*caller's* explicit thresholds; this is labelled
+`ALL_WITHIN_CALLER_THRESHOLDS_NOT_CERTIFIED`, never scientific certification.
+
+**Actual data still needed:** a real executed batch and references from
+astronomical services/tables with independently established source identity,
+frame and time-scale conversion. This tool intentionally cannot certify
+the reference's independence or enable `NEW_MOON` for Regolo.
+
+```sh
+node --test test/compare-regolo-conjunction-batch.test.mjs
+node scripts/compare-regolo-conjunction-batch.mjs --help
+```

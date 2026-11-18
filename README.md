@@ -104,6 +104,12 @@ sourced birth DUT1 and observed time-source policy. It verifies the pinned
 source/addon/DE441 bytes **once** and emits individually inspectable
 candidate/error receipts; no reference data is fabricated or scientific
 certification claimed. See the [batch operator instructions](docs/REGOLO_MOON_CONJUNCTION_SEARCH.md#multi-epoch-native-smoke-with-one-de441-preflight).
+The offline companion
+`scripts/compare-regolo-conjunction-batch.mjs` matches case IDs to separately
+documented independent references, reports time/angle residuals and
+fail-closed missing/mismatched evidence while preserving the `NEW_MOON`
+unavailable gate. Only **synthetic** comparator tests exist today; see the
+[full-batch comparison protocol](docs/REGOLO_MOON_CONJUNCTION_SEARCH.md#compare-the-full-batch-against-independent-references).
 
 **Not included:** natal chart interpretations, user accounts, private birth records, databases, API credentials, frontend graphics, NASA/JPL kernels, or production VirgoStars services. Proposed interfaces described in `docs/CONTRACTS.md` are not necessarily shipped APIs.
 

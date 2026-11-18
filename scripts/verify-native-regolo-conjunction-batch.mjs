@@ -45,7 +45,8 @@ export function parseNativeConjunctionBatchManifest(manifest, common) {
   }
   const ids = new Set();
   return Object.freeze(manifest.cases.map(item => {
-    if (!exact(item, CASE_FIELDS) || !ID.test(item.id ?? '') ||
+    if (!exact(item, CASE_FIELDS) || typeof item.id !== 'string' ||
+        !ID.test(item.id) ||
         ids.has(item.id) || !Number.isFinite(item.birthDut1Seconds) ||
         Math.abs(item.birthDut1Seconds) > 1 ||
         typeof item.dut1SourceUri !== 'string' ||
