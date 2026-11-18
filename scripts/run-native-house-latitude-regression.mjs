@@ -41,6 +41,27 @@ function assertEmptyOutputDirectory(outDir) {
   }
 }
 
+/** Resolve existing parent symlinks without creating the planned output folder. */
+function canonicalPlannedOutput(outDir) {
+  let ancestor = outDir;
+  const missing = [];
+  while (!existsSync(ancestor)) {
+    missing.unshift(path.basename(ancestor));
+    const parent = path.dirname(ancestor);
+    if (parent === ancestor) {
+      fail('E_NATIVE_REGRESSION_OUTPUT', 'Cannot resolve output directory ancestor');
+    }
+    ancestor = parent;
+  }
+  return path.resolve(realpathSync(ancestor), ...missing);
+}
+
+function isInside(target, directory) {
+  const relative = path.relative(directory, target);
+  return relative === '' || (relative !== '..' &&
+    !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
+
 export function parseNativeRegressionOptions(argv) {
   const {values} = parseArgs({args: argv, strict: true, options: {
     checkout: {type: 'string'}, 'expected-commit': {type: 'string'},
@@ -126,6 +147,14 @@ export function preflightNativeRegression(options) {
   }
   if (options.outDir === options.baseline) {
     fail('E_NATIVE_REGRESSION_OUTPUT', 'Output directory cannot be the baseline receipt');
+  }
+  const canonicalOut = canonicalPlannedOutput(options.outDir);
+  if (isInside(canonicalOut, checkout)) {
+    fail('E_NATIVE_REGRESSION_OUTPUT',
+      'Evidence output cannot be inside the pinned Rust source checkout');
+  }
+  if (canonicalOut.split(path.sep).some(segment => segment.toLowerCase() === '.git')) {
+    fail('E_NATIVE_REGRESSION_OUTPUT', 'Evidence output cannot be inside Git metadata');
   }
   assertEmptyOutputDirectory(options.outDir);
   return Object.freeze({checkout, nodeDir, baseline, baselineBytes, baselineSha256});
