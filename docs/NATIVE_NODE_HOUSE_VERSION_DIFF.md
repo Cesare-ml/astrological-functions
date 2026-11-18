@@ -47,7 +47,12 @@ $rustShaFromPr596 = 'PASTE_EXACT_40_CHARACTER_SHA_FROM_PR596'
 For nonstandard paths, supply `-EphemerisCheckout` and `-BaselineReceipt`.
 The launcher pins the historical receipt's raw SHA-256 by default, chooses
 a new unique directory under the Git-ignored `tmp/`, and prints the exact
-`house-regression-bundle.json` path. Upload **that single file** for review.
+`house-regression-bundle.json` path. After either successful runner status (0
+or 2), it additionally invokes the offline bundle verifier with the **same
+independently pinned Rust commit and original baseline SHA-256** and displays
+the human-readable `--triage` review on screen. A failed bundle consistency
+check stops the launcher; `-CheckOnly` still never writes or runs this report.
+Upload **that single file** for review.
 Before building, the delegated runner rejects symlinked native output paths;
 after a reported successful build, it refuses a **completely unchanged addon**
 (same bytes, size and modification timestamp), so an old `.node` cannot
