@@ -123,6 +123,10 @@ Use `scripts/verify-native-house-regression-bundle.mjs --bundle PATH` to
 recompute the 161-method diff and horizon audit **offline, without Rust**;
 passing only verifies internal consistency, not scientific correctness or
 the origin of native binaries.
+Add `--triage` to print a compact, human-readable seven-latitude comparison,
+changed-method priorities and remaining independent-reference counts instead
+of the default JSON result. The option validates the full bundle first and
+does not classify any method as scientifically approved.
 If the original and new receipts declare identical native addon SHA-256
 digests, the report requires manual review even when structural and rising
 checks pass. This is not proof that a build failed or succeeded.
