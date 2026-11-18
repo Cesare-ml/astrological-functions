@@ -14,12 +14,12 @@ const signed = x => ((x + 540) % 360) - 180;
  */
 export function calculatePlacidusHouseCusps(input) {
   if (!input || typeof input !== 'object') fail('INVALID_INPUT', 'Explicit Placidus inputs are required');
-  const {armcDeg, trueObliquityDeg, datetimeUtc, ascendantDeg, midheavenDeg, source, birthTimeKnown} = input;
+  const {armcDeg, trueObliquityDeg, datetimeUtc, epochUt1JulianDay, ascendantDeg, midheavenDeg, source, birthTimeKnown} = input;
   if (birthTimeKnown !== true) fail('BIRTH_TIME_REQUIRED', 'Placidus houses require a known birth time');
   if (!Number.isFinite(armcDeg) || !Number.isFinite(trueObliquityDeg) || trueObliquityDeg <= 0 || trueObliquityDeg >= 90) {
     fail('INVALID_ANGLES', 'Finite ARMC and physical true obliquity are required');
   }
-  const base = calculatePorphyryHouseCusps({datetimeUtc, ascendantDeg, midheavenDeg, source});
+  const base = calculatePorphyryHouseCusps({datetimeUtc, epochUt1JulianDay, ascendantDeg, midheavenDeg, source});
   const latitude = base.source.observer.latitudeDeg * rad;
   const epsilon = trueObliquityDeg * rad;
   if (Math.abs(Math.tan(latitude) * Math.tan(epsilon)) >= 1) {
@@ -64,5 +64,5 @@ export function calculatePlacidusHouseCusps(input) {
   const opposite = x => normalize360(x + 180);
   const cuspsDeg = Object.freeze([asc,c2,c3,ic,opposite(c11),opposite(c12),opposite(asc),opposite(c2),opposite(c3),mc,c11,c12]);
   locateLongitudeInHouses(asc, cuspsDeg);
-  return Object.freeze({contract:'PlacidusHouseCusps',contractVersion:'0.1.0-experimental',houseSystem:'PLACIDUS',datetimeUtc:base.datetimeUtc,angles:base.angles,armcDeg:theta,trueObliquityDeg,cuspsDeg,source:base.source,validation:'CALLER_ASSERTED_ANGLES_NOT_INDEPENDENTLY_VERIFIED'});
+  return Object.freeze({contract:'PlacidusHouseCusps',contractVersion:'0.1.0-experimental',houseSystem:'PLACIDUS',...(epochUt1JulianDay !== undefined ? {epochUt1JulianDay} : {datetimeUtc:base.datetimeUtc}),angles:base.angles,armcDeg:theta,trueObliquityDeg,cuspsDeg,source:base.source,validation:'CALLER_ASSERTED_ANGLES_NOT_INDEPENDENTLY_VERIFIED'});
 }

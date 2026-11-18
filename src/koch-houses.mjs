@@ -26,5 +26,5 @@ export function calculateKochHouseCusps(input) {
   const asc=base.angles.ascendantDeg,mc=base.angles.midheavenDeg;
   const cuspsDeg=Object.freeze([asc,c2,c3,base.angles.icDeg,opposite(c11),opposite(c12),opposite(asc),opposite(c2),opposite(c3),mc,c11,c12]);
   locateLongitudeInHouses(asc,cuspsDeg);
-  return Object.freeze({contract:'KochHouseCusps',contractVersion:'0.1.0-experimental',houseSystem:'KOCH',datetimeUtc:base.datetimeUtc,angles:base.angles,armcDeg:theta,trueObliquityDeg:base.trueObliquityDeg,cuspsDeg,source:base.source,validation:'CALLER_ASSERTED_ANGLES_NOT_INDEPENDENTLY_VERIFIED'});
+  return Object.freeze({contract:'KochHouseCusps',contractVersion:'0.1.0-experimental',houseSystem:'KOCH',...(base.epochUt1JulianDay !== undefined ? {epochUt1JulianDay:base.epochUt1JulianDay} : {datetimeUtc:base.datetimeUtc}),angles:base.angles,armcDeg:theta,trueObliquityDeg:base.trueObliquityDeg,cuspsDeg,source:base.source,validation:'CALLER_ASSERTED_ANGLES_NOT_INDEPENDENTLY_VERIFIED'});
 }
