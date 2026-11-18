@@ -91,3 +91,10 @@ The first later **owner-supplied real Windows addon audit** is summarized in
 It recorded 141/161 canonical-shaped results, 20 errors, and identified a
 shared high-latitude quadrant precondition. That receipt is structural
 evidence, not an independently calibrated astronomical reference.
+
+To review a fresh native build without losing that historical baseline, retain
+both complete receipts and run the
+[offline before/after version diff](NATIVE_NODE_HOUSE_VERSION_DIFF.md). It
+reports all 161 success/error transitions, changes in error codes, circular
+cusp shifts and source-angle differences; an exit-0 diff does **not** mean
+the new build is scientifically correct or regression-free.
