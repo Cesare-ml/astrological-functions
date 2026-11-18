@@ -14,9 +14,16 @@ contains the nine kleroi found in `Regolo-Alpha-Leonis` and the entire
 92-entry legacy Arabic-part catalog (15 essential and twelve Abū Maʿshar
 groups totalling 77). Formula descriptions and a known 134°/14° Cancer
 discrepancy remain traceable to the pinned source. The math needs independent
-legacy fixture parity, scholarly source verification, authentic sect/new-Moon
+legacy HTTP fixture parity, scholarly source verification, authentic sect/new-Moon
 data and downstream typed/consumer validation before any production use.
 See [Regolo kleroi and Arabic parts](REGOLO_KLEROI_AND_ARABIC_PARTS.md).
+
+**Offline Regolo arithmetic parity (18 November 2026):** 552 of 552
+checks matched the exact legacy `parti-arabe.js` Git blob across three synthetic
+charts in both sects, including all 92 original entry names, descriptions and
+results per scenario. This is a manual, source-blob-pinned check without the
+legacy HTTP service or Swiss astronomy. Real API and scientific validation
+gates remain open; the original file is never bundled in this package.
 
 The next stacked draft after #213 introduces a typed, opt-in 24-method selector
 without replacing any existing API, including Gauquelin's separate 36-sector

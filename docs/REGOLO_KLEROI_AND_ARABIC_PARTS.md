@@ -93,9 +93,18 @@ which lunation applies; that choice is intentionally not guessed here.
 2. Replace caller-asserted Sun/Ascendant sect with versioned rising/setting
    astronomical facts from validated `VirgoStars-Ephemeris`. Sun positions,
    Moon lunations, zodiac frame, house axes and rulers must all match.
-3. Snapshot synthetic legacy `Regolo` API outputs **offline**, including
-   day/night formulas, all 92 source IDs and the known 134° anomaly. Numeric
-   agreement with old code is not evidence of historical correctness.
+3. The 92-entry **original formula arithmetic** now has an independently
+   repeatable offline check: `scripts/compare-regolo-legacy-parts.mjs` runs only
+   the original pure formula functions (not its router, Swiss ephemeris, moment
+   or lunation solver) from the exact Git blob
+   `51c5ae87451a1718212153e77139920a12a1f871`. Three entirely synthetic
+   themes in both sects produce **552 comparison rows**, including all 92
+   captions and names per scenario, the anomalous 134° value, house rulers,
+   the new-Moon ruler and cusp boundaries. On 18 November 2026, **552/552
+   numeric and label comparisons matched** the pinned Regolo formula source.
+   A real legacy HTTP API snapshot and independent historical verification
+   remain **open**; the mock new-Moon value and independently supplied sect do
+   not validate astronomy.
 4. Run strict NodeNext/Bundler TypeScript consumer checks, full native suite,
    Desktop/Mobile/backend shadow parity and source-rights/licence audit before
    promoting any result. Do not use customer birth records as fixtures.
@@ -108,6 +117,18 @@ merge, production deployment or GitHub visibility changes.
 ```sh
 node --test test/regolo-kleroi-and-arabic-parts.test.mjs
 npm test
+# OPTIONAL: offline parity against the exact original owner repo file.
+# Check out Regolo at commit 87636d88f22b85470ae3cb7a52d5280b9f43e018.
+node scripts/compare-regolo-legacy-parts.mjs --source /path/to/Regolo-Alpha-Leonis/@api/routes/api/parti-arabe.js
 # Run once TypeScript is available in the contributor environment:
 tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext test/types/regolo-lots.test.ts
 ```
+
+The parity runner rejects a modified or different source file **before**
+evaluating any code. It can also read standard input with `--source -`.
+It never downloads files, calls external services, stores birth records or
+imports legacy Swiss code. As with all Node VM evaluation, use only the trusted,
+verified owner-controlled source, not an arbitrary downloaded script. Its
+comparison uses synthetic longitudes, an injected new-Moon result and the
+Regolo output representation (`lngOffs + highlight`). This is a
+**compatibility test, not astrological/historical certification**.

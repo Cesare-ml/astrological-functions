@@ -21,6 +21,12 @@ The legacy navigation part's caption **14° Cancer** contradicts its executed
 remain `IMPLEMENTED_ISOLATED`, not historical source validation or production
 integration. See [the Regolo lot compatibility contract](docs/REGOLO_KLEROI_AND_ARABIC_PARTS.md).
 
+An additional **manual offline legacy parity runner** checks all 92 Regolo
+Arabic-part outputs against the exact pinned owner source, without bundling it
+or executing its Swiss-backed HTTP service. Its initial three synthetic
+charts × two sects passed **552/552 mathematical/label comparisons**. This does
+not validate astronomical sunrise, sect, new-Moon times, or historical claims.
+
 **Not included:** natal chart interpretations, user accounts, private birth records, databases, API credentials, frontend graphics, NASA/JPL kernels, or production VirgoStars services. Proposed interfaces described in `docs/CONTRACTS.md` are not necessarily shipped APIs.
 
 ## Try the source locally
