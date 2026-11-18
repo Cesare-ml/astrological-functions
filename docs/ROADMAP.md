@@ -36,6 +36,16 @@ injection boundary only**, not an implemented Rust solar-altitude/new-Moon
 producer or independently validated natal calculation. See
 [Regolo astronomical fact bridge](REGOLO_LOTS_ASTRONOMY_BRIDGE.md).
 
+**Regolo native-API solar sect bridge (18 November 2026):** a new isolated,
+typed opt-in entrypoint consumes the actual upstream Node `Engine.riseTransUt`
+signature with `SE_BIT_DISC_CENTER` and atmospheric refraction. It assigns
+day/night from the last matched rise/set, fails closed near the horizon and
+in polar cases, and preserves explicit missing preceding-new-Moon parts.
+The real native addon has **not** been loaded for this change; synthetic mock
+conformance does not certify Rust event times, binary provenance or the
+accuracy of caller-provided birth-chart positions. See
+[Regolo Node rise/set bridge](REGOLO_RISE_SET_NODE_BRIDGE.md).
+
 The next stacked draft after #213 introduces a typed, opt-in 24-method selector
 without replacing any existing API, including Gauquelin's separate 36-sector
 result. Its synthetic dispatch/type tests support consumer wiring but do not

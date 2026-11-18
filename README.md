@@ -37,6 +37,16 @@ astronomical fallback. It **does not** calculate the Sun's altitude or the
 new-Moon event; production needs a validated Rust provider. See
 [the Regolo astronomical fact bridge](docs/REGOLO_LOTS_ASTRONOMY_BRIDGE.md).
 
+The opt-in typed `./regolo-lots-rise-set-bridge` is the first **actual
+upstream-API-shaped solar event consumer** for these lots: it calls an injected
+`VirgoStars-Ephemeris` Node `Engine.riseTransUt` for the apparent refracted
+Sun-centre rising/setting instants and derives a conservative `DAY`/`NIGHT`
+sect, failing closed near a crossing or when polar solar events are absent.
+The installed engine binary, source commit, UT1 offset and natal positions
+are **not authenticated by injection**; live Rust scientific parity and the
+latest preceding new-Moon solver remain open gates. See
+[the Regolo Node rise/set adapter](docs/REGOLO_RISE_SET_NODE_BRIDGE.md).
+
 **Not included:** natal chart interpretations, user accounts, private birth records, databases, API credentials, frontend graphics, NASA/JPL kernels, or production VirgoStars services. Proposed interfaces described in `docs/CONTRACTS.md` are not necessarily shipped APIs.
 
 ## Try the source locally

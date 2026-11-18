@@ -17,6 +17,10 @@
       "types": "./src/regolo-lots-astronomy-bridge.d.mts",
       "import": "./src/regolo-lots-astronomy-bridge.mjs"
     },
+    "./regolo-lots-rise-set-bridge": {
+      "types": "./src/regolo-lots-rise-set-bridge.d.mts",
+      "import": "./src/regolo-lots-rise-set-bridge.mjs"
+    },
     "./dodecatemoria": {
       "types": "./src/dodecatemoria-methods.d.mts",
       "import": "./src/dodecatemoria-methods.mjs"
