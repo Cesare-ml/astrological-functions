@@ -132,6 +132,26 @@ node scripts/compare-native-house-latitudes.mjs \
   --reference latitude-references.json
 ```
 
+If a reviewer received only the **single portable regression bundle**, a
+separate `house-latitudes-new.json` export is **not required**. The same
+comparator accepts the verified bundle directly (Windows PowerShell):
+
+```powershell
+node scripts/compare-native-house-latitudes.mjs `
+  --bundle 'D:\GitHub\astrological-functions\tmp\YOUR-NEW-REGRESSION\house-regression-bundle.json' `
+  --reference 'D:\GitHub\astrological-functions\tmp\YOUR-NEW-REGRESSION\independent-references-EMPTY.json' `
+  --expected-commit $rustShaFromPr596 `
+  --expected-baseline-sha256 '002b567327cdb77f73c5f4c3ca223cd51cb8af4a952dccced3f1f779e7cd1577'
+```
+
+Use the independently selected Rust commit SHA and the actual original
+receipt digest. Bundle mode first checks the embedded historical bytes, all
+six report digests, the complete 161-case grid and the polar orientation;
+**inconsistent/tampered evidence fails before a reference comparison runs**.
+The deliberately empty template will report `INCOMPLETE_REFERENCES` with
+exit **1**. Once independent references have been filled, rerun the same
+command; numerical agreement is not an authenticity or scientific proof.
+
 The script writes a `VirgoStarsHouseLatitudeComparisonReceiptV1` JSON report
 to standard output and does not modify repository files.
 
