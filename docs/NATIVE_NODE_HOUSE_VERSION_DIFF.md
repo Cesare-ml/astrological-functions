@@ -51,14 +51,15 @@ The output directory must be **new or empty**. This command:
    **no ephemeris kernels are downloaded**.
 3. Hashes and preflights the compiled `.node` binary, runs the real 7 × 23
    grid and 23-method smoke, then analyzes the rising horizon branch.
-4. Saves **five separate JSON reports** without overwriting any prior file:
+4. Saves **six separate JSON reports** without overwriting any prior file:
    `house-latitudes-new.json`, `house-smoke-new.json`,
    `house-angle-orientation.json`, `house-latitudes-version-diff.json` and
-   `house-regression-summary.json`.
+   `house-method-review-queue.json`, `house-regression-summary.json`.
 5. Also saves `house-regression-bundle.json`: **one portable file to attach**
    for subsequent review. It contains both complete grids, **the unmodified
    original baseline bytes encoded as base64**, the native smoke, orientation
-   and version diagnostics, summary, and all five report SHA-256s.
+   and version diagnostics, the 161-method review queue, summary, and all
+   six report SHA-256s.
 
 Verify the self-contained evidence file offline without Rust, the native addon
 or a network connection:
@@ -72,7 +73,7 @@ node scripts/verify-native-house-regression-bundle.mjs `
 
 The verifier recomputes all 161 method comparisons and the Ascendant branch
 diagnostic, checks **the original 160 KB Windows UTF-16LE baseline file hash
-and parsed contents**, the five report hashes, the two optionally pinned
+and parsed contents**, the six report hashes, the two optionally pinned
 external digests, and rejects incomplete/inconsistent data. The baseline
 SHA-256 above was measured from the owner-supplied historical receipt;
 **use a different expected hash if intentionally comparing another baseline**.
@@ -150,6 +151,29 @@ The portable bundle has contract `VirgoStarsNativeHouseRegressionEvidenceV1`.
 A successful verification reports
 `INTERNAL_CONSISTENCY_VERIFIED_NOT_CERTIFIED`: **only** internal consistency,
 never astronomical correctness of house cusp positions.
+
+## Independent scientific review queue
+
+`house-method-review-queue.json` is a **human review to-do list**, never a
+truth table of which polar methods must be available. It has **161 separate
+method outcomes and 7 source-angle checks**, each with
+`PENDING_INDEPENDENT_REVIEW` and the needed kind of independent reference:
+
+| Triage category | What to investigate |
+| --- | --- |
+| `P0_NEW_METHOD_FAILURE` | A method that previously returned cusps now returns an error. |
+| `P1_CHANGED_ERROR_CODE` | Both versions error, but the error code changed. |
+| `P1_PERSISTENT_METHOD_FAILURE` | Both versions still report the same error code. |
+| `P2_RECOVERED_METHOD` | An earlier method error now returns numeric cusps; accuracy remains unproven. |
+| `P3_CHANGED_NUMERIC_CUSPS` | Both versions returned values, but at least one longitude changed. |
+| `P4_STILL_REQUIRES_INDEPENDENT_REFERENCE` | Values were unchanged but were never independently certified. |
+
+The seven analytic rising/setting checks are listed separately, to avoid
+presenting one Ascendant defect as dozens of independently established
+house-method failures. `P0_ASCENDANT_OR_SOURCE_ANGLES_REVIEW` flags unexpected
+angle orientations or missing source angles. A `RISING_BRANCH` result still
+requires an external angle reference. The output never marks any numeric
+method, error code, or polar unavailability as scientifically accepted.
 
 ## Remaining scientific/release gates
 
