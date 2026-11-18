@@ -16,10 +16,12 @@ import {validateNativeLatitudeAudit} from './compare-native-house-latitudes.mjs'
 import {diffNativeHouseLatitudes, readNativeLatitudeDiffReceipt,
   parseNativeLatitudeDiffReceiptBytes} from
   './diff-native-house-latitudes.mjs';
+import {buildNativeHouseMethodReviewQueue} from './build-native-house-method-review-queue.mjs';
 
 const NAMES = Object.freeze({nativeGrid: 'house-latitudes-new.json',
   smoke: 'house-smoke-new.json', orientation: 'house-angle-orientation.json',
   versionDiff: 'house-latitudes-version-diff.json',
+  methodReview: 'house-method-review-queue.json',
   summary: 'house-regression-summary.json'});
 const METHODS = ASTRO_COM_HOUSE_SYSTEM_IDS.filter(name => name !== 'SUNSHINE');
 const methods = new Set(METHODS);
@@ -87,7 +89,8 @@ export function verifyNativeHouseRegressionBundle(bundle) {
       !Object.hasOwn(bundle.reports, 'baseline')) {
     fail('E_NATIVE_BUNDLE_CONTRACT', 'Require an explicit, uncertified self-contained evidence bundle');
   }
-  const {baseline, nativeGrid, smoke, orientation, versionDiff, summary} = bundle.reports;
+  const {baseline, nativeGrid, smoke, orientation, versionDiff,
+    methodReview, summary} = bundle.reports;
   const encodedBaseline = bundle.baselineSource.rawBytesBase64;
   if (encodedBaseline.length === 0 || encodedBaseline.length > 7_000_000 ||
       !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encodedBaseline)) {
@@ -106,9 +109,13 @@ export function verifyNativeHouseRegressionBundle(bundle) {
   checkSmoke(smoke, nativeGrid);
   const actualOrientation = auditNativeHouseAngleOrientation(nativeGrid);
   const actualDiff = diffNativeHouseLatitudes(baseline, nativeGrid);
+  const actualReviewQueue = buildNativeHouseMethodReviewQueue(baseline, nativeGrid);
   if (!isDeepStrictEqual(orientation, actualOrientation) ||
       !isDeepStrictEqual(versionDiff, actualDiff)) {
     fail('E_NATIVE_BUNDLE_CALCULATIONS', 'Saved orientation or diff differs from recomputation');
+  }
+  if (!isDeepStrictEqual(methodReview, actualReviewQueue)) {
+    fail('E_NATIVE_BUNDLE_REVIEW_QUEUE', 'Saved human-review queue differs from all 161 original outcomes');
   }
   for (const key of Object.keys(NAMES)) {
     if (!sha64(bundle.reportSha256[key]) ||
@@ -135,6 +142,10 @@ export function verifyNativeHouseRegressionBundle(bundle) {
       summary.attempted !== 161 || summary.smokePassed !== smoke.passed ||
       summary.smokeFailed !== smoke.failed ||
       summary.ascendantBranchesFlagged !== orientation.flagged ||
+      summary.pendingIndependentMethodReferences !==
+        actualReviewQueue.missingIndependentMethodReferences ||
+      summary.pendingIndependentAngleReferences !==
+        actualReviewQueue.missingIndependentAngleReferences ||
       summary.errorToSuccess !== actualDiff.errorToSuccess ||
       summary.successToError !== actualDiff.successToError ||
       summary.errorCodesChanged !== actualDiff.errorCodesChanged ||
@@ -153,6 +164,9 @@ export function verifyNativeHouseRegressionBundle(bundle) {
     flaggedAscendants: orientation.flagged,
     recoveredMethods: actualDiff.errorToSuccess,
     newlyFailedMethods: actualDiff.successToError,
+    independentMethodReferencesStillNeeded: actualReviewQueue.missingIndependentMethodReferences,
+    independentAngleReferencesStillNeeded: actualReviewQueue.missingIndependentAngleReferences,
+    methodReviewPriorityCounts: actualReviewQueue.priorities,
     reportHashesChecked: Object.keys(NAMES).length,
     originalBaselineSha256Checked: true});
 }
@@ -161,8 +175,8 @@ export const HELP_TEXT = `Offline verification of a single portable VirgoStars 7
   node scripts/verify-native-house-regression-bundle.mjs --bundle house-regression-bundle.json \\
     [--expected-commit 40_HEX_PR_SHA] [--expected-baseline-sha256 64_HEX_RECEIPT_SHA]
 
-Checks SHA-256 for its exact original UTF-8/UTF-16LE baseline bytes, the five
-individually saved reports, all 161 method outcomes,
+Checks SHA-256 for its exact original UTF-8/UTF-16LE baseline bytes, the six
+individually saved reports, all 161 method outcomes and their review queue,
 the 23-method smoke, horizon branch, before/after diff and summary consistency.
 No Rust, native addon, kernel, network, Swiss code, external reference or
 production service is used. Exit 0 only for internally consistent evidence;
