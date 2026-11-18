@@ -131,9 +131,11 @@ export function preflightNativeRegression(options) {
   return Object.freeze({checkout, nodeDir, baseline, baselineBytes, baselineSha256});
 }
 
+const serializedJson = data => `${JSON.stringify(data, null, 2)}\n`;
+
 function exclusiveJson(dir, name, data) {
   const filename = path.join(dir, name);
-  writeFileSync(filename, `${JSON.stringify(data, null, 2)}\n`, {encoding: 'utf8', flag: 'wx'});
+  writeFileSync(filename, serializedJson(data), {encoding: 'utf8', flag: 'wx'});
   return filename;
 }
 
@@ -215,6 +217,27 @@ export function assembleNativeHouseRegressionEvidence({selected, options, native
   return Object.freeze({summary, bundle});
 }
 
+/** Confirm all seven saved files exactly match the verified in-memory evidence. */
+export function verifySavedNativeHouseRegressionEvidence(outDir, evidence) {
+  const files = [...Object.entries(NATIVE_HOUSE_BUNDLE_FILES).map(([key, filename]) =>
+    [filename, evidence.bundle.reports[key]]),
+  ['house-regression-bundle.json', evidence.bundle]];
+  const directory = lstatSync(outDir);
+  if (directory.isSymbolicLink() || !directory.isDirectory() ||
+      readdirSync(outDir).length !== files.length) {
+    fail('E_NATIVE_REGRESSION_PERSIST', 'Saved evidence directory is not an exact seven-file set');
+  }
+  for (const [filename, object] of files) {
+    const output = path.join(outDir, filename);
+    const entry = lstatSync(output);
+    if (entry.isSymbolicLink() || !entry.isFile() ||
+        !readFileSync(output).equals(Buffer.from(serializedJson(object), 'utf8'))) {
+      fail('E_NATIVE_REGRESSION_PERSIST', `Saved evidence bytes differ: ${filename}`);
+    }
+  }
+  return Object.freeze({filesChecked: files.length});
+}
+
 /** Write only a previously verified bundle; no partial files for malformed results. */
 export function saveNativeHouseRegressionEvidence(outDir, evidence) {
   verifyNativeHouseRegressionBundle(evidence.bundle);
@@ -225,6 +248,8 @@ export function saveNativeHouseRegressionEvidence(outDir, evidence) {
   }
   const bundleFile = exclusiveJson(outDir, 'house-regression-bundle.json', evidence.bundle);
   const auditFile = path.join(outDir, NATIVE_HOUSE_BUNDLE_FILES.nativeGrid);
+  // Return success only after reading the complete seven-file evidence back.
+  verifySavedNativeHouseRegressionEvidence(outDir, evidence);
   return Object.freeze({summary: evidence.bundle.reports.summary, auditFile, bundleFile});
 }
 
