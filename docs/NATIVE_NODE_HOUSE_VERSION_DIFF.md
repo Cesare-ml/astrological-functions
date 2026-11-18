@@ -48,6 +48,12 @@ For nonstandard paths, supply `-EphemerisCheckout` and `-BaselineReceipt`.
 The launcher pins the historical receipt's raw SHA-256 by default, chooses
 a new unique directory under the Git-ignored `tmp/`, and prints the exact
 `house-regression-bundle.json` path. Upload **that single file** for review.
+Before building, the delegated runner rejects symlinked native output paths;
+after a reported successful build, it refuses a **completely unchanged addon**
+(same bytes, size and modification timestamp), so an old `.node` cannot
+silently pass as newly compiled. Identical reproducible bytes are allowed if
+the file was actually recopied. This local freshness check does **not** prove
+that the new binary originated from the pinned Rust commit.
 Exit **2** means valid reports were saved and human review remains pending;
 exit **1** means the build/inputs failed. Neither outcome certifies scientific
 accuracy. This wrapper has not been executed on Windows in this environment;
