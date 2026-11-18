@@ -166,3 +166,9 @@ Regolo parts. A future adapter must require matched archive SHA/source-row
 identity, explicit continuity at birth, an independently validated Sun–Moon
 conjunction and a `VirgoStars-Ephemeris` longitude at the event timestamp;
 without all these it must return `UNAVAILABLE`, not a fabricated longitude.
+
+An **opt-in diagnostic candidate adapter** now checks the existing Python P0
+response shape, SHA/row IDs/coverage warnings and the geocentric Sun–Moon
+longitude residual via the real Node `calcUt` interface. It intentionally
+continues to return `UNAVAILABLE` for every unreviewed event; see
+[Regolo recorded-Moon diagnostics](REGOLO_P0_MOON_EVENT_CANDIDATE.md).

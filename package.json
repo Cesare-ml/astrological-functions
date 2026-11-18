@@ -21,6 +21,10 @@
       "types": "./src/regolo-lots-rise-set-bridge.d.mts",
       "import": "./src/regolo-lots-rise-set-bridge.mjs"
     },
+    "./regolo-moon-event-candidate": {
+      "types": "./src/regolo-moon-event-candidate.d.mts",
+      "import": "./src/regolo-moon-event-candidate.mjs"
+    },
     "./dodecatemoria": {
       "types": "./src/dodecatemoria-methods.d.mts",
       "import": "./src/dodecatemoria-methods.mjs"

@@ -53,6 +53,14 @@ It never fetches a kernel, runs against synthetic birth positions and issues
 only a **structural** receipt until an independently referenced astronomical
 comparison is performed. See the native smoke instructions in the adapter doc.
 
+The additional experimental `./regolo-moon-event-candidate` accepts a recorded
+Moon-cycle snapshot from `VirgoStars-Event-Ephemeris` P0 and uses the actual
+`VirgoStars-Ephemeris` `calcUt` interface for a **diagnostic** Sun–Moon
+longitude residual. It verifies event/row/dataset identity and known coverage
+limits but **never marks an unreviewed archive event as an available new Moon**
+for the Arabic parts. See
+[Regolo recorded lunar-event diagnostics](docs/REGOLO_P0_MOON_EVENT_CANDIDATE.md).
+
 **Not included:** natal chart interpretations, user accounts, private birth records, databases, API credentials, frontend graphics, NASA/JPL kernels, or production VirgoStars services. Proposed interfaces described in `docs/CONTRACTS.md` are not necessarily shipped APIs.
 
 ## Try the source locally

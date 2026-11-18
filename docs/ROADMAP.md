@@ -55,6 +55,18 @@ digest and mock-engine tests are present; the native binary is not available
 in this workspace, so **no real Rust execution or astronomical parity is
 claimed**. The independent full lunar event/longitude source remains open.
 
+**Regolo recorded-Moon candidate audit (18 November 2026):** another opt-in
+typed experimental module consumes the actual `VirgoStars-Event-Ephemeris`
+Python-first `get_synods_at` JSON envelope and calls the real Node `calcUt`
+Sun/Moon interface to compare archived conjunction candidates. It preserves
+source row ID, exact event UTC microseconds, dataset SHA, observed UT1 and
+the angular conjunction residual. All current P0 coverage is **unreviewed**:
+the module ALWAYS emits an `UNAVAILABLE` Regolo lunar input, including when
+the candidate is geometrically plausible. Known historical gaps and stale
+anchors block even candidate computation. No real Rust/P0 binary was loaded
+here; only mocked contract tests have run. See
+[Regolo recorded-Moon candidate audit](REGOLO_P0_MOON_EVENT_CANDIDATE.md).
+
 The next stacked draft after #213 introduces a typed, opt-in 24-method selector
 without replacing any existing API, including Gauquelin's separate 36-sector
 result. Its synthetic dispatch/type tests support consumer wiring but do not
