@@ -17,7 +17,7 @@ import {verifyNativeAddonPreflight, runNativeHouseSmoke} from
 import {runNativeHouseLatitudeAudit} from './audit-native-house-latitudes.mjs';
 import {auditNativeHouseAngleOrientation} from './audit-native-house-angle-orientation.mjs';
 import {validateNativeLatitudeAudit} from './compare-native-house-latitudes.mjs';
-import {diffNativeHouseLatitudes, readNativeLatitudeDiffReceipt} from
+import {diffNativeHouseLatitudes, parseNativeLatitudeDiffReceiptBytes} from
   './diff-native-house-latitudes.mjs';
 import {NATIVE_HOUSE_BUNDLE_FILES, verifyNativeHouseRegressionBundle} from
   './verify-native-house-regression-bundle.mjs';
@@ -32,19 +32,23 @@ const sha256 = filename => createHash('sha256').update(readFileSync(filename)).d
 export function parseNativeRegressionOptions(argv) {
   const {values} = parseArgs({args: argv, strict: true, options: {
     checkout: {type: 'string'}, 'expected-commit': {type: 'string'},
-    baseline: {type: 'string'}, 'out-dir': {type: 'string'},
+    baseline: {type: 'string'}, 'expected-baseline-sha256': {type: 'string'},
+    'out-dir': {type: 'string'},
     'kernel-context': {type: 'string'}, help: {type: 'boolean'},
   }});
   if (values.help) return {help: true};
   if (!fileName(values.checkout) || !sha40(values['expected-commit']) ||
       !fileName(values.baseline) || !fileName(values['out-dir']) ||
-      !label(values['kernel-context'])) {
+      !label(values['kernel-context']) ||
+      (values['expected-baseline-sha256'] !== undefined &&
+        !/^[a-f\d]{64}$/i.test(values['expected-baseline-sha256']))) {
     fail('E_NATIVE_REGRESSION_OPTIONS', 'Require --checkout, --expected-commit (40 hex), ' +
       '--baseline, --out-dir, --kernel-context');
   }
   return Object.freeze({checkout: path.resolve(values.checkout),
     expectedCommit: values['expected-commit'].toLowerCase(),
     baseline: path.resolve(values.baseline),
+    expectedBaselineSha256: values['expected-baseline-sha256']?.toLowerCase(),
     outDir: path.resolve(values['out-dir']),
     kernelContext: values['kernel-context']});
 }
@@ -83,8 +87,17 @@ export function preflightNativeRegression(options) {
   }
   command('git', ['-C', checkout, 'ls-files', '--error-unmatch',
     '--', 'bindings/node/package.json', 'bindings/node/scripts/build-native.mjs']);
-  const baseline = readNativeLatitudeDiffReceipt(options.baseline);
+  // Snapshot the original bytes once, before a potentially long Cargo build:
+  // the parsed comparison, digest and portable source must all refer to the
+  // exact same receipt, even if another process touches its path later.
+  const baselineBytes = readFileSync(options.baseline);
+  const baseline = parseNativeLatitudeDiffReceiptBytes(baselineBytes, options.baseline);
   validateNativeLatitudeAudit(baseline);
+  const baselineSha256 = createHash('sha256').update(baselineBytes).digest('hex');
+  if (options.expectedBaselineSha256 && options.expectedBaselineSha256 !== baselineSha256) {
+    fail('E_NATIVE_REGRESSION_BASELINE_SHA256',
+      'Original baseline receipt bytes do not match --expected-baseline-sha256');
+  }
   if (baseline.ephemeris.kernelContext !== options.kernelContext) {
     fail('E_NATIVE_REGRESSION_CONTEXT', 'Baseline declared kernel context differs from selected label');
   }
@@ -99,8 +112,7 @@ export function preflightNativeRegression(options) {
       (!statSync(options.outDir).isDirectory() || readdirSync(options.outDir).length !== 0)) {
     fail('E_NATIVE_REGRESSION_OUTPUT', 'Output directory must be absent or EMPTY (no overwrites)');
   }
-  return Object.freeze({checkout, nodeDir, baseline,
-    baselineSha256: sha256(options.baseline)});
+  return Object.freeze({checkout, nodeDir, baseline, baselineBytes, baselineSha256});
 }
 
 function exclusiveJson(dir, name, data) {
@@ -174,6 +186,7 @@ export async function runNativeHouseLatitudeRegression(options) {
     scientificallyCertified: false,
     independentlyVerifiedBuildProvenance: false,
     comparisonToIndependentReferences: false,
+    baselineSource: {rawBytesBase64: selected.baselineBytes.toString('base64')},
     reports, reportSha256});
   verifyNativeHouseRegressionBundle(bundle);
   const bundleFile = exclusiveJson(options.outDir, 'house-regression-bundle.json', bundle);
@@ -185,15 +198,17 @@ export const HELP_TEXT = `One-shot manual, local VirgoStars house regression (Wi
     --checkout PATH_TO_CLEAN_VIRGOSTARS_EPHEMERIS_REPO \\
     --expected-commit EXACT_40_HEX_PR596_HEAD \\
     --baseline PATH_TO_OLD_141_OF_161_RECEIPT \\
+    --expected-baseline-sha256 ORIGINAL_64_HEX_BASELINE_SHA256 \\
     --out-dir NEW_EMPTY_EVIDENCE_DIRECTORY \\
     --kernel-context HOUSE_ANGLES_NO_KERNEL
 
-Checks exact Git HEAD, clean tracked sources, the full 161-case baseline,
+Checks exact externally pinned Git HEAD, clean tracked sources, the original
+baseline bytes hash (if provided), the full 161-case baseline,
 and an empty/absent output directory BEFORE running npm run build (cargo).
 Builds the Rust addon, verifies installed bytes, then saves a new full 161-case
 receipt, 23-method smoke, rising-branch analysis, before/after diff and summary.
-Also exports a single self-contained house-regression-bundle.json with all
-source receipts and checksums; verify it offline with
+Also exports a single self-contained house-regression-bundle.json with both
+grids, exact historical receipt bytes (base64) and checksums; verify it with
   node scripts/verify-native-house-regression-bundle.mjs --bundle FILE
 It never switches/pulls branches, installs npm dependencies, downloads kernels,
 overwrites existing files, or claims scientific or reproducible-build parity.
