@@ -80,20 +80,25 @@ function command(cmd, args, options = {}) {
   return result.stdout.trim();
 }
 
-/** Validate all safe-to-check inputs before compiling or creating files. */
-export function preflightNativeRegression(options) {
-  const checkout = realpathSync(options.checkout);
+/** Require the selected Rust HEAD and tracked tree to remain pinned throughout the run. */
+export function assertPinnedNativeSource(checkout, expectedCommit) {
   const gitRoot = realpathSync(command('git', ['-C', checkout, 'rev-parse', '--show-toplevel']));
-  if (checkout !== gitRoot) {
+  if (realpathSync(checkout) !== gitRoot) {
     fail('E_NATIVE_REGRESSION_CHECKOUT', '--checkout must be the Git repository root');
   }
   const head = command('git', ['-C', checkout, 'rev-parse', 'HEAD']).toLowerCase();
-  if (head !== options.expectedCommit) {
+  if (head !== expectedCommit) {
     fail('E_NATIVE_REGRESSION_COMMIT', 'Selected HEAD differs from the required full commit');
   }
   if (command('git', ['-C', checkout, 'status', '--porcelain', '--untracked-files=no'])) {
     fail('E_NATIVE_REGRESSION_DIRTY', 'Rust checkout has modified tracked files');
   }
+}
+
+/** Validate all safe-to-check inputs before compiling or creating files. */
+export function preflightNativeRegression(options) {
+  const checkout = realpathSync(options.checkout);
+  assertPinnedNativeSource(checkout, options.expectedCommit);
   const nodeDir = path.join(checkout, 'bindings', 'node');
   const packageFile = path.join(nodeDir, 'package.json');
   if (!existsSync(packageFile) || !statSync(packageFile).isFile()) {
@@ -234,6 +239,8 @@ export async function runNativeHouseLatitudeRegression(options) {
   if (build.error || build.status !== 0) {
     fail('E_NATIVE_REGRESSION_BUILD', String(build.error?.message ?? `npm build exit ${build.status}`));
   }
+  // A build script must not change tracked Rust inputs or switch the pinned HEAD.
+  assertPinnedNativeSource(selected.checkout, options.expectedCommit);
   const afterBuild = snapshotNativeAddon(addonPath);
   assertNativeAddonBuildUpdated(beforeBuild, afterBuild);
   const nativeOptions = {checkout: selected.checkout,
@@ -247,6 +254,8 @@ export async function runNativeHouseLatitudeRegression(options) {
   const smoke = await runNativeHouseSmoke(nativeOptions);
   const evidence = assembleNativeHouseRegressionEvidence({selected, options, nativeOptions,
     audit, smoke});
+  // Also refuse evidence if tracked source changed while the addon was audited.
+  assertPinnedNativeSource(selected.checkout, options.expectedCommit);
   const {summary, auditFile, bundleFile} = saveNativeHouseRegressionEvidence(options.outDir,
     evidence);
   return Object.freeze({summary, auditFile, bundleFile});
