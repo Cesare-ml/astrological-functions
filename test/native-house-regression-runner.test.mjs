@@ -103,6 +103,23 @@ test('preflight refuses unpinned/dirty checkout, changed context and occupied ou
       kernelContext: 'WRONG_CONTEXT'}), /E_NATIVE_REGRESSION_CONTEXT/);
     assert.throws(() => preflightNativeRegression({...base,
       expectedBaselineSha256: 'a'.repeat(64)}), /E_NATIVE_REGRESSION_BASELINE_SHA256/);
+    assert.throws(() => preflightNativeRegression({...base,
+      outDir: path.join(fixture.checkout, 'reports')}), /E_NATIVE_REGRESSION_OUTPUT/);
+    assert.throws(() => preflightNativeRegression({...base,
+      outDir: path.join(fixture.checkout, '.git', 'objects', 'reports')}),
+    /E_NATIVE_REGRESSION_OUTPUT/);
+    assert.throws(() => preflightNativeRegression({...base,
+      outDir: path.join(fixture.folder, '.git', 'reports')}),
+    /E_NATIVE_REGRESSION_OUTPUT/);
+    const link = path.join(fixture.folder, 'linked-rust-source');
+    try {
+      symlinkSync(fixture.checkout, link, 'dir');
+      assert.throws(() => preflightNativeRegression({...base,
+        outDir: path.join(link, 'indirect-reports')}), /E_NATIVE_REGRESSION_OUTPUT/);
+    } catch (error) {
+      if (process.platform !== 'win32' ||
+          (error.code !== 'EPERM' && error.code !== 'EACCES')) throw error;
+    }
     const reusedSource = baseline();
     reusedSource.ephemeris.upstreamCommitSha = fixture.expectedCommit;
     const reusedBaseline = path.join(fixture.folder, 'same-commit.json');
