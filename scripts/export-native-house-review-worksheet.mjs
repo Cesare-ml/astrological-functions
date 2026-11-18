@@ -11,14 +11,16 @@ import {parseArgs} from 'node:util';
 import {readNativeLatitudeDiffReceipt} from './diff-native-house-latitudes.mjs';
 import {verifyNativeHouseRegressionBundle} from './verify-native-house-regression-bundle.mjs';
 
-const HEADERS = Object.freeze([
+export const NATIVE_HOUSE_REVIEW_COLUMNS = Object.freeze([
   'row_type', 'scenario_id', 'latitude_deg', 'house_system',
   'observed_transition', 'observed_outcome', 'observed_error_code',
   'observed_changed_cusps', 'observed_max_cusp_delta_arcsec',
   'observed_horizon_status', 'triage_priority', 'required_independent_evidence',
   'review_status', 'reference_source_url', 'reference_source_title',
+  'reference_source_acquired_utc', 'reference_source_convention',
   'reference_expected_availability', 'reference_expected_values_degrees',
-  'reference_tolerance_arcsec', 'reviewer_notes',
+  'reference_expected_error_code', 'reference_tolerance_arcsec',
+  'reference_tolerance_rationale', 'reviewer_notes',
 ]);
 
 const fail = (code, reason) => {throw new Error(`${code}: ${reason}`);};
@@ -27,7 +29,10 @@ const fail = (code, reason) => {throw new Error(`${code}: ${reason}`);};
 export function reviewCsvCell(value) {
   if (value === undefined || value === null) return '""';
   let content = String(value);
-  if (typeof value === 'string' && /^\s*[=+\-@]/u.test(content)) {
+  // A numeric cell may become a string after a CSV editor round trip. Keep
+  // plain signed decimal numbers intact; guard all other formula-like text.
+  if (typeof value === 'string' && /^\s*[=+\-@]/u.test(content) &&
+      !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/u.test(content)) {
     content = `'${content}`;
   }
   return `"${content.replaceAll('"', '""')}"`;
@@ -39,20 +44,21 @@ export function createNativeHouseReviewWorksheetCsv(bundle) {
   if (queue.methods.length !== 161 || queue.angles.length !== 7) {
     fail('E_NATIVE_WORKSHEET_COVERAGE', 'Require all 161 methods and seven angle cases');
   }
-  const rows = [HEADERS];
+  const emptyIndependentFields = Array(10).fill('');
+  const rows = [NATIVE_HOUSE_REVIEW_COLUMNS];
   for (const item of queue.methods) {
     rows.push(['METHOD', item.id, item.latitudeDeg, item.houseSystem,
       item.transition, item.currentOutcome, item.currentErrorCode,
       item.changedCusps, item.maxCuspDeltaArcsec, null, item.triage,
-      item.requiredEvidence, item.reviewStatus, '', '', '', '', '', '']);
+      item.requiredEvidence, item.reviewStatus, ...emptyIndependentFields]);
   }
   for (const item of queue.angles) {
     rows.push(['ANGLES', item.id, item.latitudeDeg, null,
       null, null, null, null, null, item.analyticHorizonStatus,
       item.triage, item.requiredEvidence, item.reviewStatus,
-      '', '', '', '', '', '']);
+      ...emptyIndependentFields]);
   }
-  if (rows.length !== 169 || rows.some(row => row.length !== HEADERS.length)) {
+  if (rows.length !== 169 || rows.some(row => row.length !== NATIVE_HOUSE_REVIEW_COLUMNS.length)) {
     fail('E_NATIVE_WORKSHEET_COVERAGE', 'Worksheet schema or row count changed');
   }
   // Excel recognizes the UTF-8 BOM; CRLF preserves one physical row per case.
@@ -67,10 +73,10 @@ export const HELP_TEXT = `Export a human review worksheet (CSV) from a VERIFIED 
 Creates, without overwriting, a UTF-8-BOM Excel-readable CSV with 161 method
 rows and seven angle rows. Observed fields and triage priorities come only from
 the internally consistent evidence bundle. Independent source, expected value,
-availability and reviewer fields are BLANK. This CSV is a HUMAN TRIAGE AID,
-NOT a comparator input, scientific certification or proof of binary provenance.
-Obtain separate references and enter them manually; do not treat native addon
-values or errors as independent expectations.`;
+availability and reviewer fields are BLANK. An optional importer can convert
+manually completed, independently sourced rows into comparator-compatible JSON.
+This CSV is a HUMAN TRIAGE AID, NOT scientific certification or proof of binary
+provenance. Never copy native addon values/errors into expected references.`;
 
 async function main() {
   try {
