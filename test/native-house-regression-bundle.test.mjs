@@ -11,6 +11,8 @@ import {HOUSE_SMOKE_FIXTURE} from '../scripts/verify-native-house-bridge.mjs';
 import {LATITUDE_AUDIT_CASES} from '../scripts/audit-native-house-latitudes.mjs';
 import {auditNativeHouseAngleOrientation} from '../scripts/audit-native-house-angle-orientation.mjs';
 import {diffNativeHouseLatitudes} from '../scripts/diff-native-house-latitudes.mjs';
+import {buildNativeHouseMethodReviewQueue} from
+  '../scripts/build-native-house-method-review-queue.mjs';
 import {canonicalReportSha256, NATIVE_HOUSE_BUNDLE_FILES,
   verifyNativeHouseRegressionBundle} from
   '../scripts/verify-native-house-regression-bundle.mjs';
@@ -65,6 +67,7 @@ function makeBundle() {
   };
   const orientation = auditNativeHouseAngleOrientation(nativeGrid);
   const versionDiff = diffNativeHouseLatitudes(baseline, nativeGrid);
+  const methodReview = buildNativeHouseMethodReviewQueue(baseline, nativeGrid);
   const review = orientation.flagged > 0;
   const summary = {contract: 'VirgoStarsNativeHouseRegressionBundleV1',
     status: review ? 'MANUAL_METHOD_REVIEW_REQUIRED' : 'STRUCTURAL_CHECKS_COMPLETE_NOT_CERTIFIED',
@@ -77,13 +80,16 @@ function makeBundle() {
     currentPassed: nativeGrid.passed, currentFailed: nativeGrid.failed,
     attempted: 161, smokePassed: smoke.passed, smokeFailed: smoke.failed,
     ascendantBranchesFlagged: orientation.flagged,
+    pendingIndependentMethodReferences: methodReview.missingIndependentMethodReferences,
+    pendingIndependentAngleReferences: methodReview.missingIndependentAngleReferences,
     errorToSuccess: versionDiff.errorToSuccess,
     successToError: versionDiff.successToError,
     errorCodesChanged: versionDiff.errorCodesChanged,
     successValuesChanged: versionDiff.successValuesChanged,
     sameAddonDigest: versionDiff.sameAddonDigest,
     files: [...Object.values(NATIVE_HOUSE_BUNDLE_FILES), 'house-regression-bundle.json']};
-  const reports = {baseline, nativeGrid, smoke, orientation, versionDiff, summary};
+  const reports = {baseline, nativeGrid, smoke, orientation, versionDiff,
+    methodReview, summary};
   const reportSha256 = Object.fromEntries(Object.keys(NATIVE_HOUSE_BUNDLE_FILES).map(
     key => [key, canonicalReportSha256(reports[key])]));
   return {contract: 'VirgoStarsNativeHouseRegressionEvidenceV1',
@@ -99,7 +105,9 @@ test('portable bundle checks hashes and recomputes 161-method diff and polar ris
   assert.equal(output.contract, 'VirgoStarsNativeHouseBundleVerificationV1');
   assert.equal(output.status, 'INTERNAL_CONSISTENCY_VERIFIED_NOT_CERTIFIED');
   assert.equal(output.attempted, 161);
-  assert.equal(output.reportHashesChecked, 5);
+  assert.equal(output.reportHashesChecked, 6);
+  assert.equal(output.independentMethodReferencesStillNeeded, 161);
+  assert.equal(output.independentAngleReferencesStillNeeded, 7);
   assert.equal(output.originalBaselineSha256Checked, true);
   assert.equal(output.flaggedAscendants, 0);
   assert.equal(output.scientificallyCertified, false);
@@ -108,6 +116,48 @@ test('portable bundle checks hashes and recomputes 161-method diff and polar ris
   assert.equal(bundle.reports.orientation.scenarios[6].status, 'RISING_BRANCH');
   assert.ok(Math.abs(bundle.reports.versionDiff.scenarios[6]
     .angleDeltaArcsec.ascendantDeg - 648000) < 1e-6);
+  assert.equal(bundle.reports.methodReview.methods.length, 161);
+  assert.equal(bundle.reports.methodReview.angles.length, 7);
+  assert.equal(bundle.reports.methodReview.priorities.P4_STILL_REQUIRES_INDEPENDENT_REFERENCE, 161);
+});
+
+test('human-review queue distinguishes new, persistent, recovered, changed errors and cusps', () => {
+  const {baseline, nativeGrid} = makeBundle().reports;
+  function markError(grid, index, houseSystem, code) {
+    const scenario = grid.scenarios[index];
+    const position = scenario.results.findIndex(row => row.houseSystem === houseSystem);
+    assert.notEqual(position, -1);
+    scenario.results.splice(position, 1);
+    scenario.failures.push({houseSystem, code, message: 'Synthetic unresolved method'});
+    scenario.passed--;
+    scenario.failed++;
+    grid.passed--;
+    grid.failed++;
+    grid.status = 'METHOD_ERRORS_REQUIRE_MANUAL_REVIEW';
+  }
+  markError(baseline, 0, 'PLACIDUS', 'POLAR_HOUSES_UNAVAILABLE');
+  markError(nativeGrid, 0, 'PLACIDUS', 'POLAR_HOUSES_UNAVAILABLE');
+  markError(baseline, 1, 'KOCH', 'POLAR_HOUSES_UNAVAILABLE');
+  markError(nativeGrid, 2, 'GAUQUELIN_36', 'GAUQUELIN_CUSPS_UNAVAILABLE');
+  markError(baseline, 3, 'CAMPANUS', 'DEGENERATE_QUADRANTS');
+  markError(nativeGrid, 3, 'CAMPANUS', 'HOUSE_GEOMETRY_UNAVAILABLE');
+  nativeGrid.scenarios[4].results.find(row => row.houseSystem === 'MERIDIAN')
+    .valuesDeg[0] += 1;
+  const queue = buildNativeHouseMethodReviewQueue(baseline, nativeGrid);
+  assert.deepEqual(queue.priorities, {
+    P0_NEW_METHOD_FAILURE: 1, P1_CHANGED_ERROR_CODE: 1,
+    P1_PERSISTENT_METHOD_FAILURE: 1, P2_RECOVERED_METHOD: 1,
+    P3_CHANGED_NUMERIC_CUSPS: 1, P4_STILL_REQUIRES_INDEPENDENT_REFERENCE: 156,
+  });
+  assert.equal(queue.attempted, 161);
+  assert.equal(queue.currentMethodFailures, 3);
+  assert.equal(queue.missingIndependentMethodReferences, 161);
+  assert.equal(queue.missingIndependentAngleReferences, 7);
+  assert.equal(queue.polarMethodAvailabilityIndependentlyVerified, false);
+  assert.equal(queue.methods.filter(row => row.reviewStatus !==
+    'PENDING_INDEPENDENT_REVIEW').length, 0);
+  assert.equal(queue.methods.find(row => row.triage === 'P0_NEW_METHOD_FAILURE')
+    .requiredEvidence, 'INDEPENDENT_METHOD_AVAILABILITY_REFERENCE');
 });
 
 test('hash mismatch fails before accepting an altered cusp or error code', () => {
@@ -133,6 +183,11 @@ test('even re-hashed fabricated orientation or method report is rejected', () =>
   duplicate.reports.smoke.results[1].houseSystem = duplicate.reports.smoke.results[0].houseSystem;
   duplicate.reportSha256.smoke = canonicalReportSha256(duplicate.reports.smoke);
   assert.throws(() => verifyNativeHouseRegressionBundle(duplicate), /E_NATIVE_BUNDLE_SMOKE/);
+  const forgedReview = structuredClone(makeBundle());
+  forgedReview.reports.methodReview.methods[0].reviewStatus = 'SCIENTIFICALLY_APPROVED';
+  forgedReview.reportSha256.methodReview =
+    canonicalReportSha256(forgedReview.reports.methodReview);
+  assert.throws(() => verifyNativeHouseRegressionBundle(forgedReview), /E_NATIVE_BUNDLE_REVIEW_QUEUE/);
   const wrongFixture = makeBundle();
   wrongFixture.reports.baseline.scenarios[3].fixture.ttJulianDay += 1;
   assert.throws(() => verifyNativeHouseRegressionBundle(wrongFixture), /E_NATIVE_BUNDLE_BASELINE/);
@@ -156,7 +211,7 @@ test('CLI accepts a single Windows UTF-16LE/BOM portable file without Rust', () 
     writeFileSync(receipt, `\uFEFF${JSON.stringify(makeBundle())}`, 'utf16le');
     const run = spawnSync(process.execPath, [script, '--bundle', receipt], {encoding: 'utf8'});
     assert.equal(run.status, 0, run.stderr);
-    assert.equal(JSON.parse(run.stdout).reportHashesChecked, 5);
+    assert.equal(JSON.parse(run.stdout).reportHashesChecked, 6);
     const pinned = spawnSync(process.execPath, [script, '--bundle', receipt,
       '--expected-commit', 'c'.repeat(40), '--expected-baseline-sha256',
       makeBundle().reports.summary.baselineReceiptSha256], {encoding: 'utf8'});
