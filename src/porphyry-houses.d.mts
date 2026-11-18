@@ -10,6 +10,7 @@ export interface PorphyryAngleSource {
 }
 export interface PorphyryHouseInput {
   readonly datetimeUtc: string;
+  readonly epochUt1JulianDay?: never;
   /** Caller-provided ecliptic longitude in degrees. */
   readonly ascendantDeg: number;
   readonly midheavenDeg: number;
@@ -34,4 +35,13 @@ export interface PorphyryHouseCusps {
   readonly interpretation: 'FACTS_ONLY';
   readonly validation: 'CALLER_ASSERTED_ANGLES_NOT_INDEPENDENTLY_VERIFIED';
 }
+/** Historical time is explicitly UT1, not a synthetic UTC datetime. */
+export type HistoricalPorphyryHouseInput = Omit<PorphyryHouseInput, 'datetimeUtc' | 'epochUt1JulianDay'> & {
+  readonly epochUt1JulianDay: number;
+  readonly datetimeUtc?: never;
+};
+export type HistoricalPorphyryHouseCusps = Omit<PorphyryHouseCusps, 'datetimeUtc'> & {
+  readonly epochUt1JulianDay: number;
+};
 export declare function calculatePorphyryHouseCusps(input: PorphyryHouseInput): Readonly<PorphyryHouseCusps>;
+export declare function calculatePorphyryHouseCusps(input: HistoricalPorphyryHouseInput): Readonly<HistoricalPorphyryHouseCusps>;
