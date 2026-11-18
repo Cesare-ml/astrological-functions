@@ -1,12 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
+import {mkdtempSync, rmSync, writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {ASTRO_COM_HOUSE_SYSTEM_IDS} from '../src/astro-com-house-selector.mjs';
 import {HOUSE_SMOKE_FIXTURE} from '../scripts/verify-native-house-bridge.mjs';
 import {LATITUDE_AUDIT_CASES} from '../scripts/audit-native-house-latitudes.mjs';
-import {compareNativeHouseLatitudeAudit} from '../scripts/compare-native-house-latitudes.mjs';
+import {compareNativeHouseLatitudeAudit, readSmallJson} from
+  '../scripts/compare-native-house-latitudes.mjs';
 
 const methods = ASTRO_COM_HOUSE_SYSTEM_IDS.filter(id => id !== 'SUNSHINE');
 const context = {upstreamCommitSha: 'a'.repeat(40),
@@ -191,4 +194,31 @@ test('manual CLI never advertises scientific certification or accepts implicit f
   assert.equal(missing.status, 1);
   assert.match(missing.stderr, /E_LATITUDE_COMPARE_ARGS/);
   assert.match(path.basename(script), /latitudes/);
+});
+
+test('Windows UTF-16LE/BOM references and audits work, invalid Unicode fails closed', () => {
+  const script = fileURLToPath(new URL(
+    '../scripts/compare-native-house-latitudes.mjs', import.meta.url));
+  const dir = mkdtempSync(path.join(tmpdir(), 'vs-native-reference-'));
+  try {
+    const audit = path.join(dir, 'audit.json');
+    const reference = path.join(dir, 'reference.json');
+    writeFileSync(audit, `\uFEFF${JSON.stringify(fakeAudit())}`, 'utf16le');
+    writeFileSync(reference, `\uFEFF${JSON.stringify(fakeReferences())}`, 'utf16le');
+    assert.equal(readSmallJson(reference).scenarios.length, 7);
+    const result = spawnSync(process.execPath, [script, '--audit', audit,
+      '--reference', reference], {encoding: 'utf8'});
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(JSON.parse(result.stdout).status, 'MATCHES_CALLER_REFERENCES_NOT_CERTIFIED');
+    writeFileSync(reference, Buffer.from([0xff, 0xfe, 0x7b]));
+    assert.throws(() => readSmallJson(reference), /E_LATITUDE_COMPARE_JSON/);
+    const invalid = spawnSync(process.execPath, [script, '--audit', audit,
+      '--reference', reference], {encoding: 'utf8'});
+    assert.equal(invalid.status, 1);
+    assert.match(invalid.stderr, /E_LATITUDE_COMPARE_JSON/);
+    writeFileSync(reference, Buffer.from([0xc3, 0x28]));
+    assert.throws(() => readSmallJson(reference), /E_LATITUDE_COMPARE_JSON/);
+  } finally {
+    rmSync(dir, {recursive: true, force: true});
+  }
 });
