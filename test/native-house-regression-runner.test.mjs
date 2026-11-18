@@ -76,8 +76,16 @@ function setup() {
 test('worksheet CSV parser preserves quoted metadata and rejects malformed records', () => {
   assert.deepEqual(parseNativeHouseReviewCsv('\uFEFF"name","note"\r\n"a""b","line 1\r\nline 2"\r\n'),
     [['name', 'note'], ['a"b', 'line 1\r\nline 2']]);
+  assert.deepEqual(parseNativeHouseReviewCsv('\uFEFFsep=;\r\n"name";"note"\r\n"a""b";"one;two"\r\n'),
+    [['name', 'note'], ['a"b', 'one;two']]);
+  assert.deepEqual(parseNativeHouseReviewCsv('sep=,\r\n"name","note"\r\n"a","b"\r\n'),
+    [['name', 'note'], ['a', 'b']]);
   assert.throws(() => parseNativeHouseReviewCsv('"unterminated'), /E_NATIVE_WORKSHEET_CSV/);
   assert.throws(() => parseNativeHouseReviewCsv('"a"junk,b'), /E_NATIVE_WORKSHEET_CSV/);
+  assert.throws(() => parseNativeHouseReviewCsv('"name";"note","extra"\n'),
+    /E_NATIVE_WORKSHEET_DELIMITER/);
+  assert.throws(() => parseNativeHouseReviewCsv('sep=;\n"name","note"\n'),
+    /E_NATIVE_WORKSHEET_DELIMITER/);
 });
 
 test('single-command runner validates fully pinned clean repo and UTF-16LE baseline', () => {
@@ -417,6 +425,11 @@ test('synthetic evidence flows through assembly, all seven files and offline ver
     const filledReview = `\uFEFF${worksheetCells.map(row =>
       row.map(reviewCsvCell).join(',')).join('\r\n')}\r\n`;
     const reviewed = createNativeHouseReferenceFromWorksheet(portable, filledReview);
+    const italianCsv = `\uFEFFsep=;\r\n${worksheetCells.map(row =>
+      row.map(reviewCsvCell).join(';')).join('\r\n')}\r\n`;
+    const italianReviewed = createNativeHouseReferenceFromWorksheet(portable, italianCsv);
+    assert.deepEqual(italianReviewed, reviewed,
+      'Italian Excel semicolon CSV must preserve all independent references');
     assert.equal(reviewed.comparison.methodsCompared, 1);
     assert.equal(reviewed.comparison.angleComparisons.length, 1);
     assert.equal(reviewed.comparison.missingMethodReferences.length, 160);
