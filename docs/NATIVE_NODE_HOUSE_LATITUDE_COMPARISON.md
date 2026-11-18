@@ -94,9 +94,12 @@ reviewed row, supply:
 
 Leave **all `reference_*` cells blank** for unfinished rows. A partially filled
 reference is rejected; no empty cells or native observations are silently
-interpreted as expectations. Save as **UTF-8 comma-delimited CSV** with the
-original headers; some Italian Excel installations default to semicolon CSV,
-so explicitly choose the comma separator on export/import.
+interpreted as expectations. Save as **UTF-8 CSV** with the original headers.
+The importer auto-detects both standard comma CSV and regional semicolon CSV
+(common in Italian Excel), including Excel's optional `sep=,` or `sep=;` first
+line; a mixed/ambiguous delimiter is rejected. **Always use `.` for decimal
+degrees**, even when the file columns are delimited by semicolons. Keep
+semicolon-separated numeric arrays inside a single quoted CSV cell.
 
 When at least one row has documented independent evidence, convert the CSV
 into the comparator's exact JSON reference contract (the original empty JSON
