@@ -19,13 +19,37 @@ const INDEPENDENT_COLUMNS = NATIVE_HOUSE_REVIEW_COLUMNS.filter(name =>
   name.startsWith('reference_'));
 const ANGLE_NAMES = ['armcDeg', 'ascendantDeg', 'midheavenDeg', 'trueObliquityDeg'];
 
-/** Parse ordinary RFC-4180-style quoted comma CSV, including quoted newlines. */
+/** Detect an unambiguous delimiter from the unedited first header row. */
+function csvDelimiter(input) {
+  const marker = /^sep=([,;])(?:\r\n|\n|\r)/i.exec(input);
+  const source = marker ? input.slice(marker[0].length) : input;
+  const breakIndex = source.search(/[\r\n]/u);
+  const header = breakIndex < 0 ? source : source.slice(0, breakIndex);
+  let quoted = false, commas = 0, semicolons = 0;
+  for (let i = 0; i < header.length; i++) {
+    if (header[i] === '"') {
+      if (quoted && header[i + 1] === '"') i++;
+      else quoted = !quoted;
+    } else if (!quoted && header[i] === ',') commas++;
+    else if (!quoted && header[i] === ';') semicolons++;
+  }
+  if (commas && semicolons) {
+    fail('E_NATIVE_WORKSHEET_DELIMITER', 'Mixed commas and semicolons in CSV header');
+  }
+  const delimiter = semicolons ? ';' : ',';
+  if (marker && marker[1] !== delimiter) {
+    fail('E_NATIVE_WORKSHEET_DELIMITER', 'Excel sep= delimiter conflicts with CSV header');
+  }
+  return {source, delimiter};
+}
+
+/** Parse quoted UTF-8 comma/semicolon CSV, including quoted newlines. */
 export function parseNativeHouseReviewCsv(csv) {
   if (typeof csv !== 'string' || csv.length === 0 || csv.length > 10_000_000 ||
       csv.includes('\u0000')) {
     fail('E_NATIVE_WORKSHEET_CSV', 'Require nonempty, bounded UTF-8 CSV without NUL');
   }
-  const source = csv.replace(/^\uFEFF/, '');
+  const {source, delimiter} = csvDelimiter(csv.replace(/^\uFEFF/, ''));
   const records = [];
   let row = [], field = '', quoted = false, closedQuote = false, atFieldStart = true;
   function endField() {
@@ -54,7 +78,7 @@ export function parseNativeHouseReviewCsv(csv) {
       }
       continue;
     }
-    if (char === ',') {
+    if (char === delimiter) {
       endField();
     } else if (char === '\r' || char === '\n') {
       if (char === '\r' && source[i + 1] === '\n') i++;
@@ -213,7 +237,8 @@ ARMC;ASC;MC;TRUE_OBLIQUITY, separated by semicolons, with dot decimals, a
 positive arcsecond tolerance and rationale. For UNAVAILABLE methods provide a
 documented method-specific error code, but no numeric values or tolerance.
 Both kinds require real HTTPS source/title, UTC acquisition time and precise
-method/model convention. Save UTF-8 comma-delimited CSV with original headers.
+method/model convention. Save UTF-8 CSV with original headers and a comma or
+regional semicolon delimiter.
 The importer ignores ALL observed native values when building expectations,
 validates references with the existing comparator and exclusively writes JSON.
 It NEVER certifies authenticity, independence or scientific method correctness.`;
