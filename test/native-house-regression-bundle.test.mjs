@@ -266,6 +266,40 @@ test('CLI accepts a single Windows UTF-16LE/BOM portable file without Rust', () 
     const referenceTemplate = JSON.parse(readFileSync(referenceFile, 'utf8'));
     assert.equal(compareNativeHouseLatitudeAudit(makeBundle().reports.nativeGrid,
       referenceTemplate).missingMethodReferences.length, 161);
+    const comparisonScript = fileURLToPath(new URL(
+      '../scripts/compare-native-house-latitudes.mjs', import.meta.url));
+    const partialComparison = spawnSync(process.execPath, [comparisonScript,
+      '--bundle', receipt, '--reference', referenceFile,
+      '--expected-commit', 'c'.repeat(40), '--expected-baseline-sha256',
+      makeBundle().reports.summary.baselineReceiptSha256], {encoding: 'utf8'});
+    assert.equal(partialComparison.status, 1,
+      'empty template can never exit successfully');
+    assert.equal(partialComparison.stderr, '');
+    const partialReview = JSON.parse(partialComparison.stdout);
+    assert.equal(partialReview.status, 'INCOMPLETE_REFERENCES');
+    assert.equal(partialReview.missingMethodReferences.length, 161);
+    assert.equal(partialReview.missingAngleReferences.length, 7);
+    assert.equal(partialReview.scientificallyCertified, false);
+    const wrongComparisonPin = spawnSync(process.execPath, [comparisonScript,
+      '--bundle', receipt, '--reference', referenceFile,
+      '--expected-commit', 'd'.repeat(40)], {encoding: 'utf8'});
+    assert.equal(wrongComparisonPin.status, 1);
+    assert.match(wrongComparisonPin.stderr, /E_LATITUDE_COMPARE_EXPECTED_COMMIT/);
+    assert.equal(wrongComparisonPin.stdout, '');
+    const altered = structuredClone(makeBundle());
+    altered.reports.orientation.scenarios[6].status = 'SETTING_BRANCH';
+    const tamperedBundleFile = path.join(dir, 'tampered-portable.json');
+    writeFileSync(tamperedBundleFile, `\uFEFF${JSON.stringify(altered)}`, 'utf16le');
+    const corruptComparison = spawnSync(process.execPath, [comparisonScript,
+      '--bundle', tamperedBundleFile, '--reference', referenceFile], {encoding: 'utf8'});
+    assert.equal(corruptComparison.status, 1);
+    assert.match(corruptComparison.stderr, /E_NATIVE_BUNDLE_CALCULATIONS/);
+    assert.equal(corruptComparison.stdout, '');
+    const wrongComparisonInputs = spawnSync(process.execPath, [comparisonScript,
+      '--audit', receipt, '--bundle', receipt, '--reference', referenceFile],
+      {encoding: 'utf8'});
+    assert.equal(wrongComparisonInputs.status, 1);
+    assert.match(wrongComparisonInputs.stderr, /E_LATITUDE_COMPARE_ARGS/);
     const noOverwrite = spawnSync(process.execPath, [referenceScript, '--bundle', receipt,
       '--out', referenceFile], {encoding: 'utf8'});
     assert.equal(noOverwrite.status, 1);
