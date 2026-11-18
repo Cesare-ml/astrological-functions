@@ -107,7 +107,9 @@ Windows native build and independent method references before release.
 Its `--check-only` mode checks pinned source/receipt identity without compiling
 or creating files. On Windows, the optional
 `scripts/run-native-house-regression-windows.ps1` supplies a guided launcher,
-generates a unique Git-ignored evidence directory and prints the file to attach.
+generates a unique Git-ignored evidence directory, validates the completed
+portable bundle again with the pinned source/old-receipt digests, displays its
+human triage automatically, and prints the file to attach.
 Its additional `house-regression-bundle.json` consolidates both full receipts,
 the exact original baseline bytes, the smoke/orientation/version diagnostics,
 a full 161-method independent-reference review queue and their SHA-256
