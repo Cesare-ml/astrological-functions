@@ -223,12 +223,19 @@ test('CLI accepts a single Windows UTF-16LE/BOM portable file without Rust', () 
     const run = spawnSync(process.execPath, [script, '--bundle', receipt], {encoding: 'utf8'});
     assert.equal(run.status, 0, run.stderr);
     assert.equal(JSON.parse(run.stdout).reportHashesChecked, 6);
-    const human = spawnSync(process.execPath, [script, '--bundle', receipt, '--triage'],
+    const human = spawnSync(process.execPath, [script, '--bundle', receipt, '--triage',
+      '--expected-commit', 'c'.repeat(40), '--expected-baseline-sha256',
+      makeBundle().reports.summary.baselineReceiptSha256],
       {encoding: 'utf8'});
     assert.equal(human.status, 0, human.stderr);
     assert.match(human.stdout, /Seven synthetic latitude cases:/);
     assert.match(human.stdout, /161 method outcomes, 7 angle sets/);
     assert.doesNotMatch(human.stdout, /"contract"/);
+    const badHuman = spawnSync(process.execPath, [script, '--bundle', receipt, '--triage',
+      '--expected-commit', 'd'.repeat(40)], {encoding: 'utf8'});
+    assert.equal(badHuman.status, 1);
+    assert.match(badHuman.stderr, /E_NATIVE_BUNDLE_EXPECTED_COMMIT/);
+    assert.equal(badHuman.stdout, '');
     const pinned = spawnSync(process.execPath, [script, '--bundle', receipt,
       '--expected-commit', 'c'.repeat(40), '--expected-baseline-sha256',
       makeBundle().reports.summary.baselineReceiptSha256], {encoding: 'utf8'});
