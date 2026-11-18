@@ -98,6 +98,15 @@ The output directory must be **new or empty**. This command:
    and version diagnostics, the 161-method review queue, summary, and all
    six report SHA-256s.
 
+All six report objects and the portable bundle are now assembled and verified
+**in memory before the first evidence file is written**. A malformed native
+smoke, incomplete 161-method grid, inconsistent summary or incorrect bundle
+cannot leave a misleading partial set of JSON reports. Only then are the seven
+files created with exclusive-create semantics; an already populated output
+directory is refused. The end-to-end evidence-write path is tested using
+**synthetic data only** (including the offline verifier and non-overwrite rule),
+not a substitute for a real Windows Rust execution.
+
 Verify the self-contained evidence file offline without Rust, the native addon
 or a network connection:
 
