@@ -89,6 +89,17 @@ compiled addon, actual P0 file or real astronomical comparison has run.
 The candidate remains `UNAVAILABLE` for Regolo parts even after a structural
 smoke exit 0. See [operator recipe](REGOLO_P0_MOON_EVENT_CANDIDATE.md#native-python-p0--rust-node-end-to-end-smoke-operator-only).
 
+**Regolo numerical preceding conjunction (18 November 2026):** the isolated
+typed opt-in `regolo-moon-conjunction-search` samples an actual Node
+`VirgoStars-Ephemeris` `Engine.calcUt`-shaped provider over 30–35 UT1 days,
+brackets and refines positive signed ecliptic elongation crossings, rejects
+opposition seams, and reports the latest numerical candidate as JD UT1.
+All local cases are **synthetic**; the real Rust/DE441 addon and independent
+geocentric event UTC references have not been compared. A birth DUT1 cannot
+be reused as an event DUT1 weeks earlier. It **always** returns an
+`UNAVAILABLE` Regolo new Moon: no 92-part availability inflation or implicit
+production wiring. See [search contract and pending gates](REGOLO_MOON_CONJUNCTION_SEARCH.md).
+
 The next stacked draft after #213 introduces a typed, opt-in 24-method selector
 without replacing any existing API, including Gauquelin's separate 36-sector
 result. Its synthetic dispatch/type tests support consumer wiring but do not

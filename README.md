@@ -78,6 +78,15 @@ prepared and mock-tested only; real dual-runtime execution, independent
 astronomical accuracy and historical coverage remain unverified. See the
 [native smoke recipe](docs/REGOLO_P0_MOON_EVENT_CANDIDATE.md#native-python-p0--rust-node-end-to-end-smoke-operator-only).
 
+The separate opt-in `./regolo-moon-conjunction-search` finds a *candidate*
+latest preceding Sun–Moon geocentric ecliptic-longitude conjunction by
+sampling and bisecting the injected native `Engine.calcUt` longitudes over
+an explicit 30–35-day window. It handles 0°/360° wrapping, distinguishes
+opposition crossings, and keeps `NEW_MOON` **unavailable** for all Regolo
+parts pending real native + independent reference validation. Its current
+tests use synthetic positions only. See
+[the experimental preceding-conjunction solver](docs/REGOLO_MOON_CONJUNCTION_SEARCH.md).
+
 **Not included:** natal chart interpretations, user accounts, private birth records, databases, API credentials, frontend graphics, NASA/JPL kernels, or production VirgoStars services. Proposed interfaces described in `docs/CONTRACTS.md` are not necessarily shipped APIs.
 
 ## Try the source locally
