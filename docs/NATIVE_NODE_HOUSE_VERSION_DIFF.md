@@ -97,7 +97,9 @@ The output directory must be **new or empty**. This command:
    161 method outcomes and matching declared kernel context.
 2. Runs `npm run build` in the pinned upstream `bindings/node` folder, using
    the local Rust/Cargo toolchain. Cargo may fetch missing pinned dependencies;
-   **no ephemeris kernels are downloaded**.
+   **no ephemeris kernels are downloaded**. Rechecks the pinned Rust HEAD and
+   clean tracked source tree immediately after the build and again before
+   saving evidence, refusing a report if source changes during the run.
 3. Hashes and preflights the compiled `.node` binary, runs the real 7 × 23
    grid and 23-method smoke, then analyzes the rising horizon branch.
 4. Saves **six separate JSON reports** without overwriting any prior file:
