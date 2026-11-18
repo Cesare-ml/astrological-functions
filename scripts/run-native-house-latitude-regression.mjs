@@ -170,7 +170,8 @@ export function assembleNativeHouseRegressionEvidence({selected, options, native
   const methodReview = buildNativeHouseMethodReviewQueue(selected.baseline, audit);
   const summary = Object.freeze({contract: 'VirgoStarsNativeHouseRegressionBundleV1',
     status: smoke.failed > 0 || orientation.flagged > 0 || audit.failed > 0 ||
-      comparison.successToError > 0 ? 'MANUAL_METHOD_REVIEW_REQUIRED'
+      comparison.successToError > 0 || comparison.sameAddonDigest
+      ? 'MANUAL_METHOD_REVIEW_REQUIRED'
       : 'STRUCTURAL_CHECKS_COMPLETE_NOT_CERTIFIED',
     scientificallyCertified: false, nativeBuildOriginIndependentlyVerified: false,
     independentMethodParityVerified: false,
