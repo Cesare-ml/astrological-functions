@@ -93,6 +93,13 @@ requiring 161 method expectations and seven independent angle sets for a
 complete result. A matched error code is never automatically scientific proof.
 See [latitude reference protocol](docs/NATIVE_NODE_HOUSE_LATITUDE_COMPARISON.md).
 
+For a changed native build, the separate offline
+`scripts/diff-native-house-latitudes.mjs` compares **two complete 161-attempt
+receipts**: observed success/error transitions, changed codes, wrapped cusp
+differences and four source-angle shifts at each latitude. It accepts Windows
+UTF-16LE/BOM receipts and cannot certify an improvement merely because a
+method now returns data. See [version-diff protocol](docs/NATIVE_NODE_HOUSE_VERSION_DIFF.md).
+
 Version: `0.1.0-dev`. The package stays `"private": true` to prevent accidental npm publishing, independently of GitHub repository visibility. There is **no stable API or compatibility commitment yet**.
 
 ## Architecture and safety
