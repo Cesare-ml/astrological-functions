@@ -90,6 +90,12 @@ test('preflight refuses unpinned/dirty checkout, changed context and occupied ou
       expectedCommit: 'f'.repeat(40)}), /E_NATIVE_REGRESSION_COMMIT/);
     assert.throws(() => preflightNativeRegression({...base,
       kernelContext: 'WRONG_CONTEXT'}), /E_NATIVE_REGRESSION_CONTEXT/);
+    const reusedSource = baseline();
+    reusedSource.ephemeris.upstreamCommitSha = fixture.expectedCommit;
+    const reusedBaseline = path.join(fixture.folder, 'same-commit.json');
+    writeFileSync(reusedBaseline, JSON.stringify(reusedSource));
+    assert.throws(() => preflightNativeRegression({...base, baseline: reusedBaseline}),
+      /E_NATIVE_REGRESSION_UNCHANGED_COMMIT/);
     mkdirSync(fixture.outDir);
     writeFileSync(path.join(fixture.outDir, 'keep-user-file.txt'), 'do not touch');
     assert.throws(() => preflightNativeRegression(base), /E_NATIVE_REGRESSION_OUTPUT/);
