@@ -41,6 +41,34 @@ reference sets separately. Never copy the native addon values, its error
 codes or its claimed orientation into the expected references. The portable
 bundle and this template are diagnostic inputs, **not scientific authority**.
 
+## Export a spreadsheet for human review
+
+From the **same verified portable bundle**, optionally export a separate CSV
+worksheet that opens in Excel (UTF-8 with BOM and Windows CRLF rows):
+
+```powershell
+node scripts/export-native-house-review-worksheet.mjs `
+  --bundle 'D:\GitHub\astrological-functions\tmp\YOUR-NEW-REGRESSION\house-regression-bundle.json' `
+  --out 'D:\GitHub\astrological-functions\tmp\YOUR-NEW-REGRESSION\house-review-worksheet.csv' `
+  --expected-commit $rustShaFromPr596 `
+  --expected-baseline-sha256 '002b567327cdb77f73c5f4c3ca223cd51cb8af4a952dccced3f1f779e7cd1577'
+```
+
+The CSV has **161 method rows and seven independent angle-review rows**.
+Observed outcomes, changes and review priorities are filled from the native
+evidence to help direct attention. The six independent source, expected value,
+availability, tolerance and reviewer fields are intentionally **blank** on
+every row; they require documented external references. The file is created
+only if its output path does not already exist. Escaping protects spreadsheet
+cells from accidental formula execution.
+
+The worksheet is **not a JSON reference-set input** to the comparator, is not
+scientific validation and is not proof that the `.node` binary was compiled
+from the pinned Rust source. After collecting genuine independent references,
+enter the authoritative values into the separate JSON template above using
+the documented reference structure. Never promote observed errors or native
+numerical results to independent expectations.
+
 ## Reference document shape
 
 Save an independently documented `latitude-references.json` matching this
