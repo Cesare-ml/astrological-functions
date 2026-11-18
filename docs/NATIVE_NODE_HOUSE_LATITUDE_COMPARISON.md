@@ -13,6 +13,34 @@ including 36 Gauquelin sector boundaries, and the native source angles for
 each scenario where at least one method succeeded. No native addon is loaded by
 this offline comparison script.
 
+## Generate a safe, initially empty reference template
+
+After completing the [pinned regression](NATIVE_NODE_HOUSE_VERSION_DIFF.md),
+generate a UTF-8 JSON scaffold from its **verified** portable evidence file:
+
+```powershell
+node scripts/create-native-house-reference-template.mjs `
+  --bundle 'D:\GitHub\astrological-functions\tmp\YOUR-NEW-REGRESSION\house-regression-bundle.json' `
+  --out 'D:\GitHub\astrological-functions\tmp\YOUR-NEW-REGRESSION\independent-references-EMPTY.json' `
+  --expected-commit $rustShaFromPr596 `
+  --expected-baseline-sha256 '002b567327cdb77f73c5f4c3ca223cd51cb8af4a952dccced3f1f779e7cd1577'
+```
+
+Replace `YOUR-NEW-REGRESSION` with the actual saved directory and reuse the
+40-character Rust SHA selected independently from PR #596. The output file
+**must not already exist**: the generator will not overwrite it. The output
+contains exactly seven scenario identities, the matching native source/addon
+context and initially **empty `methods` arrays**, with no `angleReference`
+fields. This is intentional: 161 method references and seven independent angle
+reference sets remain to be collected. It passes the JSON contract but the
+comparison **must report `INCOMPLETE_REFERENCES`**, never success.
+
+Enter a method only after obtaining independently sourced numeric cusps or
+documented method-specific unavailability. Enter independent house-angle
+reference sets separately. Never copy the native addon values, its error
+codes or its claimed orientation into the expected references. The portable
+bundle and this template are diagnostic inputs, **not scientific authority**.
+
 ## Reference document shape
 
 Save an independently documented `latitude-references.json` matching this
