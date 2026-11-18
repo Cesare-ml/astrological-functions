@@ -13,7 +13,8 @@ import {auditNativeHouseAngleOrientation} from '../scripts/audit-native-house-an
 import {diffNativeHouseLatitudes} from '../scripts/diff-native-house-latitudes.mjs';
 import {buildNativeHouseMethodReviewQueue} from
   '../scripts/build-native-house-method-review-queue.mjs';
-import {canonicalReportSha256, NATIVE_HOUSE_BUNDLE_FILES,
+import {canonicalReportSha256, formatNativeHouseRegressionTriage,
+  NATIVE_HOUSE_BUNDLE_FILES,
   verifyNativeHouseRegressionBundle} from
   '../scripts/verify-native-house-regression-bundle.mjs';
 
@@ -119,6 +120,14 @@ test('portable bundle checks hashes and recomputes 161-method diff and polar ris
   assert.equal(bundle.reports.methodReview.methods.length, 161);
   assert.equal(bundle.reports.methodReview.angles.length, 7);
   assert.equal(bundle.reports.methodReview.priorities.P4_STILL_REQUIRES_INDEPENDENT_REFERENCE, 161);
+  const triage = formatNativeHouseRegressionTriage(bundle);
+  assert.match(triage, /NOT SCIENTIFICALLY CERTIFIED/);
+  assert.match(triage, /Seven synthetic latitude cases:/);
+  assert.match(triage, /N_HIGH_80 \(80°\): 23\/23 -> 23\/23/);
+  assert.match(triage, /ASC RISING_BRANCH; delta 648000\.000 arcsec/);
+  assert.match(triage, /Identical addon digest: NO/);
+  assert.equal(triage.split('\n').filter(line =>
+    /\((?:-?80|-?66\.55|-?45|0)°\):/.test(line)).length, 7);
 });
 
 test('human-review queue distinguishes new, persistent, recovered, changed errors and cusps', () => {
@@ -194,6 +203,8 @@ test('even re-hashed fabricated orientation or method report is rejected', () =>
   const rawTamper = makeBundle();
   rawTamper.baselineSource.rawBytesBase64 = Buffer.from('a fabricated old receipt').toString('base64');
   assert.throws(() => verifyNativeHouseRegressionBundle(rawTamper), /E_NATIVE_BUNDLE_BASELINE/);
+  assert.throws(() => formatNativeHouseRegressionTriage(rawTamper),
+    /E_NATIVE_BUNDLE_BASELINE/, 'triage must never summarize an invalid bundle');
   const rehashedWrongBaseline = makeBundle();
   rehashedWrongBaseline.reports.summary.baselineReceiptSha256 = 'a'.repeat(64);
   rehashedWrongBaseline.reportSha256.summary =
@@ -212,6 +223,12 @@ test('CLI accepts a single Windows UTF-16LE/BOM portable file without Rust', () 
     const run = spawnSync(process.execPath, [script, '--bundle', receipt], {encoding: 'utf8'});
     assert.equal(run.status, 0, run.stderr);
     assert.equal(JSON.parse(run.stdout).reportHashesChecked, 6);
+    const human = spawnSync(process.execPath, [script, '--bundle', receipt, '--triage'],
+      {encoding: 'utf8'});
+    assert.equal(human.status, 0, human.stderr);
+    assert.match(human.stdout, /Seven synthetic latitude cases:/);
+    assert.match(human.stdout, /161 method outcomes, 7 angle sets/);
+    assert.doesNotMatch(human.stdout, /"contract"/);
     const pinned = spawnSync(process.execPath, [script, '--bundle', receipt,
       '--expected-commit', 'c'.repeat(40), '--expected-baseline-sha256',
       makeBundle().reports.summary.baselineReceiptSha256], {encoding: 'utf8'});
