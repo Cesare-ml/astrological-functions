@@ -127,7 +127,8 @@ export function verifyNativeHouseRegressionBundle(bundle) {
     fail('E_NATIVE_BUNDLE_HASH', 'Unexpected or omitted report hash');
   }
   const expectedReview = smoke.failed > 0 || actualOrientation.flagged > 0 ||
-    nativeGrid.failed > 0 || actualDiff.successToError > 0;
+    nativeGrid.failed > 0 || actualDiff.successToError > 0 ||
+    actualDiff.sameAddonDigest;
   if (!plain(summary) || summary.contract !== 'VirgoStarsNativeHouseRegressionBundleV1' ||
       summary.scientificallyCertified !== false ||
       summary.nativeBuildOriginIndependentlyVerified !== false ||
@@ -164,6 +165,7 @@ export function verifyNativeHouseRegressionBundle(bundle) {
     flaggedAscendants: orientation.flagged,
     recoveredMethods: actualDiff.errorToSuccess,
     newlyFailedMethods: actualDiff.successToError,
+    sameAddonDigest: actualDiff.sameAddonDigest,
     independentMethodReferencesStillNeeded: actualReviewQueue.missingIndependentMethodReferences,
     independentAngleReferencesStillNeeded: actualReviewQueue.missingIndependentAngleReferences,
     methodReviewPriorityCounts: actualReviewQueue.priorities,
