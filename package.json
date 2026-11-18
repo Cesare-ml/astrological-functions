@@ -5,6 +5,18 @@
   "type": "module",
   "exports": {
     ".": "./src/index.mjs",
+    "./monomeric-cross": {
+      "types": "./src/monomeric-cross.d.mts",
+      "import": "./src/monomeric-cross.mjs"
+    },
+    "./planetary-hours": {
+      "types": "./src/planetary-hours.d.mts",
+      "import": "./src/planetary-hours.mjs"
+    },
+    "./planetary-hours-solar-adapter": {
+      "types": "./src/planetary-hours-solar-adapter.d.mts",
+      "import": "./src/planetary-hours-solar-adapter.mjs"
+    },
     "./dodecatemoria": {
       "types": "./src/dodecatemoria-methods.d.mts",
       "import": "./src/dodecatemoria-methods.mjs"
