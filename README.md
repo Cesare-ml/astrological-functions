@@ -90,8 +90,64 @@ output. See [latitude-grid audit](docs/NATIVE_NODE_HOUSE_LATITUDE_GRID.md).
 The opt-in `scripts/compare-native-house-latitudes.mjs` subsequently compares
 that receipt to **caller-sourced** numeric and method-availability references,
 requiring 161 method expectations and seven independent angle sets for a
-complete result. A matched error code is never automatically scientific proof.
+complete result. It reads UTF-8 and Windows PowerShell UTF-16LE/BOM JSON;
+a matched error code is never automatically scientific proof.
+The comparator can also take `--bundle VERIFIED_BUNDLE.json` alongside
+`--reference REFERENCES.json`, verifying the entire portable regression bundle before
+evaluating independently sourced expectations; no extracted new-grid file
+is needed for an external reviewer.
 See [latitude reference protocol](docs/NATIVE_NODE_HOUSE_LATITUDE_COMPARISON.md).
+
+For a changed native build, the separate offline
+`scripts/diff-native-house-latitudes.mjs` compares **two complete 161-attempt
+receipts**: observed success/error transitions, changed codes, wrapped cusp
+differences and four source-angle shifts at each latitude. It accepts Windows
+UTF-16LE/BOM receipts and cannot certify an improvement merely because a
+method now returns data. See [version-diff protocol](docs/NATIVE_NODE_HOUSE_VERSION_DIFF.md).
+The optional one-command `scripts/run-native-house-latitude-regression.mjs`
+automates the **explicitly pinned local** Rust Node addon build, grid, smoke,
+orientation check and complete before/after report. It never switches Git
+revisions or overwrites old receipts, and still requires a real owner-run
+Windows native build and independent method references before release.
+Its `--check-only` mode checks pinned source/receipt identity without compiling
+or creating files. On Windows, the optional
+`scripts/run-native-house-regression-windows.ps1` supplies a guided launcher,
+generates a unique Git-ignored evidence directory, validates the completed
+portable bundle again with the pinned source/old-receipt digests, displays its
+human triage automatically, and prints the file to attach.
+Its additional `house-regression-bundle.json` consolidates both full receipts,
+the exact original baseline bytes, the smoke/orientation/version diagnostics,
+a full 161-method independent-reference review queue and their SHA-256
+checksums in **one portable file**.
+Reports are assembled and cross-checked in memory before any evidence JSON is
+written; the seven file outputs then use exclusive-create semantics. A separate
+synthetic end-to-end test exercises this exact writing and offline verification
+path, without claiming a real Rust build was executed.
+The runner also refuses a successful build that appears to have left a stale
+preexisting native addon untouched, or a symlinked native output path; the
+check does not establish reproducible build provenance.
+Use `scripts/verify-native-house-regression-bundle.mjs --bundle PATH` to
+recompute the 161-method diff and horizon audit **offline, without Rust**;
+passing only verifies internal consistency, not scientific correctness or
+the origin of native binaries.
+Add `--triage` to print a compact, human-readable seven-latitude comparison,
+changed-method priorities and remaining independent-reference counts instead
+of the default JSON result. The option validates the full bundle first and
+does not classify any method as scientifically approved.
+For actual external method review, the opt-in
+`scripts/create-native-house-reference-template.mjs --bundle FILE --out NEW_FILE`
+creates a strictly **empty**, commit/addon-pinned UTF-8 reference set that is
+compatible with the comparator but requires all 161 method and seven angle
+expectations to be sourced separately; it never copies native observations.
+The matching `export-native-house-review-worksheet.mjs` exports 168 human
+review rows as UTF-8 CSV with empty independent-source cells; after a reviewer
+documents real external references, `import-native-house-review-worksheet.mjs`
+converts only those independently filled cells into comparator-compatible
+JSON. It validates exact row identities and source/tolerance requirements,
+never treating native output as the expected value or granting certification.
+If the original and new receipts declare identical native addon SHA-256
+digests, the report requires manual review even when structural and rising
+checks pass. This is not proof that a build failed or succeeded.
 
 Version: `0.1.0-dev`. The package stays `"private": true` to prevent accidental npm publishing, independently of GitHub repository visibility. There is **no stable API or compatibility commitment yet**.
 

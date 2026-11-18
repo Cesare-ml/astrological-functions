@@ -1,0 +1,118 @@
+# Explicit manual Windows launcher; no Git checkout/pull, npm install, kernel download,
+# deployment, deletion or overwrite. Source SHA must be copied from the PR page.
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory = $true)]
+    [ValidatePattern('^[0-9a-fA-F]{40}$')]
+    [string]$ExpectedCommit,
+
+    [string]$EphemerisCheckout,
+    [string]$BaselineReceipt,
+    [string]$OutputDirectory,
+
+    # SHA-256 of the owner's original 17 Nov 2026 UTF-16LE/BOM receipt.
+    [ValidatePattern('^[0-9a-fA-F]{64}$')]
+    [string]$ExpectedBaselineSha256 = '002b567327cdb77f73c5f4c3ca223cd51cb8af4a952dccced3f1f779e7cd1577',
+
+    [switch]$CheckOnly
+)
+
+$ErrorActionPreference = 'Stop'
+# PowerShell 7.3+ can promote a native exit code 2 to a terminating error when
+# PSNativeCommandUseErrorActionPreference is enabled. Our runner deliberately
+# uses 2 for VALID evidence that still needs scientific review, so inspect
+# $LASTEXITCODE explicitly on both Windows PowerShell 5.1 and PowerShell 7+.
+$PSNativeCommandUseErrorActionPreference = $false
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$runner = Join-Path $PSScriptRoot 'run-native-house-latitude-regression.mjs'
+$verifier = Join-Path $PSScriptRoot 'verify-native-house-regression-bundle.mjs'
+$referenceTemplateTool = Join-Path $PSScriptRoot 'create-native-house-reference-template.mjs'
+$worksheetTool = Join-Path $PSScriptRoot 'export-native-house-review-worksheet.mjs'
+
+if ([string]::IsNullOrWhiteSpace($EphemerisCheckout)) {
+    $EphemerisCheckout = Join-Path (Split-Path -Parent $repoRoot) 'VirgoStars-Ephemeris'
+}
+if ([string]::IsNullOrWhiteSpace($BaselineReceipt)) {
+    $BaselineReceipt = Join-Path $repoRoot 'house-latitudes-local.json'
+}
+if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
+    $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $nonce = [guid]::NewGuid().ToString('N').Substring(0, 8)
+    $OutputDirectory = Join-Path $repoRoot (Join-Path 'tmp' "house-regression-$stamp-$nonce")
+}
+
+$EphemerisCheckout = (Resolve-Path -LiteralPath $EphemerisCheckout -ErrorAction Stop).Path
+$BaselineReceipt = (Resolve-Path -LiteralPath $BaselineReceipt -ErrorAction Stop).Path
+$OutputDirectory = [System.IO.Path]::GetFullPath($OutputDirectory)
+
+if (-not (Test-Path -LiteralPath $runner -PathType Leaf)) {
+    throw "Missing local runner: $runner. Select the astrological-functions PR #225 branch."
+}
+Get-Command node -ErrorAction Stop | Out-Null
+Get-Command git -ErrorAction Stop | Out-Null
+if (-not $CheckOnly) {
+    Get-Command npm -ErrorAction Stop | Out-Null
+    Get-Command cargo -ErrorAction Stop | Out-Null
+}
+
+$expectedCommitLower = $ExpectedCommit.ToLowerInvariant()
+$expectedBaselineLower = $ExpectedBaselineSha256.ToLowerInvariant()
+
+$arguments = @(
+    $runner,
+    '--checkout', $EphemerisCheckout,
+    '--expected-commit', $expectedCommitLower,
+    '--baseline', $BaselineReceipt,
+    '--expected-baseline-sha256', $expectedBaselineLower,
+    '--out-dir', $OutputDirectory,
+    '--kernel-context', 'HOUSE_ANGLES_NO_KERNEL'
+)
+if ($CheckOnly) {
+    $arguments += '--check-only'
+    Write-Host 'Checking pinned native source and original receipt (no build or writes)...'
+} else {
+    Write-Host 'Starting opt-in real native build and full 161-case regression...'
+}
+
+& node @arguments
+$nativeExit = $LASTEXITCODE
+if (-not $CheckOnly -and ($nativeExit -eq 0 -or $nativeExit -eq 2)) {
+    $bundle = Join-Path $OutputDirectory 'house-regression-bundle.json'
+    if (-not (Test-Path -LiteralPath $bundle -PathType Leaf)) {
+        throw "Runner completed but portable evidence is missing: $bundle"
+    }
+    if (-not (Test-Path -LiteralPath $verifier -PathType Leaf)) {
+        throw "Offline bundle verifier is missing: $verifier"
+    }
+    Write-Host 'Verifying complete portable evidence and displaying its read-only triage...'
+    & node $verifier --bundle $bundle --expected-commit $expectedCommitLower --expected-baseline-sha256 $expectedBaselineLower --triage
+    if ($LASTEXITCODE -ne 0) {
+        throw 'The portable bundle failed independent offline consistency checks; do not attach as validated evidence.'
+    }
+    # Keep the evidence directory sealed at precisely seven JSON files. Review
+    # artifacts are sibling files and cannot alter its read-back verification.
+    if (-not (Test-Path -LiteralPath $referenceTemplateTool -PathType Leaf)) {
+        throw "Missing independent reference template generator: $referenceTemplateTool"
+    }
+    if (-not (Test-Path -LiteralPath $worksheetTool -PathType Leaf)) {
+        throw "Missing human review worksheet exporter: $worksheetTool"
+    }
+    $referenceTemplate = "${OutputDirectory}-independent-references-EMPTY.json"
+    $reviewWorksheet = "${OutputDirectory}-review-worksheet.csv"
+    Write-Host 'Preparing empty independent-reference JSON and human-review CSV beside the evidence folder...'
+    & node $referenceTemplateTool --bundle $bundle --out $referenceTemplate --expected-commit $expectedCommitLower --expected-baseline-sha256 $expectedBaselineLower
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Independent reference template creation failed; the verified bundle remains saved.'
+    }
+    & node $worksheetTool --bundle $bundle --out $reviewWorksheet --expected-commit $expectedCommitLower --expected-baseline-sha256 $expectedBaselineLower
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Human-review CSV export failed; the verified bundle remains saved.'
+    }
+    Write-Host "Independent references (EMPTY, must be sourced): $referenceTemplate"
+    Write-Host "Excel human-review worksheet: $reviewWorksheet"
+    Write-Host "Attach only this file for review: $bundle"
+    if ($nativeExit -eq 2) {
+        Write-Warning 'Valid evidence saved; one or more methods/angles still need manual review.'
+    }
+}
+exit $nativeExit

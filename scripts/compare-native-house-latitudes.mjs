@@ -11,6 +11,8 @@ import {parseArgs} from 'node:util';
 import {ASTRO_COM_HOUSE_SYSTEM_IDS} from '../src/astro-com-house-selector.mjs';
 import {HOUSE_SMOKE_FIXTURE, circularErrorArcsec} from './verify-native-house-bridge.mjs';
 import {LATITUDE_AUDIT_CASES} from './audit-native-house-latitudes.mjs';
+import {readNativeLatitudeDiffReceipt} from './diff-native-house-latitudes.mjs';
+import {verifyNativeHouseRegressionBundle} from './verify-native-house-regression-bundle.mjs';
 
 const METHODS = Object.freeze(ASTRO_COM_HOUSE_SYSTEM_IDS.filter(id => id !== 'SUNSHINE'));
 const methodSet = new Set(METHODS);
@@ -138,6 +140,10 @@ function checkAudit(audit) {
     fail('E_LATITUDE_COMPARE_AUDIT', 'Latitude audit totals/status do not agree');
   }
 }
+
+// Reuse the same complete 7 × 23 strict receipt contract for offline
+// version-to-version diagnostics. A valid receipt is not a scientific proof.
+export {checkAudit as validateNativeLatitudeAudit};
 
 function checkReference(reference, audit) {
   if (!plain(reference) || reference.contract !== 'VirgoStarsHouseLatitudeReferenceSetV1' ||
@@ -271,32 +277,81 @@ export function compareNativeHouseLatitudeAudit(audit, reference) {
 
 export function readSmallJson(filename) {
   const stat = statSync(filename);
-  if (!stat.isFile() || stat.size > 5_000_000) {
-    fail('E_LATITUDE_COMPARE_FILE', 'Only regular JSON files up to 5 MB are accepted');
+  if (!stat.isFile() || stat.size === 0 || stat.size > 5_000_000) {
+    fail('E_LATITUDE_COMPARE_FILE', 'Only nonempty regular JSON files up to 5 MB are accepted');
   }
-  return JSON.parse(readFileSync(filename, 'utf8'));
+  const bytes = readFileSync(filename);
+  const utf16le = bytes[0] === 0xff && bytes[1] === 0xfe;
+  try {
+    // Windows PowerShell 5.1 often redirects JSON as UTF-16LE with BOM;
+    // reject malformed Unicode instead of silently replacing corrupt bytes.
+    const text = new TextDecoder(utf16le ? 'utf-16le' : 'utf-8',
+      {fatal: true}).decode(bytes).replace(/^\uFEFF/, '');
+    return JSON.parse(text);
+  } catch {
+    fail('E_LATITUDE_COMPARE_JSON', 'Invalid UTF-8 or UTF-16LE/BOM JSON reference/audit file');
+  }
 }
 
 export const HELP_TEXT = `Offline latitude-grid comparison against caller-sourced numeric and availability references.
   node scripts/compare-native-house-latitudes.mjs --audit GRID.json --reference REFERENCES.json
+  node scripts/compare-native-house-latitudes.mjs --bundle VERIFIED_BUNDLE.json \\
+    --reference REFERENCES.json [--expected-commit 40_HEX_RUST_SHA] \\
+    [--expected-baseline-sha256 64_HEX_ORIGINAL_SHA]
+Use exactly one of --audit or --bundle. Bundle mode first independently
+recomputes the full portable evidence consistency checks (all 161 outcomes,
+seven angles and the original baseline bytes) before comparing references.
 Exit 0 only if all 161 methods, all seven independent angle sets, and every
 declared expectation match. An exit-0 receipt is NOT scientific certification.
 Method-specific polar unavailability needs an explicit external reference.
+Both input JSON files accept UTF-8 or Windows PowerShell UTF-16LE/BOM.
 See docs/NATIVE_NODE_HOUSE_LATITUDE_COMPARISON.md.`;
 
 function main() {
   try {
     const {values} = parseArgs({args: process.argv.slice(2), strict: true,
-      options: {audit: {type: 'string'}, reference: {type: 'string'}, help: {type: 'boolean'}}});
+      options: {audit: {type: 'string'}, bundle: {type: 'string'},
+        reference: {type: 'string'}, 'expected-commit': {type: 'string'},
+        'expected-baseline-sha256': {type: 'string'}, help: {type: 'boolean'}}});
     if (values.help) {
       process.stdout.write(`${HELP_TEXT}\n`);
       return;
     }
-    if (!label(values.audit) || !label(values.reference)) {
-      fail('E_LATITUDE_COMPARE_ARGS', 'Provide --audit and --reference JSON files');
+    if (!label(values.reference) || Number(values.audit !== undefined) +
+        Number(values.bundle !== undefined) !== 1 ||
+        (values.audit !== undefined && !label(values.audit)) ||
+        (values.bundle !== undefined && !label(values.bundle)) ||
+        (values.audit !== undefined && (values['expected-commit'] !== undefined ||
+          values['expected-baseline-sha256'] !== undefined)) ||
+        (values['expected-commit'] !== undefined &&
+          !/^[a-f\d]{40}$/i.test(values['expected-commit'])) ||
+        (values['expected-baseline-sha256'] !== undefined &&
+          !/^[a-f\d]{64}$/i.test(values['expected-baseline-sha256']))) {
+      fail('E_LATITUDE_COMPARE_ARGS', 'Provide --reference and exactly one of --audit/--bundle; ' +
+        'commit/baseline SHA pins are only valid with --bundle');
     }
-    const report = compareNativeHouseLatitudeAudit(readSmallJson(values.audit),
-      readSmallJson(values.reference));
+    let audit;
+    if (values.bundle !== undefined) {
+      // These imports are only invoked after module initialization; no
+      // native binaries or network services are loaded by either verifier.
+      const bundle = readNativeLatitudeDiffReceipt(values.bundle, 20_000_000);
+      verifyNativeHouseRegressionBundle(bundle);
+      audit = bundle.reports.nativeGrid;
+      if (values['expected-commit'] &&
+          audit.ephemeris.upstreamCommitSha.toLowerCase() !==
+            values['expected-commit'].toLowerCase()) {
+        fail('E_LATITUDE_COMPARE_EXPECTED_COMMIT', 'Bundle differs from independently pinned Rust commit');
+      }
+      if (values['expected-baseline-sha256'] &&
+          bundle.reports.summary.baselineReceiptSha256.toLowerCase() !==
+            values['expected-baseline-sha256'].toLowerCase()) {
+        fail('E_LATITUDE_COMPARE_EXPECTED_BASELINE',
+          'Bundle differs from independently pinned historical receipt');
+      }
+    } else {
+      audit = readSmallJson(values.audit);
+    }
+    const report = compareNativeHouseLatitudeAudit(audit, readSmallJson(values.reference));
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
     if (report.status !== 'MATCHES_CALLER_REFERENCES_NOT_CERTIFIED') process.exitCode = 1;
   } catch (error) {

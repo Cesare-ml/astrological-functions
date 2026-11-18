@@ -13,6 +13,119 @@ including 36 Gauquelin sector boundaries, and the native source angles for
 each scenario where at least one method succeeded. No native addon is loaded by
 this offline comparison script.
 
+## Generate a safe, initially empty reference template
+
+After completing the [pinned regression](NATIVE_NODE_HOUSE_VERSION_DIFF.md),
+generate a UTF-8 JSON scaffold from its **verified** portable evidence file:
+
+```powershell
+node scripts/create-native-house-reference-template.mjs `
+  --bundle 'D:\GitHub\astrological-functions\tmp\YOUR-NEW-REGRESSION\house-regression-bundle.json' `
+  --out 'D:\GitHub\astrological-functions\tmp\YOUR-NEW-REGRESSION\independent-references-EMPTY.json' `
+  --expected-commit $rustShaFromPr596 `
+  --expected-baseline-sha256 '002b567327cdb77f73c5f4c3ca223cd51cb8af4a952dccced3f1f779e7cd1577'
+```
+
+Replace `YOUR-NEW-REGRESSION` with the actual saved directory and reuse the
+40-character Rust SHA selected independently from PR #596. The output file
+**must not already exist**: the generator will not overwrite it. The output
+contains exactly seven scenario identities, the matching native source/addon
+context and initially **empty `methods` arrays**, with no `angleReference`
+fields. This is intentional: 161 method references and seven independent angle
+reference sets remain to be collected. It passes the JSON contract but the
+comparison **must report `INCOMPLETE_REFERENCES`**, never success.
+
+Enter a method only after obtaining independently sourced numeric cusps or
+documented method-specific unavailability. Enter independent house-angle
+reference sets separately. Never copy the native addon values, its error
+codes or its claimed orientation into the expected references. The portable
+bundle and this template are diagnostic inputs, **not scientific authority**.
+
+## Export a spreadsheet for human review
+
+From the **same verified portable bundle**, optionally export a separate CSV
+worksheet that opens in Excel (UTF-8 with BOM and Windows CRLF rows):
+
+```powershell
+node scripts/export-native-house-review-worksheet.mjs `
+  --bundle 'D:\GitHub\astrological-functions\tmp\YOUR-NEW-REGRESSION\house-regression-bundle.json' `
+  --out 'D:\GitHub\astrological-functions\tmp\YOUR-NEW-REGRESSION\house-review-worksheet.csv' `
+  --expected-commit $rustShaFromPr596 `
+  --expected-baseline-sha256 '002b567327cdb77f73c5f4c3ca223cd51cb8af4a952dccced3f1f779e7cd1577'
+```
+
+The CSV has **161 method rows and seven independent angle-review rows**.
+Observed outcomes, changes and review priorities are filled from the native
+evidence to help direct attention. The ten independent source, expected value,
+availability, error, tolerance, convention and reviewer fields are intentionally
+**blank** on every row; they require documented external references. The file is created
+only if its output path does not already exist. Escaping protects spreadsheet
+cells from accidental formula execution.
+
+The worksheet is **not itself a JSON reference-set input** to the comparator,
+is not scientific validation and is not proof that the `.node` binary was
+compiled from the pinned Rust source. Never promote observed errors or native
+numerical results to independent expectations.
+
+### Import independently completed CSV rows into JSON
+
+Keep the original worksheet untouched. Work in a **separately named CSV copy**
+and preserve every original `row_type`, `scenario_id`, `latitude_deg`,
+`house_system` and column header; sorting full rows is safe. For each genuinely
+reviewed row, supply:
+
+- `reference_source_url`: actual **HTTPS** source; `reference_source_title`:
+  descriptive real citation; `reference_source_acquired_utc`: strict
+  `YYYY-MM-DDTHH:mm:ssZ`; `reference_source_convention`: the exact method/model,
+  time scales, coordinate frame, numbering and polar convention used.
+- `reference_expected_availability`: `AVAILABLE` for numerically documented
+  methods and angles; `UNAVAILABLE` **only for a specific method** when a
+  genuinely independent source documents that polar restriction.
+- For `AVAILABLE`, `reference_expected_values_degrees` contains **12 decimal
+  degrees separated by `;`** (36 for `GAUQUELIN_36`); for `ANGLES`, four
+  values in **ARMC;ASC;MC;TRUE_OBLIQUITY** order. Use `.` for decimals,
+  longitudes in `[0,360)`, a positive `reference_tolerance_arcsec` no larger
+  than 3600 and a nonempty `reference_tolerance_rationale`. Keep the
+  expected-error field empty.
+- For a documented `UNAVAILABLE` method, supply a specific accepted
+  `reference_expected_error_code` and leave numeric/tolerance cells empty.
+- `reviewer_notes` is optional human context and is **not** used as a source
+  or copied into comparator expectations.
+
+Leave **all `reference_*` cells blank** for unfinished rows. A partially filled
+reference is rejected; no empty cells or native observations are silently
+interpreted as expectations. Save as **UTF-8 CSV** with the original headers.
+The importer auto-detects both standard comma CSV and regional semicolon CSV
+(common in Italian Excel), including Excel's optional `sep=,` or `sep=;` first
+line; a mixed/ambiguous delimiter is rejected. **Always use `.` for decimal
+degrees**, even when the file columns are delimited by semicolons. Keep
+semicolon-separated numeric arrays inside a single quoted CSV cell.
+
+When at least one row has documented independent evidence, convert the CSV
+into the comparator's exact JSON reference contract (the original empty JSON
+template remains untouched):
+
+```powershell
+node scripts/import-native-house-review-worksheet.mjs `
+  --bundle 'D:\GitHub\astrological-functions\tmp\YOUR-NEW-REGRESSION\house-regression-bundle.json' `
+  --worksheet 'D:\GitHub\astrological-functions\tmp\house-review-COMPLETED.csv' `
+  --out 'D:\GitHub\astrological-functions\tmp\house-references-REVIEWED.json' `
+  --expected-commit $rustShaFromPr596 `
+  --expected-baseline-sha256 '002b567327cdb77f73c5f4c3ca223cd51cb8af4a952dccced3f1f779e7cd1577'
+```
+
+The importer re-verifies the full native bundle and original 168-row identity,
+checks that observed outcome/triage columns still agree with the verified
+bundle, rejects incomplete or malformed source/values and exclusively writes a **new**
+UTF-8 JSON file. It uses **only the `reference_*` cells** to build expectations;
+the observed native result columns never become expected reference values.
+It reports how many methods/angles still lack references and whether the
+currently supplied values match the native audit. The output is then usable as
+`--reference` in the independent comparator below, even when coverage is still
+incomplete. A match is still **caller-sourced, not scientifically certified**;
+source independence and reproducible native build provenance require separate
+human assessment.
+
 ## Reference document shape
 
 Save an independently documented `latitude-references.json` matching this
@@ -80,6 +193,8 @@ Save an independently documented `latitude-references.json` matching this
 
 The sample is **not runnable JSON**. Never use a fabricated observation as
 scientific evidence; replace all placeholders with actual reviewed values.
+The comparator accepts both UTF-8 and UTF-16LE with BOM (the default output
+encoding of Windows PowerShell 5.1); malformed Unicode or JSON is rejected.
 When a reference is genuinely unavailable, omit it until obtained. The tool
 reports missing coverage instead of inventing a zero, interpolating output or
 accepting undocumented failure.
@@ -101,6 +216,26 @@ node scripts/compare-native-house-latitudes.mjs \
   --audit house-latitudes-local.json \
   --reference latitude-references.json
 ```
+
+If a reviewer received only the **single portable regression bundle**, a
+separate `house-latitudes-new.json` export is **not required**. The same
+comparator accepts the verified bundle directly (Windows PowerShell):
+
+```powershell
+node scripts/compare-native-house-latitudes.mjs `
+  --bundle 'D:\GitHub\astrological-functions\tmp\YOUR-NEW-REGRESSION\house-regression-bundle.json' `
+  --reference 'D:\GitHub\astrological-functions\tmp\YOUR-NEW-REGRESSION\independent-references-EMPTY.json' `
+  --expected-commit $rustShaFromPr596 `
+  --expected-baseline-sha256 '002b567327cdb77f73c5f4c3ca223cd51cb8af4a952dccced3f1f779e7cd1577'
+```
+
+Use the independently selected Rust commit SHA and the actual original
+receipt digest. Bundle mode first checks the embedded historical bytes, all
+six report digests, the complete 161-case grid and the polar orientation;
+**inconsistent/tampered evidence fails before a reference comparison runs**.
+The deliberately empty template will report `INCOMPLETE_REFERENCES` with
+exit **1**. Once independent references have been filled, rerun the same
+command; numerical agreement is not an authenticity or scientific proof.
 
 The script writes a `VirgoStarsHouseLatitudeComparisonReceiptV1` JSON report
 to standard output and does not modify repository files.
