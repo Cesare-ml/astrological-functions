@@ -112,6 +112,9 @@ Its additional `house-regression-bundle.json` consolidates both full receipts,
 the exact original baseline bytes, the smoke/orientation/version diagnostics,
 a full 161-method independent-reference review queue and their SHA-256
 checksums in **one portable file**.
+The runner also refuses a successful build that appears to have left a stale
+preexisting native addon untouched, or a symlinked native output path; the
+check does not establish reproducible build provenance.
 Use `scripts/verify-native-house-regression-bundle.mjs --bundle PATH` to
 recompute the 161-method diff and horizon audit **offline, without Rust**;
 passing only verifies internal consistency, not scientific correctness or
