@@ -66,6 +66,10 @@ Exit **2** means valid reports were saved and human review remains pending;
 exit **1** means the build/inputs failed. Neither outcome certifies scientific
 accuracy. This wrapper has not been executed on Windows in this environment;
 the delegated Node preflight is independently exercised in the test suite.
+The launcher explicitly handles native exit code **2** on both Windows
+PowerShell 5.1 and PowerShell 7.3+ (even if the user's PowerShell preference
+normally promotes nonzero native exits to errors), so the final bundle
+verification and triage can still run before returning that status.
 
 ### Direct Node command (Windows or Linux)
 
