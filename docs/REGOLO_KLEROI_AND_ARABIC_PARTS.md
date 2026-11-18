@@ -105,6 +105,14 @@ which lunation applies; that choice is intentionally not guessed here.
    A real legacy HTTP API snapshot and independent historical verification
    remain **open**; the mock new-Moon value and independently supplied sect do
    not validate astronomy.
+   Separately, `scripts/compare-regolo-legacy-kleroi.mjs` checks the **nine
+   original kleroi calculations** in `func.js` from pinned Git blob
+   `536efcd4e6a652448530c6dbd980aee1d72bc3bd`. On 18 November 2026,
+   **54/54** symbolic longitudes matched on three synthetic charts in both
+   sects. Together the two independent-source parity runners verified
+   **606/606 comparisons**. They deliberately bypass Regolo's old heuristic
+   day/night classification; a verified astronomical horizon sect remains
+   required for natal usage.
 4. Run strict NodeNext/Bundler TypeScript consumer checks, full native suite,
    Desktop/Mobile/backend shadow parity and source-rights/licence audit before
    promoting any result. Do not use customer birth records as fixtures.
@@ -120,15 +128,16 @@ npm test
 # OPTIONAL: offline parity against the exact original owner repo file.
 # Check out Regolo at commit 87636d88f22b85470ae3cb7a52d5280b9f43e018.
 node scripts/compare-regolo-legacy-parts.mjs --source /path/to/Regolo-Alpha-Leonis/@api/routes/api/parti-arabe.js
+node scripts/compare-regolo-legacy-kleroi.mjs --source /path/to/Regolo-Alpha-Leonis/@api/routes/api/func.js
 # Run once TypeScript is available in the contributor environment:
 tsc --strict --noEmit --target es2022 --module nodenext --moduleResolution nodenext test/types/regolo-lots.test.ts
 ```
 
-The parity runner rejects a modified or different source file **before**
-evaluating any code. It can also read standard input with `--source -`.
-It never downloads files, calls external services, stores birth records or
-imports legacy Swiss code. As with all Node VM evaluation, use only the trusted,
-verified owner-controlled source, not an arbitrary downloaded script. Its
-comparison uses synthetic longitudes, an injected new-Moon result and the
-Regolo output representation (`lngOffs + highlight`). This is a
+Both parity runners reject modified or different source files **before**
+evaluating any code. They can also read standard input with `--source -`.
+They never download files, call external services, store birth records or
+import legacy Swiss code. As with all Node VM evaluation, use only trusted,
+verified owner-controlled source, not an arbitrary downloaded script. The
+comparison uses synthetic longitudes, an injected new-Moon result for Arabic
+parts, and Regolo's output representation (`lngOffs + highlight`). This is a
 **compatibility test, not astrological/historical certification**.

@@ -21,9 +21,11 @@ See [Regolo kleroi and Arabic parts](REGOLO_KLEROI_AND_ARABIC_PARTS.md).
 **Offline Regolo arithmetic parity (18 November 2026):** 552 of 552
 checks matched the exact legacy `parti-arabe.js` Git blob across three synthetic
 charts in both sects, including all 92 original entry names, descriptions and
-results per scenario. This is a manual, source-blob-pinned check without the
+results per scenario. The original nine kleroi in `func.js` also matched
+**54/54** synthetic day/night comparisons, for **606/606** Regolo symbolic
+parity checks overall. This is a manual, source-blob-pinned check without the
 legacy HTTP service or Swiss astronomy. Real API and scientific validation
-gates remain open; the original file is never bundled in this package.
+gates remain open; the original files are never bundled in this package.
 
 The next stacked draft after #213 introduces a typed, opt-in 24-method selector
 without replacing any existing API, including Gauquelin's separate 36-sector
