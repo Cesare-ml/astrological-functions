@@ -13,7 +13,8 @@ import {ASTRO_COM_HOUSE_SYSTEM_IDS} from '../src/astro-com-house-selector.mjs';
 import {HOUSE_SMOKE_FIXTURE} from './verify-native-house-bridge.mjs';
 import {auditNativeHouseAngleOrientation} from './audit-native-house-angle-orientation.mjs';
 import {validateNativeLatitudeAudit} from './compare-native-house-latitudes.mjs';
-import {diffNativeHouseLatitudes, readNativeLatitudeDiffReceipt} from
+import {diffNativeHouseLatitudes, readNativeLatitudeDiffReceipt,
+  parseNativeLatitudeDiffReceiptBytes} from
   './diff-native-house-latitudes.mjs';
 
 const NAMES = Object.freeze({nativeGrid: 'house-latitudes-new.json',
@@ -81,10 +82,25 @@ export function verifyNativeHouseRegressionBundle(bundle) {
       bundle.independentlyVerifiedBuildProvenance !== false ||
       bundle.comparisonToIndependentReferences !== false ||
       !plain(bundle.reports) || !plain(bundle.reportSha256) ||
+      !plain(bundle.baselineSource) ||
+      typeof bundle.baselineSource.rawBytesBase64 !== 'string' ||
       !Object.hasOwn(bundle.reports, 'baseline')) {
     fail('E_NATIVE_BUNDLE_CONTRACT', 'Require an explicit, uncertified self-contained evidence bundle');
   }
   const {baseline, nativeGrid, smoke, orientation, versionDiff, summary} = bundle.reports;
+  const encodedBaseline = bundle.baselineSource.rawBytesBase64;
+  if (encodedBaseline.length === 0 || encodedBaseline.length > 7_000_000 ||
+      !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encodedBaseline)) {
+    fail('E_NATIVE_BUNDLE_BASELINE', 'Original baseline must have canonical base64 bytes');
+  }
+  const rawBaseline = Buffer.from(encodedBaseline, 'base64');
+  if (rawBaseline.toString('base64') !== encodedBaseline ||
+      rawBaseline.length > 5_000_000 || rawBaseline.length === 0 ||
+      !plain(summary) ||
+      createHash('sha256').update(rawBaseline).digest('hex') !== summary.baselineReceiptSha256 ||
+      !isDeepStrictEqual(parseNativeLatitudeDiffReceiptBytes(rawBaseline), baseline)) {
+    fail('E_NATIVE_BUNDLE_BASELINE', 'Raw historical baseline bytes or hash do not match parsed report');
+  }
   validateNativeLatitudeAudit(baseline);
   validateNativeLatitudeAudit(nativeGrid);
   checkSmoke(smoke, nativeGrid);
@@ -137,13 +153,16 @@ export function verifyNativeHouseRegressionBundle(bundle) {
     flaggedAscendants: orientation.flagged,
     recoveredMethods: actualDiff.errorToSuccess,
     newlyFailedMethods: actualDiff.successToError,
-    reportHashesChecked: Object.keys(NAMES).length});
+    reportHashesChecked: Object.keys(NAMES).length,
+    originalBaselineSha256Checked: true});
 }
 
 export const HELP_TEXT = `Offline verification of a single portable VirgoStars 7×23 evidence bundle.
-  node scripts/verify-native-house-regression-bundle.mjs --bundle house-regression-bundle.json
+  node scripts/verify-native-house-regression-bundle.mjs --bundle house-regression-bundle.json \\
+    [--expected-commit 40_HEX_PR_SHA] [--expected-baseline-sha256 64_HEX_RECEIPT_SHA]
 
-Checks SHA-256 for its five individually saved reports, all 161 method outcomes,
+Checks SHA-256 for its exact original UTF-8/UTF-16LE baseline bytes, the five
+individually saved reports, all 161 method outcomes,
 the 23-method smoke, horizon branch, before/after diff and summary consistency.
 No Rust, native addon, kernel, network, Swiss code, external reference or
 production service is used. Exit 0 only for internally consistent evidence;
@@ -153,14 +172,35 @@ the authenticity of source binaries or scientific house-method correctness.`;
 async function main() {
   try {
     const {values} = parseArgs({args: process.argv.slice(2), strict: true,
-      options: {bundle: {type: 'string'}, help: {type: 'boolean'}}});
+      options: {bundle: {type: 'string'}, 'expected-commit': {type: 'string'},
+        'expected-baseline-sha256': {type: 'string'}, help: {type: 'boolean'}}});
     if (values.help) {
       process.stdout.write(`${HELP_TEXT}\n`);
       return;
     }
     if (!values.bundle) fail('E_NATIVE_BUNDLE_OPTIONS', '--bundle JSON_PATH is required');
-    const receipt = readNativeLatitudeDiffReceipt(values.bundle);
+    if (values['expected-commit'] !== undefined &&
+        !/^[a-f\d]{40}$/i.test(values['expected-commit'])) {
+      fail('E_NATIVE_BUNDLE_OPTIONS', '--expected-commit must be 40 hex');
+    }
+    if (values['expected-baseline-sha256'] !== undefined &&
+        !/^[a-f\d]{64}$/i.test(values['expected-baseline-sha256'])) {
+      fail('E_NATIVE_BUNDLE_OPTIONS', '--expected-baseline-sha256 must be 64 hex');
+    }
+    // The bundle includes the parsed baseline AND its raw bytes, so it can
+    // exceed the strict per-receipt 5 MB limit without weakening that limit.
+    const receipt = readNativeLatitudeDiffReceipt(values.bundle, 20_000_000);
     const output = verifyNativeHouseRegressionBundle(receipt);
+    if (values['expected-commit'] &&
+        receipt.reports.nativeGrid.ephemeris.upstreamCommitSha.toLowerCase() !==
+          values['expected-commit'].toLowerCase()) {
+      fail('E_NATIVE_BUNDLE_EXPECTED_COMMIT', 'Evidence differs from the independently selected Rust commit');
+    }
+    if (values['expected-baseline-sha256'] &&
+        receipt.reports.summary.baselineReceiptSha256.toLowerCase() !==
+          values['expected-baseline-sha256'].toLowerCase()) {
+      fail('E_NATIVE_BUNDLE_EXPECTED_BASELINE', 'Evidence differs from the selected old receipt');
+    }
     process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
   } catch (caught) {
     process.stderr.write(`${String(caught?.message ?? caught)}\n`);
