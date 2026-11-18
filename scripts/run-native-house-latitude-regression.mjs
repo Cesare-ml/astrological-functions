@@ -21,7 +21,8 @@ import {diffNativeHouseLatitudes, parseNativeLatitudeDiffReceiptBytes} from
   './diff-native-house-latitudes.mjs';
 import {buildNativeHouseMethodReviewQueue} from
   './build-native-house-method-review-queue.mjs';
-import {NATIVE_HOUSE_BUNDLE_FILES, verifyNativeHouseRegressionBundle} from
+import {canonicalReportSha256, NATIVE_HOUSE_BUNDLE_FILES,
+  verifyNativeHouseRegressionBundle} from
   './verify-native-house-regression-bundle.mjs';
 
 const fail = (code, message) => {throw new Error(`${code}: ${message}`);};
@@ -30,6 +31,15 @@ const label = value => typeof value === 'string' && value.length > 0 &&
   value.length <= 128 && value.trim() === value && !/[\x00-\x1f\x7f]/.test(value);
 const fileName = value => typeof value === 'string' && value.trim() !== '';
 const sha256 = filename => createHash('sha256').update(readFileSync(filename)).digest('hex');
+
+function assertEmptyOutputDirectory(outDir) {
+  const entry = lstatSync(outDir, {throwIfNoEntry: false});
+  if (entry && (entry.isSymbolicLink() || !entry.isDirectory() ||
+      readdirSync(outDir).length !== 0)) {
+    fail('E_NATIVE_REGRESSION_OUTPUT',
+      'Output directory must be absent or EMPTY and cannot be a symlink (no overwrites)');
+  }
+}
 
 export function parseNativeRegressionOptions(argv) {
   const {values} = parseArgs({args: argv, strict: true, options: {
@@ -112,10 +122,7 @@ export function preflightNativeRegression(options) {
   if (options.outDir === options.baseline) {
     fail('E_NATIVE_REGRESSION_OUTPUT', 'Output directory cannot be the baseline receipt');
   }
-  if (existsSync(options.outDir) &&
-      (!statSync(options.outDir).isDirectory() || readdirSync(options.outDir).length !== 0)) {
-    fail('E_NATIVE_REGRESSION_OUTPUT', 'Output directory must be absent or EMPTY (no overwrites)');
-  }
+  assertEmptyOutputDirectory(options.outDir);
   return Object.freeze({checkout, nodeDir, baseline, baselineBytes, baselineSha256});
 }
 
@@ -154,40 +161,13 @@ export function assertNativeAddonBuildUpdated(previous, current) {
   }
 }
 
-export async function runNativeHouseLatitudeRegression(options) {
-  const selected = preflightNativeRegression(options);
-  const addonPath = path.join(selected.nodeDir, 'native', 'virgostars_ephemeris.node');
-  const beforeBuild = snapshotNativeAddon(addonPath);
-  process.stdout.write('Building pinned Rust Node addon (npm run build)...\n');
-  const build = spawnSync(process.platform === 'win32' ? 'npm.cmd' : 'npm',
-    ['run', 'build'], {cwd: selected.nodeDir, stdio: 'inherit',
-      timeout: 15 * 60_000, shell: process.platform === 'win32'});
-  if (build.error || build.status !== 0) {
-    fail('E_NATIVE_REGRESSION_BUILD', String(build.error?.message ?? `npm build exit ${build.status}`));
-  }
-  const afterBuild = snapshotNativeAddon(addonPath);
-  assertNativeAddonBuildUpdated(beforeBuild, afterBuild);
-  const nativeOptions = {checkout: selected.checkout,
-    expectedCommit: options.expectedCommit,
-    expectedAddonSha256: afterBuild.sha256, kernelContext: options.kernelContext};
-  verifyNativeAddonPreflight(nativeOptions);
-  mkdirSync(options.outDir, {recursive: true});
-
-  process.stdout.write('Running the actual 7 × 23 native method grid...\n');
-  const audit = await runNativeHouseLatitudeAudit(nativeOptions);
+/** Build and verify every report IN MEMORY before writing any evidence file. */
+export function assembleNativeHouseRegressionEvidence({selected, options, nativeOptions,
+  audit, smoke}) {
   validateNativeLatitudeAudit(audit);
-  const auditFile = exclusiveJson(options.outDir, 'house-latitudes-new.json', audit);
-
-  process.stdout.write('Running 23-method native smoke, rising check and version diff...\n');
-  const smoke = await runNativeHouseSmoke(nativeOptions);
   const orientation = auditNativeHouseAngleOrientation(audit);
   const comparison = diffNativeHouseLatitudes(selected.baseline, audit);
   const methodReview = buildNativeHouseMethodReviewQueue(selected.baseline, audit);
-  exclusiveJson(options.outDir, 'house-smoke-new.json', smoke);
-  exclusiveJson(options.outDir, 'house-angle-orientation.json', orientation);
-  exclusiveJson(options.outDir, 'house-latitudes-version-diff.json', comparison);
-  exclusiveJson(options.outDir, 'house-method-review-queue.json', methodReview);
-
   const summary = Object.freeze({contract: 'VirgoStarsNativeHouseRegressionBundleV1',
     status: smoke.failed > 0 || orientation.flagged > 0 || audit.failed > 0 ||
       comparison.successToError > 0 ? 'MANUAL_METHOD_REVIEW_REQUIRED'
@@ -214,12 +194,11 @@ export async function runNativeHouseLatitudeRegression(options) {
       'house-method-review-queue.json', 'house-regression-summary.json',
       'house-regression-bundle.json'],
     note: 'Structural and version evidence only; not independent scientific validation.'});
-  exclusiveJson(options.outDir, 'house-regression-summary.json', summary);
   const reports = Object.freeze({baseline: selected.baseline, nativeGrid: audit,
     smoke, orientation, versionDiff: comparison, methodReview, summary});
   const reportSha256 = Object.freeze(Object.fromEntries(
-    Object.entries(NATIVE_HOUSE_BUNDLE_FILES).map(([key, file]) =>
-      [key, sha256(path.join(options.outDir, file))])));
+    Object.keys(NATIVE_HOUSE_BUNDLE_FILES).map(key =>
+      [key, canonicalReportSha256(reports[key])])));
   const bundle = Object.freeze({contract: 'VirgoStarsNativeHouseRegressionEvidenceV1',
     scientificallyCertified: false,
     independentlyVerifiedBuildProvenance: false,
@@ -227,7 +206,48 @@ export async function runNativeHouseLatitudeRegression(options) {
     baselineSource: {rawBytesBase64: selected.baselineBytes.toString('base64')},
     reports, reportSha256});
   verifyNativeHouseRegressionBundle(bundle);
-  const bundleFile = exclusiveJson(options.outDir, 'house-regression-bundle.json', bundle);
+  return Object.freeze({summary, bundle});
+}
+
+/** Write only a previously verified bundle; no partial files for malformed results. */
+export function saveNativeHouseRegressionEvidence(outDir, evidence) {
+  verifyNativeHouseRegressionBundle(evidence.bundle);
+  assertEmptyOutputDirectory(outDir);
+  mkdirSync(outDir, {recursive: true});
+  for (const [key, file] of Object.entries(NATIVE_HOUSE_BUNDLE_FILES)) {
+    exclusiveJson(outDir, file, evidence.bundle.reports[key]);
+  }
+  const bundleFile = exclusiveJson(outDir, 'house-regression-bundle.json', evidence.bundle);
+  const auditFile = path.join(outDir, NATIVE_HOUSE_BUNDLE_FILES.nativeGrid);
+  return Object.freeze({summary: evidence.bundle.reports.summary, auditFile, bundleFile});
+}
+
+export async function runNativeHouseLatitudeRegression(options) {
+  const selected = preflightNativeRegression(options);
+  const addonPath = path.join(selected.nodeDir, 'native', 'virgostars_ephemeris.node');
+  const beforeBuild = snapshotNativeAddon(addonPath);
+  process.stdout.write('Building pinned Rust Node addon (npm run build)...\n');
+  const build = spawnSync(process.platform === 'win32' ? 'npm.cmd' : 'npm',
+    ['run', 'build'], {cwd: selected.nodeDir, stdio: 'inherit',
+      timeout: 15 * 60_000, shell: process.platform === 'win32'});
+  if (build.error || build.status !== 0) {
+    fail('E_NATIVE_REGRESSION_BUILD', String(build.error?.message ?? `npm build exit ${build.status}`));
+  }
+  const afterBuild = snapshotNativeAddon(addonPath);
+  assertNativeAddonBuildUpdated(beforeBuild, afterBuild);
+  const nativeOptions = {checkout: selected.checkout,
+    expectedCommit: options.expectedCommit,
+    expectedAddonSha256: afterBuild.sha256, kernelContext: options.kernelContext};
+  verifyNativeAddonPreflight(nativeOptions);
+
+  process.stdout.write('Running the actual 7 × 23 native method grid...\n');
+  const audit = await runNativeHouseLatitudeAudit(nativeOptions);
+  process.stdout.write('Running 23-method native smoke, rising check and version diff...\n');
+  const smoke = await runNativeHouseSmoke(nativeOptions);
+  const evidence = assembleNativeHouseRegressionEvidence({selected, options, nativeOptions,
+    audit, smoke});
+  const {summary, auditFile, bundleFile} = saveNativeHouseRegressionEvidence(options.outDir,
+    evidence);
   return Object.freeze({summary, auditFile, bundleFile});
 }
 
