@@ -131,3 +131,49 @@ test('runner requires explicit inputs; --help never starts building', () => {
   assert.equal(noArgs.status, 1);
   assert.match(noArgs.stderr, /E_NATIVE_REGRESSION_OPTIONS/);
 });
+
+test('--check-only validates genuine input bytes without building or writing files', () => {
+  const fixture = setup();
+  const script = fileURLToPath(new URL(
+    '../scripts/run-native-house-latitude-regression.mjs', import.meta.url));
+  try {
+    const args = [script, '--checkout', fixture.checkout,
+      '--expected-commit', fixture.expectedCommit,
+      '--baseline', fixture.baseline,
+      '--expected-baseline-sha256', fixture.expectedBaselineSha256,
+      '--out-dir', fixture.outDir,
+      '--kernel-context', fixture.kernelContext, '--check-only'];
+    const check = spawnSync(process.execPath, args, {encoding: 'utf8'});
+    assert.equal(check.status, 0, check.stderr);
+    const result = JSON.parse(check.stdout);
+    assert.equal(result.contract, 'VirgoStarsNativeHouseRegressionPreflightV1');
+    assert.equal(result.sourceCommitSha, fixture.expectedCommit);
+    assert.equal(result.baselineReceiptSha256, fixture.expectedBaselineSha256);
+    assert.equal(result.attempted, 161);
+    assert.equal(result.status, 'INPUTS_CHECKED_NO_BUILD_OR_WRITES');
+    assert.equal(existsSync(fixture.outDir), false);
+    assert.equal(existsSync(path.join(fixture.checkout, 'bindings', 'node', 'native')), false);
+    const wrong = spawnSync(process.execPath, args.map(arg => arg === fixture.expectedCommit
+      ? 'f'.repeat(40) : arg), {encoding: 'utf8'});
+    assert.equal(wrong.status, 1);
+    assert.match(wrong.stderr, /E_NATIVE_REGRESSION_COMMIT/);
+    assert.equal(existsSync(fixture.outDir), false);
+  } finally {
+    rmSync(fixture.folder, {recursive: true, force: true});
+  }
+});
+
+test('Windows launcher delegates to pinned native runner and has an explicit no-build mode', () => {
+  const script = fileURLToPath(new URL(
+    '../scripts/run-native-house-regression-windows.ps1', import.meta.url));
+  const source = readFileSync(script, 'utf8');
+  assert.match(source, /\[Parameter\(Mandatory = \$true\)\]/);
+  assert.match(source, /\[switch\]\$CheckOnly/);
+  assert.match(source, /'--expected-commit'/);
+  assert.match(source, /'--expected-baseline-sha256'/);
+  assert.match(source, /'--kernel-context', 'HOUSE_ANGLES_NO_KERNEL'/);
+  assert.match(source, /'--check-only'/);
+  assert.match(source, /'house-regression-bundle\.json'/);
+  assert.match(source, /if \(-not \$CheckOnly\)/);
+  assert.doesNotMatch(source, /&\s*git\s+(?:checkout|pull|merge|reset)/i);
+});
