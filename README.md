@@ -92,6 +92,10 @@ that receipt to **caller-sourced** numeric and method-availability references,
 requiring 161 method expectations and seven independent angle sets for a
 complete result. It reads UTF-8 and Windows PowerShell UTF-16LE/BOM JSON;
 a matched error code is never automatically scientific proof.
+The comparator can also take `--bundle VERIFIED_BUNDLE.json` alongside
+`--reference REFERENCES.json`, verifying the entire portable regression bundle before
+evaluating independently sourced expectations; no extracted new-grid file
+is needed for an external reviewer.
 See [latitude reference protocol](docs/NATIVE_NODE_HOUSE_LATITUDE_COMPARISON.md).
 
 For a changed native build, the separate offline
