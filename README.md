@@ -139,6 +139,12 @@ For actual external method review, the opt-in
 creates a strictly **empty**, commit/addon-pinned UTF-8 reference set that is
 compatible with the comparator but requires all 161 method and seven angle
 expectations to be sourced separately; it never copies native observations.
+The matching `export-native-house-review-worksheet.mjs` exports 168 human
+review rows as UTF-8 CSV with empty independent-source cells; after a reviewer
+documents real external references, `import-native-house-review-worksheet.mjs`
+converts only those independently filled cells into comparator-compatible
+JSON. It validates exact row identities and source/tolerance requirements,
+never treating native output as the expected value or granting certification.
 If the original and new receipts declare identical native addon SHA-256
 digests, the report requires manual review even when structural and rising
 checks pass. This is not proof that a build failed or succeeded.
