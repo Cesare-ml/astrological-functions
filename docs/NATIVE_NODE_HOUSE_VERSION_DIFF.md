@@ -24,7 +24,38 @@ manually select the exact latest **PR #596** commit in a clean
 commit displayed on the GitHub PR; **copy that SHA from GitHub rather than
 deriving the expected SHA from your local HEAD**. The script does not fetch or
 switch code.
-Then, on Windows PowerShell:
+
+### Guided Windows launcher
+
+From the `astrological-functions` PR #225 branch, copy the **full 40-character
+Rust commit SHA** from PR #596. With sibling repositories in `D:\GitHub`,
+the original receipt in the `astrological-functions` root and PowerShell:
+
+```powershell
+cd D:\GitHub\astrological-functions
+$rustShaFromPr596 = 'PASTE_EXACT_40_CHARACTER_SHA_FROM_PR596'
+
+# Safe read-only check (no Cargo build and no output folder):
+.\scripts\run-native-house-regression-windows.ps1 `
+  -ExpectedCommit $rustShaFromPr596 -CheckOnly
+
+# Only after the preflight succeeds, build the real native addon and audit:
+.\scripts\run-native-house-regression-windows.ps1 `
+  -ExpectedCommit $rustShaFromPr596
+```
+
+For nonstandard paths, supply `-EphemerisCheckout` and `-BaselineReceipt`.
+The launcher pins the historical receipt's raw SHA-256 by default, chooses
+a new unique directory under the Git-ignored `tmp/`, and prints the exact
+`house-regression-bundle.json` path. Upload **that single file** for review.
+Exit **2** means valid reports were saved and human review remains pending;
+exit **1** means the build/inputs failed. Neither outcome certifies scientific
+accuracy. This wrapper has not been executed on Windows in this environment;
+the delegated Node preflight is independently exercised in the test suite.
+
+### Direct Node command (Windows or Linux)
+
+Alternatively, on Windows PowerShell:
 
 ```powershell
 cd D:\GitHub\astrological-functions
@@ -53,8 +84,8 @@ The output directory must be **new or empty**. This command:
    grid and 23-method smoke, then analyzes the rising horizon branch.
 4. Saves **six separate JSON reports** without overwriting any prior file:
    `house-latitudes-new.json`, `house-smoke-new.json`,
-   `house-angle-orientation.json`, `house-latitudes-version-diff.json` and
-   `house-method-review-queue.json`, `house-regression-summary.json`.
+   `house-angle-orientation.json`, `house-latitudes-version-diff.json`,
+   `house-method-review-queue.json` and `house-regression-summary.json`.
 5. Also saves `house-regression-bundle.json`: **one portable file to attach**
    for subsequent review. It contains both complete grids, **the unmodified
    original baseline bytes encoded as base64**, the native smoke, orientation
