@@ -26,6 +26,8 @@ $PSNativeCommandUseErrorActionPreference = $false
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $runner = Join-Path $PSScriptRoot 'run-native-house-latitude-regression.mjs'
 $verifier = Join-Path $PSScriptRoot 'verify-native-house-regression-bundle.mjs'
+$referenceTemplateTool = Join-Path $PSScriptRoot 'create-native-house-reference-template.mjs'
+$worksheetTool = Join-Path $PSScriptRoot 'export-native-house-review-worksheet.mjs'
 
 if ([string]::IsNullOrWhiteSpace($EphemerisCheckout)) {
     $EphemerisCheckout = Join-Path (Split-Path -Parent $repoRoot) 'VirgoStars-Ephemeris'
@@ -87,6 +89,27 @@ if (-not $CheckOnly -and ($nativeExit -eq 0 -or $nativeExit -eq 2)) {
     if ($LASTEXITCODE -ne 0) {
         throw 'The portable bundle failed independent offline consistency checks; do not attach as validated evidence.'
     }
+    # Keep the evidence directory sealed at precisely seven JSON files. Review
+    # artifacts are sibling files and cannot alter its read-back verification.
+    if (-not (Test-Path -LiteralPath $referenceTemplateTool -PathType Leaf)) {
+        throw "Missing independent reference template generator: $referenceTemplateTool"
+    }
+    if (-not (Test-Path -LiteralPath $worksheetTool -PathType Leaf)) {
+        throw "Missing human review worksheet exporter: $worksheetTool"
+    }
+    $referenceTemplate = "${OutputDirectory}-independent-references-EMPTY.json"
+    $reviewWorksheet = "${OutputDirectory}-review-worksheet.csv"
+    Write-Host 'Preparing empty independent-reference JSON and human-review CSV beside the evidence folder...'
+    & node $referenceTemplateTool --bundle $bundle --out $referenceTemplate --expected-commit $expectedCommitLower --expected-baseline-sha256 $expectedBaselineLower
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Independent reference template creation failed; the verified bundle remains saved.'
+    }
+    & node $worksheetTool --bundle $bundle --out $reviewWorksheet --expected-commit $expectedCommitLower --expected-baseline-sha256 $expectedBaselineLower
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Human-review CSV export failed; the verified bundle remains saved.'
+    }
+    Write-Host "Independent references (EMPTY, must be sourced): $referenceTemplate"
+    Write-Host "Excel human-review worksheet: $reviewWorksheet"
     Write-Host "Attach only this file for review: $bundle"
     if ($nativeExit -eq 2) {
         Write-Warning 'Valid evidence saved; one or more methods/angles still need manual review.'
