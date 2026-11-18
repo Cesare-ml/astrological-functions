@@ -382,7 +382,7 @@ test('synthetic evidence flows through assembly, all seven files and offline ver
       '"\'=HYPERLINK(""https://invalid.example"")"');
     assert.equal(reviewCsvCell(-80), '"-80"', 'signed numeric latitudes must be preserved');
 
-    const worksheetPath = path.join(fixture.folder, 'review-worksheet.csv');
+    const worksheetPath = `${options.outDir}-review-worksheet.csv`;
     const worksheetArgs = [
       'scripts/export-native-house-review-worksheet.mjs',
       '--bundle', saved.bundleFile, '--out', worksheetPath,
@@ -404,6 +404,17 @@ test('synthetic evidence flows through assembly, all seven files and offline ver
     assert.equal(worksheetWrongPin.status, 1);
     assert.match(worksheetWrongPin.stderr, /E_NATIVE_WORKSHEET_BASELINE/);
     assert.equal(existsSync(wrongPinFile), false);
+    const templatePath = `${options.outDir}-independent-references-EMPTY.json`;
+    const templateRun = spawnSync(process.execPath,
+      ['scripts/create-native-house-reference-template.mjs', '--bundle', saved.bundleFile,
+        '--out', templatePath, '--expected-commit', options.expectedCommit,
+        '--expected-baseline-sha256', fixture.expectedBaselineSha256], {encoding: 'utf8'});
+    assert.equal(templateRun.status, 0, templateRun.stderr);
+    assert.equal(JSON.parse(readFileSync(templatePath, 'utf8')).scenarios.length, 7);
+    assert.equal(readdirSync(options.outDir).length, 7,
+      'review sidecars must not change the sealed evidence file count');
+    assert.equal(verifySavedNativeHouseRegressionEvidence(options.outDir, evidence).filesChecked,
+      7, 'review sidecars must not break byte-for-byte evidence read-back');
     assert.throws(() => saveNativeHouseRegressionEvidence(options.outDir, evidence),
       /E_NATIVE_REGRESSION_OUTPUT/);
     assert.deepEqual(JSON.parse(readFileSync(saved.bundleFile, 'utf8')), portable,
@@ -431,6 +442,16 @@ test('Windows launcher delegates to pinned native runner and has an explicit no-
   assert.match(source, /'--check-only'/);
   assert.match(source, /'house-regression-bundle\.json'/);
   assert.match(source, /verify-native-house-regression-bundle\.mjs/);
+  assert.match(source, /create-native-house-reference-template\.mjs/);
+  assert.match(source, /export-native-house-review-worksheet\.mjs/);
+  assert.match(source, /\$referenceTemplate = "\$\{OutputDirectory\}-independent-references-EMPTY\.json"/);
+  assert.match(source, /\$reviewWorksheet = "\$\{OutputDirectory\}-review-worksheet\.csv"/);
+  assert.match(source, /& node \$referenceTemplateTool --bundle \$bundle --out \$referenceTemplate --expected-commit \$expectedCommitLower --expected-baseline-sha256 \$expectedBaselineLower/);
+  assert.match(source, /& node \$worksheetTool --bundle \$bundle --out \$reviewWorksheet --expected-commit \$expectedCommitLower --expected-baseline-sha256 \$expectedBaselineLower/);
+  const postRunBranch = source.indexOf('if (-not $CheckOnly -and ($nativeExit -eq 0 -or $nativeExit -eq 2)) {');
+  assert.ok(postRunBranch >= 0, 'review artifacts must only be generated after native success');
+  assert.ok(source.indexOf('& node $referenceTemplateTool', postRunBranch) > postRunBranch);
+  assert.ok(source.indexOf('& node $worksheetTool', postRunBranch) > postRunBranch);
   assert.match(source, /\$PSNativeCommandUseErrorActionPreference = \$false/);
   assert.match(source, /\$expectedCommitLower = \$ExpectedCommit\.ToLowerInvariant\(\)/);
   assert.match(source, /\$expectedBaselineLower = \$ExpectedBaselineSha256\.ToLowerInvariant\(\)/);
