@@ -182,8 +182,13 @@ runs. No real client birth data is necessary or appropriate.
   receipt, an approximately **180°** ASC change is anticipated from the Rust
   rising/setting branch fix, but it is **not prefilled** or accepted as proof.
 - `sameAddonDigest` reveals if both receipts assert an identical installed
-  native addon hash. Source commit and hash remain **caller-asserted**; the
-  script cannot establish reproducible build provenance.
+  native addon hash. The consolidated summary now requires **manual review**
+  when this is true, even if all methods and rising-branch checks succeed;
+  identical bytes can legitimately arise from changes outside the compiled
+  binary, so this is an investigation flag, **not** proof of a failed build.
+  The offline verifier exposes `sameAddonDigest` directly. Source commit and
+  hash remain **caller-asserted**; the script cannot establish reproducible
+  build provenance.
 
 Exit **0** means both receipts passed strict structural validation and the
 version differences were reported; **it does not mean zero regressions**.
