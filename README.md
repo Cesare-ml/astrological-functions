@@ -97,6 +97,13 @@ the solver across historical date boundaries, variable longitude rates,
 multiple sampling intervals and zodiac-frame rotation. It also explicitly
 rejects mismatched native heliocentric/equatorial/uncorrected return flags;
 none of these mathematical checks closes real DE441 validation.
+An additional manual **multi-epoch native smoke**
+`scripts/verify-native-regolo-conjunction-batch.mjs` now accepts a strict
+versioned JSON set of 1–32 artificial test instants, each with its own
+sourced birth DUT1 and observed time-source policy. It verifies the pinned
+source/addon/DE441 bytes **once** and emits individually inspectable
+candidate/error receipts; no reference data is fabricated or scientific
+certification claimed. See the [batch operator instructions](docs/REGOLO_MOON_CONJUNCTION_SEARCH.md#multi-epoch-native-smoke-with-one-de441-preflight).
 
 **Not included:** natal chart interpretations, user accounts, private birth records, databases, API credentials, frontend graphics, NASA/JPL kernels, or production VirgoStars services. Proposed interfaces described in `docs/CONTRACTS.md` are not necessarily shipped APIs.
 

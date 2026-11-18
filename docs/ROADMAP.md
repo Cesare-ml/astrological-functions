@@ -121,6 +121,17 @@ upstream JPL-tagged results carrying incompatible heliocentric,
 no-aberration/no-deflection or equatorial flags. This is a **numerical
 robustness test**, not real native/JPL or independent event-time evidence.
 
+**Native lunar batch verification harness (18 November 2026):** a separate
+operator-only script permits 1–32 documented synthetic test epochs with
+per-epoch sourced DUT1 and recorded upstream time-source policy, reusing
+one fully preflighted native addon/DE441 session. It emits isolated
+candidate/error receipts and fails overall if any date has no eligible
+root. The command and its failure cases are mock-tested; **no actual
+native DE441 run or independent reference dataset has been supplied**.
+Scientific/source-origin certification and availability of Regolo
+`NEW_MOON` lots remain blocked. See
+[batch run instructions](REGOLO_MOON_CONJUNCTION_SEARCH.md#multi-epoch-native-smoke-with-one-de441-preflight).
+
 The next stacked draft after #213 introduces a typed, opt-in 24-method selector
 without replacing any existing API, including Gauquelin's separate 36-sector
 result. Its synthetic dispatch/type tests support consumer wiring but do not

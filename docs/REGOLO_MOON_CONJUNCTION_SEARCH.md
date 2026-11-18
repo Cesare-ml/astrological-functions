@@ -261,3 +261,91 @@ The local suite uses mocked `calcUt` and **fabricated** reference JSON.
 Neither real native binaries nor real external reference data are available
 in the current sandbox, so actual Rust/DE441 execution and independent
 numerical parity remain **PENDING** until the operator supplies them.
+
+## Multi-epoch native smoke with one DE441 preflight
+
+For a repeatable **set of independent test epochs**, use the operator-only
+`scripts/verify-native-regolo-conjunction-batch.mjs`. It shares the same
+verified Rust Node addon and DE441 bytes across all cases, so the potentially
+large kernel file is hashed **once** per batch, not once per date. The
+original single-case script remains available without changing its CLI.
+
+Create a local `conjunction-test-instants.json` (outside source control) with
+this schema. **The placeholders below are deliberately invalid until you
+replace them with actual independently sourced values.** Use artificial
+test instants, never personally identifying birth records.
+
+```json
+{
+  "contract": "RegoloNativeConjunctionBatchCasesV1",
+  "cases": [
+    {
+      "id": "EPOCH_2000_LEAP_BOUNDARY",
+      "datetimeUtc": "2000-02-29T12:00:00Z",
+      "birthDut1Seconds": "REPLACE_WITH_SOURCED_NUMBER",
+      "dut1SourceUri": "https://example.org/replace-with-authentic-UT1-data",
+      "expectedTimeSourcePolicy": "REPLACE_WITH_OBSERVED_ENGINE_POLICY"
+    },
+    {
+      "id": "EPOCH_2026_RECENT",
+      "datetimeUtc": "2026-11-18T12:00:00Z",
+      "birthDut1Seconds": "REPLACE_WITH_SOURCED_NUMBER",
+      "dut1SourceUri": "https://example.org/replace-with-authentic-UT1-data",
+      "expectedTimeSourcePolicy": "REPLACE_WITH_OBSERVED_ENGINE_POLICY"
+    }
+  ]
+}
+```
+
+Supply one numeric UT1−UTC value at **each birth/test instant**; do not use
+a universal `0`, do not reuse the correction at the eventual lunar event,
+and do not imply the archive/source URL was independently authenticated by
+the script. For diverse scientific coverage, include at least six epochs in
+the **modern era with independently defined UTC and DUT1** (e.g. the IERS
+era), plus leap years, longitude seams and observed time-model changes.
+Do **not** insert a historical pre-UTC calendar epoch into this schema by
+inventing a UT1−UTC correction: historical tests require a separately
+defined time-scale contract.
+The parser accepts **1–32** strictly specified cases with unique IDs,
+Gregorian UTC instants, numerically bounded sourced DUT1, HTTPS provenance
+URLs and each epoch's *observed* native time-source policy.
+
+Run from the owner's Windows `astrological-functions` checkout:
+
+```powershell
+node scripts/verify-native-regolo-conjunction-batch.mjs `
+  --manifest '.\conjunction-test-instants.json' `
+  --checkout 'D:\GitHub\VirgoStars-Ephemeris' `
+  --expected-commit 'INSERT_REAL_40_HEX_COMMIT' `
+  --expected-addon-sha256 'INSERT_REAL_64_HEX_ADDON' `
+  --de441 'D:\GitHub\virgo-stars\database\effemeridi\astrodienst\de441.eph' `
+  --expected-de441-sha256 'INSERT_REAL_64_HEX_DE441' `
+  --time-model 'INSERT_VERSIONED_NATIVE_TIME_MODEL' `
+  --lookback-days '35' `
+  --sample-step-hours '6' `
+  --root-tolerance-seconds '0.5' `
+  --max-iterations '64' `
+  --max-conjunction-residual-deg '0.001' > conjunction-batch-audit.json
+if ($LASTEXITCODE -ne 0) { throw 'Native batch failed: inspect the audit and stderr' }
+```
+
+The versioned `VirgoStarsNativeConjunctionBatchAuditV1` receipt records the
+same source/kernel/binary hashes, all case identifiers, the per-epoch DUT1
+source URLs and the **full** per-case original conjunction receipts. Errors
+are isolated by case after the single initial preflight: if one date fails,
+later dates still run, the overall status is `NATIVE_CANDIDATE_FAILURES`,
+and the command exits nonzero. If the initial SHA preflight fails, the
+command **never loads the native addon** or emits a success receipt.
+
+The entire batch remains `scientificParityCertified: false`, and each lunar
+input remains `UNAVAILABLE`. For a separately sourced numerical reference,
+extract a particular `results[n].receipt` unchanged and compare it with
+`compare-regolo-conjunction-reference.mjs`, supplying independent Sun/Moon
+positions at **that candidate's exact JD UT1**. The batch does not invent
+independent references or certify the method merely because several
+candidates are found.
+
+```sh
+node --test test/verify-native-regolo-conjunction-batch.test.mjs
+node scripts/verify-native-regolo-conjunction-batch.mjs --help
+```

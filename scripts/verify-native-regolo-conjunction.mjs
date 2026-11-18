@@ -114,8 +114,12 @@ export function executeNativeConjunctionSearch(engine, source, options, prefligh
   })});
 }
 
-/** Verify source/installed addon/DE441 bytes BEFORE loading the addon. */
-export async function runNativeConjunctionSearch(options) {
+/**
+ * Verify source/installed addon/DE441 bytes BEFORE loading the addon.
+ * A session lets an operator compare multiple deliberately supplied UTC
+ * instants without rehashing the (large) DE441 file for every birth epoch.
+ */
+export async function prepareNativeConjunctionSession(options) {
   const preflight = verifyNativeAddonPreflight(options);
   const kernel = await verifyRegoloKernel(options.de441,
     options.expectedDe441Sha256);
@@ -128,9 +132,28 @@ export async function runNativeConjunctionSearch(options) {
     engineVersion: preflight.upstreamCommitSha,
     kernelSetId: kernel.sha256, timeModelId: options.timeModelId});
   const engine = new binding.Engine(kernel.file);
-  const found = executeNativeConjunctionSearch(engine, source, options, preflight);
-  return Object.freeze({...found, nativeAudit: Object.freeze({...found.nativeAudit,
-    nativeAddonExecuted: true, verifiedLocalBytes: true})});
+  const pinned = Object.freeze(Object.fromEntries([
+    'checkout', 'expectedCommit', 'expectedAddonSha256', 'de441',
+    'expectedDe441Sha256', 'timeModelId',
+  ].map(key => [key, options[key]])));
+  return Object.freeze({pinned, preflight, kernel,
+    run(candidateOptions) {
+      if (Object.entries(pinned).some(([key, value]) =>
+        candidateOptions?.[key] !== value)) {
+        throw new Error('E_REGOLO_CONJUNCTION_SESSION_PIN: source, binary, kernel and time model must remain unchanged');
+      }
+      const found = executeNativeConjunctionSearch(engine, source,
+        candidateOptions, preflight);
+      return Object.freeze({...found, nativeAudit: Object.freeze({
+        ...found.nativeAudit, nativeAddonExecuted: true,
+        verifiedLocalBytes: true})});
+    }});
+}
+
+/** One-case CLI compatibility path; still performs full preflight. */
+export async function runNativeConjunctionSearch(options) {
+  const session = await prepareNativeConjunctionSession(options);
+  return session.run(options);
 }
 
 export const HELP = `Native Regolo Sun–Moon search (opt-in, STRUCTURAL ONLY).
