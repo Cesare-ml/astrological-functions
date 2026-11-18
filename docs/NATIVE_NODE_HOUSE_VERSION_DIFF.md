@@ -52,10 +52,29 @@ or 2), it additionally invokes the offline bundle verifier with the **same
 independently pinned Rust commit and original baseline SHA-256** and displays
 the human-readable `--triage` review on screen. A failed bundle consistency
 check stops the launcher; `-CheckOnly` still never writes or runs this report.
-Upload **that single file** for review.
+After successful verification, the same invocation creates two **new sibling
+files next to, but not inside, the seven-JSON evidence directory**:
+
+- `<output-directory>-independent-references-EMPTY.json` — an intentionally
+  empty, comparator-compatible scientific reference template for all seven
+  latitudes. It contains no expected method or angle values.
+- `<output-directory>-review-worksheet.csv` — an Excel-readable 168-row review
+  checklist showing observed method/angle outcomes and empty independent
+  source, expectation, tolerance and reviewer fields.
+
+These additional files are exclusive-create: existing sidecars will **not**
+be overwritten. Their location outside the sealed evidence directory matters:
+the regression runner's seven-file byte-for-byte verification must continue
+to work on its unmodified original outputs. Both generators recheck the
+portable bundle and the caller's pinned SHA values. Failure to create either
+review artifact stops the launcher with an explicit error but preserves the
+already saved seven JSON evidence files. The CSV is a human worksheet, **not**
+an independent reference oracle or comparator input. Upload **only the
+`house-regression-bundle.json` file** for review.
 If independent house-method review will proceed locally, create the initially
 empty, identity-pinned [reference template](NATIVE_NODE_HOUSE_LATITUDE_COMPARISON.md#generate-a-safe-initially-empty-reference-template)
-from that same verified bundle; no observed numbers are accepted as references.
+manually **only if using the direct Node runner** (the guided Windows launcher
+already creates it); no observed numbers are accepted as references.
 Before building, the delegated runner rejects symlinked native output paths;
 after a reported successful build, it refuses a **completely unchanged addon**
 (same bytes, size and modification timestamp), so an old `.node` cannot
