@@ -94,7 +94,10 @@ The output directory must be **new or empty**. This command:
 
 1. Checks the exact Rust source commit against your independently selected
    GitHub SHA, unchanged tracked files, **original baseline byte hash**, all
-   161 method outcomes and matching declared kernel context.
+   161 method outcomes and matching declared kernel context. The new output
+   directory must be outside the pinned Rust checkout and any `.git` metadata
+   (including when an existing parent is a symlink); `--check-only` verifies
+   this without creating folders.
 2. Runs `npm run build` in the pinned upstream `bindings/node` folder, using
    the local Rust/Cargo toolchain. Cargo may fetch missing pinned dependencies;
    **no ephemeris kernels are downloaded**. Rechecks the pinned Rust HEAD and
