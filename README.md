@@ -10,6 +10,107 @@ The current `main` branch includes pure-math utilities for angular normalization
 
 The separate [VirgoStars Ephemeris](https://github.com/Cesare-ml/VirgoStars-Ephemeris) Rust project is the **only intended source for astronomy**. This package must not duplicate orbital computation, import Swiss Ephemeris source or silently substitute a lower-accuracy engine. An experimental provider boundary and real-DE441 integration tests do **not** establish full astronomical accuracy or production parity.
 
+The opt-in experimental `./regolo-kleroi` and `./regolo-arabic-parts`
+subpaths independently reconstruct **nine Regolo kleroi** and **92 named
+legacy Arabic-part entries** (15 essential and 77 in twelve grouped lists)
+from `Cesare-ml/Regolo-Alpha-Leonis`. They require an explicit known birth
+time, Ascendant, zodiac and day/night sect; optional missing house/MC/DS/new
+Moon inputs produce **unavailable** dependent parts, never fabricated longitudes.
+The legacy navigation part's caption **14° Cancer** contradicts its executed
+**134°** value and is flagged rather than silently changed. These formulas
+remain `IMPLEMENTED_ISOLATED`, not historical source validation or production
+integration. See [the Regolo lot compatibility contract](docs/REGOLO_KLEROI_AND_ARABIC_PARTS.md).
+
+An additional **manual offline legacy parity runner** checks all 92 Regolo
+Arabic-part outputs against the exact pinned owner source, without bundling it
+or executing its Swiss-backed HTTP service. Its initial three synthetic
+charts × two sects passed **552/552 mathematical/label comparisons**; the nine
+kleroi additionally passed **54/54** against Regolo's original calculations.
+These **606 matching checks** establish numeric legacy arithmetic parity, not
+historical or scientific validation. They do not validate astronomical
+sunrise, sect, new-Moon times or historical claims.
+
+A further opt-in typed `./regolo-lots-astronomy-bridge` takes explicitly pinned
+**caller-asserted** apparent Sun-horizon and preceding-new-Moon facts, refuses
+ambiguous day/night cases, and feeds the nine kleroi/92 parts without an
+astronomical fallback. It **does not** calculate the Sun's altitude or the
+new-Moon event; production needs a validated Rust provider. See
+[the Regolo astronomical fact bridge](docs/REGOLO_LOTS_ASTRONOMY_BRIDGE.md).
+
+The opt-in typed `./regolo-lots-rise-set-bridge` is the first **actual
+upstream-API-shaped solar event consumer** for these lots: it calls an injected
+`VirgoStars-Ephemeris` Node `Engine.riseTransUt` for the apparent refracted
+Sun-centre rising/setting instants and derives a conservative `DAY`/`NIGHT`
+sect, failing closed near a crossing or when polar solar events are absent.
+The installed engine binary, source commit, UT1 offset and natal positions
+are **not authenticated by injection**; live Rust scientific parity and the
+latest preceding new-Moon solver remain open gates. See
+[the Regolo Node rise/set adapter](docs/REGOLO_RISE_SET_NODE_BRIDGE.md).
+
+The same adapter now has a manual `scripts/verify-native-regolo-lots.mjs`
+smoke entrypoint with strict upstream source/Node-addon/DE441 byte checks.
+It never fetches a kernel, runs against synthetic birth positions and issues
+only a **structural** receipt until an independently referenced astronomical
+comparison is performed. See the native smoke instructions in the adapter doc.
+
+The additional experimental `./regolo-moon-event-candidate` accepts a recorded
+Moon-cycle snapshot from `VirgoStars-Event-Ephemeris` P0 and uses the actual
+`VirgoStars-Ephemeris` `calcUt` interface for a **diagnostic** Sun–Moon
+longitude residual. It verifies event/row/dataset identity and known coverage
+limits but **never marks an unreviewed archive event as an available new Moon**
+for the Arabic parts. See
+[Regolo recorded lunar-event diagnostics](docs/REGOLO_P0_MOON_EVENT_CANDIDATE.md).
+
+An additional **manual offline lunar reference comparator**,
+`scripts/compare-regolo-moon-reference.mjs`, accepts that diagnostic receipt
+and a separately sourced conjunction timestamp plus geocentric Sun/Moon
+longitudes at the **same recorded candidate epoch**. It measures event-time
+and circular angular errors under justified tolerances, without authenticating
+the reference or lifting the unavailable Moon gate. Initial tests use only
+synthetic reference values; see the
+[reference-input contract](docs/REGOLO_P0_MOON_EVENT_CANDIDATE.md#offline-independent-reference-comparison-next-validation-gate).
+
+The operator command `scripts/verify-native-regolo-moon.mjs` connects the
+**actual installed** Python P0 reader to the SHA-pinned Rust Node
+`Engine.calcUt`, verifying the local P0 archive, DE441 and addon bytes first.
+Its JSON diagnostic feeds the offline comparator directly. This command is
+prepared and mock-tested only; real dual-runtime execution, independent
+astronomical accuracy and historical coverage remain unverified. See the
+[native smoke recipe](docs/REGOLO_P0_MOON_EVENT_CANDIDATE.md#native-python-p0--rust-node-end-to-end-smoke-operator-only).
+
+The separate opt-in `./regolo-moon-conjunction-search` finds a *candidate*
+latest preceding Sun–Moon geocentric ecliptic-longitude conjunction by
+sampling and bisecting the injected native `Engine.calcUt` longitudes over
+an explicit 30–35-day window. It handles 0°/360° wrapping, distinguishes
+opposition crossings, and keeps `NEW_MOON` **unavailable** for all Regolo
+parts pending real native + independent reference validation. Its current
+tests use synthetic positions only. See
+[the experimental preceding-conjunction solver](docs/REGOLO_MOON_CONJUNCTION_SEARCH.md).
+Its separate manual `scripts/verify-native-regolo-conjunction.mjs` verifies a
+real installed addon and DE441 before invoking the search; an independent
+`scripts/compare-regolo-conjunction-reference.mjs` checks UTC/UT1-converted
+conjunction times and positions under declared tolerances without claiming
+scientific certification. Both commands are prepared and mock-tested; a
+real native run and independent astronomical reference are still outstanding.
+An additional deterministic **128-cycle synthetic stress sweep** now checks
+the solver across historical date boundaries, variable longitude rates,
+multiple sampling intervals and zodiac-frame rotation. It also explicitly
+rejects mismatched native heliocentric/equatorial/uncorrected return flags;
+none of these mathematical checks closes real DE441 validation.
+An additional manual **multi-epoch native smoke**
+`scripts/verify-native-regolo-conjunction-batch.mjs` now accepts a strict
+versioned JSON set of 1–32 artificial test instants, each with its own
+sourced birth DUT1 and observed time-source policy. It verifies the pinned
+source/addon/DE441 bytes **once** and emits individually inspectable
+candidate/error receipts; no reference data is fabricated or scientific
+certification claimed. See the [batch operator instructions](docs/REGOLO_MOON_CONJUNCTION_SEARCH.md#multi-epoch-native-smoke-with-one-de441-preflight).
+The offline companion
+`scripts/compare-regolo-conjunction-batch.mjs` matches case IDs to separately
+documented independent references, reports time/angle residuals and
+fail-closed missing/mismatched evidence while preserving the `NEW_MOON`
+unavailable gate. Only **synthetic** comparator tests exist today; see the
+[full-batch comparison protocol](docs/REGOLO_MOON_CONJUNCTION_SEARCH.md#compare-the-full-batch-against-independent-references).
+
 **Not included:** natal chart interpretations, user accounts, private birth records, databases, API credentials, frontend graphics, NASA/JPL kernels, or production VirgoStars services. Proposed interfaces described in `docs/CONTRACTS.md` are not necessarily shipped APIs.
 
 ## Try the source locally

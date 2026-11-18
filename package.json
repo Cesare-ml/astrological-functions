@@ -5,6 +5,30 @@
   "type": "module",
   "exports": {
     ".": "./src/index.mjs",
+    "./regolo-kleroi": {
+      "types": "./src/regolo-kleroi.d.mts",
+      "import": "./src/regolo-kleroi.mjs"
+    },
+    "./regolo-arabic-parts": {
+      "types": "./src/regolo-arabic-parts.d.mts",
+      "import": "./src/regolo-arabic-parts.mjs"
+    },
+    "./regolo-lots-astronomy-bridge": {
+      "types": "./src/regolo-lots-astronomy-bridge.d.mts",
+      "import": "./src/regolo-lots-astronomy-bridge.mjs"
+    },
+    "./regolo-lots-rise-set-bridge": {
+      "types": "./src/regolo-lots-rise-set-bridge.d.mts",
+      "import": "./src/regolo-lots-rise-set-bridge.mjs"
+    },
+    "./regolo-moon-event-candidate": {
+      "types": "./src/regolo-moon-event-candidate.d.mts",
+      "import": "./src/regolo-moon-event-candidate.mjs"
+    },
+    "./regolo-moon-conjunction-search": {
+      "types": "./src/regolo-moon-conjunction-search.d.mts",
+      "import": "./src/regolo-moon-conjunction-search.mjs"
+    },
     "./dodecatemoria": {
       "types": "./src/dodecatemoria-methods.d.mts",
       "import": "./src/dodecatemoria-methods.mjs"

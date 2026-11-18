@@ -9,6 +9,149 @@ The owner has raised **both** of the following to the highest implementation pri
 
 **Non-negotiable gates:** keep the original VirgoStars Rust ephemeris as the only astronomy engine, no Swiss source/fallback, no hidden Porphyry polar substitution, no GitHub Actions, no npm/production release or merge without exact-tree tests and explicit owner review. A method is not complete merely because a source file or draft PR exists. Priorities do not override licensing, provenance or safety checks.
 
+**Regolo lots extraction, 18 November 2026:** An isolated opt-in draft now
+contains the nine kleroi found in `Regolo-Alpha-Leonis` and the entire
+92-entry legacy Arabic-part catalog (15 essential and twelve Abū Maʿshar
+groups totalling 77). Formula descriptions and a known 134°/14° Cancer
+discrepancy remain traceable to the pinned source. The math needs independent
+legacy HTTP fixture parity, scholarly source verification, authentic sect/new-Moon
+data and downstream typed/consumer validation before any production use.
+See [Regolo kleroi and Arabic parts](REGOLO_KLEROI_AND_ARABIC_PARTS.md).
+
+**Offline Regolo arithmetic parity (18 November 2026):** 552 of 552
+checks matched the exact legacy `parti-arabe.js` Git blob across three synthetic
+charts in both sects, including all 92 original entry names, descriptions and
+results per scenario. The original nine kleroi in `func.js` also matched
+**54/54** synthetic day/night comparisons, for **606/606** Regolo symbolic
+parity checks overall. This is a manual, source-blob-pinned check without the
+legacy HTTP service or Swiss astronomy. Real API and scientific validation
+gates remain open; the original files are never bundled in this package.
+
+**Regolo astronomical fact bridge (18 November 2026):** an isolated typed ESM
+subpath now checks a pinned, caller-asserted apparent topocentric Sun altitude
+against an explicitly modelled local horizon, refuses sect decisions within
+the declared uncertainty, and accepts a separately sourced latest-preceding
+new-Moon event or marks dependent parts unavailable. This is a **strict
+injection boundary only**, not an implemented Rust solar-altitude/new-Moon
+producer or independently validated natal calculation. See
+[Regolo astronomical fact bridge](REGOLO_LOTS_ASTRONOMY_BRIDGE.md).
+
+**Regolo native-API solar sect bridge (18 November 2026):** a new isolated,
+typed opt-in entrypoint consumes the actual upstream Node `Engine.riseTransUt`
+signature with `SE_BIT_DISC_CENTER` and atmospheric refraction. It assigns
+day/night from the last matched rise/set, fails closed near the horizon and
+in polar cases, and preserves explicit missing preceding-new-Moon parts.
+The real native addon has **not** been loaded for this change; synthetic mock
+conformance does not certify Rust event times, binary provenance or the
+accuracy of caller-provided birth-chart positions. See
+[Regolo Node rise/set bridge](REGOLO_RISE_SET_NODE_BRIDGE.md).
+
+**Regolo native smoke preflight (18 November 2026):** a new explicit operator
+command verifies a pinned upstream checkout, the exact Node `.node` binary
+SHA-256 and an existing DE441 file hash *before* opening the Rust binding.
+It then checks two reproducible synthetic daylight/nighttime Regolo examples
+and emits the actual event times and validation scope in JSON. Local CLI,
+digest and mock-engine tests are present; the native binary is not available
+in this workspace, so **no real Rust execution or astronomical parity is
+claimed**. The independent full lunar event/longitude source remains open.
+
+**Regolo recorded-Moon candidate audit (18 November 2026):** another opt-in
+typed experimental module consumes the actual `VirgoStars-Event-Ephemeris`
+Python-first `get_synods_at` JSON envelope and calls the real Node `calcUt`
+Sun/Moon interface to compare archived conjunction candidates. It preserves
+source row ID, exact event UTC microseconds, dataset SHA, observed UT1 and
+the angular conjunction residual. All current P0 coverage is **unreviewed**:
+the module ALWAYS emits an `UNAVAILABLE` Regolo lunar input, including when
+the candidate is geometrically plausible. Known historical gaps and stale
+anchors block even candidate computation. No real Rust/P0 binary was loaded
+here; only mocked contract tests have run. See
+[Regolo recorded-Moon candidate audit](REGOLO_P0_MOON_EVENT_CANDIDATE.md).
+
+**Regolo independent lunar reference comparator (18 November 2026):**
+`scripts/compare-regolo-moon-reference.mjs` performs a manual/offline
+comparison of a candidate receipt to separately sourced conjunction UTC and
+geocentric apparent Sun/Moon positions at the **recorded candidate epoch**.
+It reports microsecond-aware timing and circular longitude residuals under
+justified thresholds, without authenticating external reference claims or
+unlocking `NEW_MOON` parts. Ten synthetic tests passed; the real native
+addon, independent astronomical measurements and reviewed P0 archive coverage
+remain the outstanding gates. See the
+[reference protocol](REGOLO_P0_MOON_EVENT_CANDIDATE.md#offline-independent-reference-comparison-next-validation-gate).
+
+**Regolo native dual-engine operator smoke (18 November 2026):**
+`scripts/verify-native-regolo-moon.mjs` enforces the upstream source
+HEAD/addon checksum, streams local DE441/P0 archive checksums, invokes an
+installed Python `VirgoStarsEvents.open(...,expected_sha256=...)` and feeds
+its native JSON into a Node `Engine.calcUt` candidate audit. The output is
+directly accepted by the lunar reference comparator. Only mocked
+interface/preflight tests were possible here: no native Python wheel,
+compiled addon, actual P0 file or real astronomical comparison has run.
+The candidate remains `UNAVAILABLE` for Regolo parts even after a structural
+smoke exit 0. See [operator recipe](REGOLO_P0_MOON_EVENT_CANDIDATE.md#native-python-p0--rust-node-end-to-end-smoke-operator-only).
+
+**Regolo numerical preceding conjunction (18 November 2026):** the isolated
+typed opt-in `regolo-moon-conjunction-search` samples an actual Node
+`VirgoStars-Ephemeris` `Engine.calcUt`-shaped provider over 30–35 UT1 days,
+brackets and refines positive signed ecliptic elongation crossings, rejects
+opposition seams, and reports the latest numerical candidate as JD UT1.
+All local cases are **synthetic**; the real Rust/DE441 addon and independent
+geocentric event UTC references have not been compared. A birth DUT1 cannot
+be reused as an event DUT1 weeks earlier. It **always** returns an
+`UNAVAILABLE` Regolo new Moon: no 92-part availability inflation or implicit
+production wiring. See [search contract and pending gates](REGOLO_MOON_CONJUNCTION_SEARCH.md).
+
+**Native numerical-conjunction smoke and independent comparison (18 November
+2026):** operator-only scripts now preflight clean Rust upstream HEAD, exact
+Node addon bytes and streamed DE441 digest, invoke the isolated search with
+an explicit birth UT1 conversion, and compare its JD UT1 candidate plus
+geocentric apparent-of-date Sun/Moon longitudes to independently sourced
+values at the same candidate instant. Both scripts have synthetic/mock tests,
+but **no real native execution or independent reference evidence has been
+recorded**. Matching caller-supplied tolerances never certifies the source,
+birth/event time-scale conversion or new-Moon availability. The Regolo
+`NEW_MOON` gate remains closed; see
+[manual native and reference protocol](REGOLO_MOON_CONJUNCTION_SEARCH.md#operator-only-native-rustde441-execution-no-p0-dependency).
+
+**Numerical conjunction robustness sweep (18 November 2026):** 128
+deterministic synthetic Moon cycles (1600–2200 date boundaries, variable
+relative angular motion, different zodiac origins and 1–12-hour samples)
+now check latest-conjunction recovery, alongside a rotation invariance and
+an opposition-only anti-false-positive test. The solver also rejects
+upstream JPL-tagged results carrying incompatible heliocentric,
+no-aberration/no-deflection or equatorial flags. This is a **numerical
+robustness test**, not real native/JPL or independent event-time evidence.
+
+**Native lunar batch verification harness (18 November 2026):** a separate
+operator-only script permits 1–32 documented synthetic test epochs with
+per-epoch sourced DUT1 and recorded upstream time-source policy, reusing
+one fully preflighted native addon/DE441 session. It emits isolated
+candidate/error receipts and fails overall if any date has no eligible
+root. The command and its failure cases are mock-tested; **no actual
+native DE441 run or independent reference dataset has been supplied**.
+Scientific/source-origin certification and availability of Regolo
+`NEW_MOON` lots remain blocked. See
+[batch run instructions](REGOLO_MOON_CONJUNCTION_SEARCH.md#multi-epoch-native-smoke-with-one-de441-preflight).
+
+**Independent multi-epoch comparison gate (18 November 2026):** an offline
+companion `compare-regolo-conjunction-batch.mjs` now checks the native
+multi-date report against a versioned reference manifest. Every native
+case needs one matching reference ID or an explicit null; invalid/missing
+reference cases, missing native roots and independently measured time/
+longitude mismatches are counted distinctly. It audits source identity,
+UTC/DUT1 links and report counts, but **cannot authenticate reference
+independence**. All comparator tests are fabricated synthetic data; no real
+Rust/DE441 or source-independent observational parity has been obtained.
+See [full-batch comparison protocol](REGOLO_MOON_CONJUNCTION_SEARCH.md#compare-the-full-batch-against-independent-references).
+
+**Calendar-timescale hardening (18 November 2026):** the batch manifest now
+refuses historical pre-1972 UTC/DUT1 guesses, and the reference auditor
+independently recomputes birth JD UT1 from each original UTC instant and
+per-event sourced DUT1, preserving microsecond fractions. An impossible
+calendar date or a forged JD/UTC relation fails before reference comparison;
+the **standalone** single-case reference comparator now enforces this same
+birth-epoch consistency gate. Synthetic boundary tests cover both. This is
+a provenance/consistency guard, **not** a real astronomy accuracy result.
+
 The next stacked draft after #213 introduces a typed, opt-in 24-method selector
 without replacing any existing API, including Gauquelin's separate 36-sector
 result. Its synthetic dispatch/type tests support consumer wiring but do not
