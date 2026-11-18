@@ -129,6 +129,11 @@ Add `--triage` to print a compact, human-readable seven-latitude comparison,
 changed-method priorities and remaining independent-reference counts instead
 of the default JSON result. The option validates the full bundle first and
 does not classify any method as scientifically approved.
+For actual external method review, the opt-in
+`scripts/create-native-house-reference-template.mjs --bundle FILE --out NEW_FILE`
+creates a strictly **empty**, commit/addon-pinned UTF-8 reference set that is
+compatible with the comparator but requires all 161 method and seven angle
+expectations to be sourced separately; it never copies native observations.
 If the original and new receipts declare identical native addon SHA-256
 digests, the report requires manual review even when structural and rising
 checks pass. This is not proof that a build failed or succeeded.
