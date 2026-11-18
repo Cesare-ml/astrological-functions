@@ -104,6 +104,12 @@ automates the **explicitly pinned local** Rust Node addon build, grid, smoke,
 orientation check and complete before/after report. It never switches Git
 revisions or overwrites old receipts, and still requires a real owner-run
 Windows native build and independent method references before release.
+Its additional `house-regression-bundle.json` consolidates both full receipts,
+all three diagnostics and their SHA-256 checksums in **one portable file**.
+Use `scripts/verify-native-house-regression-bundle.mjs --bundle PATH` to
+recompute the 161-method diff and horizon audit **offline, without Rust**;
+passing only verifies internal consistency, not scientific correctness or
+the origin of native binaries.
 
 Version: `0.1.0-dev`. The package stays `"private": true` to prevent accidental npm publishing, independently of GitHub repository visibility. There is **no stable API or compatibility commitment yet**.
 
