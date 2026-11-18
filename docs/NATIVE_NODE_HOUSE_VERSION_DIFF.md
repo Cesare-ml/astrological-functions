@@ -53,6 +53,9 @@ independently pinned Rust commit and original baseline SHA-256** and displays
 the human-readable `--triage` review on screen. A failed bundle consistency
 check stops the launcher; `-CheckOnly` still never writes or runs this report.
 Upload **that single file** for review.
+If independent house-method review will proceed locally, create the initially
+empty, identity-pinned [reference template](NATIVE_NODE_HOUSE_LATITUDE_COMPARISON.md#generate-a-safe-initially-empty-reference-template)
+from that same verified bundle; no observed numbers are accepted as references.
 Before building, the delegated runner rejects symlinked native output paths;
 after a reported successful build, it refuses a **completely unchanged addon**
 (same bytes, size and modification timestamp), so an old `.node` cannot
