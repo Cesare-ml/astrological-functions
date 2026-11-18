@@ -11,6 +11,7 @@ import {ASTRO_COM_HOUSE_SYSTEM_IDS} from '../src/astro-com-house-selector.mjs';
 import {HOUSE_SMOKE_FIXTURE} from '../scripts/verify-native-house-bridge.mjs';
 import {LATITUDE_AUDIT_CASES} from '../scripts/audit-native-house-latitudes.mjs';
 import {assembleNativeHouseRegressionEvidence, assertNativeAddonBuildUpdated,
+  assertPinnedNativeSource,
   parseNativeRegressionOptions, preflightNativeRegression, saveNativeHouseRegressionEvidence,
   snapshotNativeAddon} from
   '../scripts/run-native-house-latitude-regression.mjs';
@@ -116,6 +117,29 @@ test('preflight refuses unpinned/dirty checkout, changed context and occupied ou
     assert.equal(existsSync(path.join(fixture.outDir, 'keep-user-file.txt')), true);
     writeFileSync(path.join(fixture.checkout, 'bindings', 'node', 'package.json'), '{}');
     assert.throws(() => preflightNativeRegression(base), /E_NATIVE_REGRESSION_DIRTY/);
+  } finally {
+    rmSync(fixture.folder, {recursive: true, force: true});
+  }
+});
+
+test('pinned Rust checkout is rechecked after build and before evidence save', () => {
+  const fixture = setup();
+  const packageFile = path.join(fixture.checkout, 'bindings', 'node', 'package.json');
+  try {
+    assert.doesNotThrow(() => assertPinnedNativeSource(fixture.checkout,
+      fixture.expectedCommit));
+    writeFileSync(packageFile, '{"private":true,"scripts":{"build":"exit 0"}}');
+    assert.throws(() => assertPinnedNativeSource(fixture.checkout,
+      fixture.expectedCommit), /E_NATIVE_REGRESSION_DIRTY/);
+    writeFileSync(packageFile, '{"private":true,"scripts":{"build":"exit 1"}}');
+    assert.doesNotThrow(() => assertPinnedNativeSource(fixture.checkout,
+      fixture.expectedCommit));
+    git(fixture.checkout, '-c', 'user.name=Test', '-c', 'user.email=unit@example.invalid',
+      'commit', '--allow-empty', '-qm', 'simulated concurrent HEAD change');
+    assert.throws(() => assertPinnedNativeSource(fixture.checkout,
+      fixture.expectedCommit), /E_NATIVE_REGRESSION_COMMIT/);
+    assert.equal(existsSync(fixture.outDir), false,
+      'rejecting source drift must not create any evidence directory');
   } finally {
     rmSync(fixture.folder, {recursive: true, force: true});
   }
