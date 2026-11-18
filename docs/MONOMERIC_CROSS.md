@@ -5,6 +5,17 @@ ecliptic locations, arranged as master above, its 90° square on the left,
 the 270° square on the right, and the opposition below. It reports the
 traditional sign ruler and houses for both the arm and the sign ruler.
 
+The twelve governors now explicitly follow the maintainer's **Tabella dei
+peregrini** *domiciles only*: `dop` is primary and `dos` secondary. `signRuler`
+and `signRulerDomicile` report Aries→Mars/primary, Taurus→Venus/primary,
+Gemini→Mercury/primary, Cancer→Moon/primary, Leo→Sun/primary,
+Virgo→Mercury/secondary, Libra→Venus/secondary, Scorpio→Mars/secondary,
+Sagittarius→Jupiter/primary, Capricorn→Saturn/primary,
+Aquarius→Saturn/secondary and Pisces→Jupiter/secondary. Exaltations,
+peregrinations, falls and exiles **do not** select domicile governors.
+Crucially, none of these dignities determines the **planetary-hour master**:
+that is calculated separately from the birth instant and real sunrise/sunset.
+
 **This is not yet a historical monomer reading.** The input `hourRuler` must
 come from a separately validated planetary-hour calculation, not merely the
 weekday ruler. The caller must supply genuine planetary longitudes and a

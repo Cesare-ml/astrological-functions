@@ -15,10 +15,24 @@ export class MonomericCrossError extends Error {
   }
 }
 
-export const TRADITIONAL_SIGN_RULERS = Object.freeze([
-  'MARS', 'VENUS', 'MERCURY', 'MOON', 'SUN', 'MERCURY',
-  'VENUS', 'MARS', 'JUPITER', 'SATURN', 'SATURN', 'JUPITER',
+/** Sign order Aries..Pisces; source: VirgoStars peregrini table supplied by
+ * the maintainer. Only dop/dos (domicile) are used here, never exaltation,
+ * exile, fall or the separately ranked peregrination grades. */
+export const TRADITIONAL_SIGN_DOMICILES = Object.freeze([
+  Object.freeze({ planet: 'MARS', domicile: 'PRIMARY' }),     // Aries: Mars dop
+  Object.freeze({ planet: 'VENUS', domicile: 'PRIMARY' }),    // Taurus: Venus dop
+  Object.freeze({ planet: 'MERCURY', domicile: 'PRIMARY' }),  // Gemini: Mercury dop
+  Object.freeze({ planet: 'MOON', domicile: 'PRIMARY' }),     // Cancer: Moon dop
+  Object.freeze({ planet: 'SUN', domicile: 'PRIMARY' }),      // Leo: Sun dop
+  Object.freeze({ planet: 'MERCURY', domicile: 'SECONDARY' }),// Virgo: Mercury dos
+  Object.freeze({ planet: 'VENUS', domicile: 'SECONDARY' }),  // Libra: Venus dos
+  Object.freeze({ planet: 'MARS', domicile: 'SECONDARY' }),   // Scorpio: Mars dos
+  Object.freeze({ planet: 'JUPITER', domicile: 'PRIMARY' }),  // Sagittarius: Jupiter dop
+  Object.freeze({ planet: 'SATURN', domicile: 'PRIMARY' }),   // Capricorn: Saturn dop
+  Object.freeze({ planet: 'SATURN', domicile: 'SECONDARY' }), // Aquarius: Saturn dos
+  Object.freeze({ planet: 'JUPITER', domicile: 'SECONDARY' }),// Pisces: Jupiter dos
 ]);
+export const TRADITIONAL_SIGN_RULERS = Object.freeze(TRADITIONAL_SIGN_DOMICILES.map(entry => entry.planet));
 const PLANETS = Object.freeze([
   'SUN', 'MOON', 'MERCURY', 'VENUS', 'MARS', 'JUPITER', 'SATURN',
 ]);
@@ -68,12 +82,12 @@ export function buildMonomericCrossGeometry(input) {
       /** Coordinate only. NOT an ordinal in any historical monomer catalog. */
       geometricDegreeIndex: Math.floor(degreeWithinSign),
       house: locateLongitudeInHouses(longitudeDeg, houseCuspsDeg).house,
-      signRuler, rulerLongitudeDeg,
+      signRuler, signRulerDomicile: TRADITIONAL_SIGN_DOMICILES[signIndex].domicile, rulerLongitudeDeg,
       rulerHouse: locateLongitudeInHouses(rulerLongitudeDeg, houseCuspsDeg).house,
     });
   });
   return Object.freeze({
-    contract: 'MonomericCrossGeometry', contractVersion: '1.0.0',
+    contract: 'MonomericCrossGeometry', contractVersion: '1.1.0',
     hourRuler, houseSystemId, catalogStatus: 'UNRESOLVED',
     arms: Object.freeze(arms),
   });

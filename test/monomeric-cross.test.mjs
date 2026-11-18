@@ -1,6 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildMonomericCrossGeometry, MonomericCrossError } from '../src/monomeric-cross.mjs';
+import { buildMonomericCrossGeometry, MonomericCrossError, TRADITIONAL_SIGN_DOMICILES, TRADITIONAL_SIGN_RULERS } from '../src/monomeric-cross.mjs';
+
+test('all twelve governors follow the supplied dop/dos domicile table, never exaltation or peregrination', () => {
+  assert.deepEqual(TRADITIONAL_SIGN_RULERS, [
+    'MARS','VENUS','MERCURY','MOON','SUN','MERCURY',
+    'VENUS','MARS','JUPITER','SATURN','SATURN','JUPITER',
+  ]);
+  assert.deepEqual(TRADITIONAL_SIGN_DOMICILES.map(entry=>entry.domicile), [
+    'PRIMARY','PRIMARY','PRIMARY','PRIMARY','PRIMARY','SECONDARY',
+    'SECONDARY','SECONDARY','PRIMARY','PRIMARY','SECONDARY','SECONDARY',
+  ]);
+  assert.ok(Object.isFrozen(TRADITIONAL_SIGN_DOMICILES) && TRADITIONAL_SIGN_DOMICILES.every(Object.isFrozen));
+});
 
 const base = Object.freeze({
   hourRuler: 'MERCURY', houseSystemId: 'VEHLOW',
@@ -13,10 +25,12 @@ const base = Object.freeze({
 
 test('master, quadratures and opposite retain the required visual direction', () => {
   const cross = buildMonomericCrossGeometry(base);
+  assert.equal(cross.contractVersion,'1.1.0');
   assert.deepEqual(cross.arms.map(a => a.role),
     ['master', 'square-left', 'square-right', 'opposite']);
   assert.deepEqual(cross.arms.map(a => a.longitudeDeg), [4.5, 94.5, 274.5, 184.5]);
   assert.deepEqual(cross.arms.map(a => a.signRuler), ['MARS', 'MOON', 'SATURN', 'VENUS']);
+  assert.deepEqual(cross.arms.map(a => a.signRulerDomicile), ['PRIMARY','PRIMARY','PRIMARY','SECONDARY']);
   assert.equal(cross.catalogStatus, 'UNRESOLVED');
   assert.equal(cross.arms[0].geometricDegreeIndex, 4);
   assert.equal(cross.arms[0].house, 12);
