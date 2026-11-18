@@ -11,6 +11,15 @@ weekday ruler. The caller must supply genuine planetary longitudes and a
 versioned set of house cusps (Vehlow when following the provided example).
 Neither sunrise/sunset nor ephemerides nor monomer descriptions are inferred.
 
+The existing astronomy-free `planetary-hours.mjs` schedule/lookup functions are
+also accessible via the `astrological-functions/planetary-hours` package
+subpath. This lets offline consumers compose a validated Chaldean unequal-hour
+schedule from **caller-supplied** local-weekday and UTC solar events without
+vendoring the astrological algorithm. The functions do **not** verify sunrise,
+sunset, observer or time-zone provenance, and the output explicitly marks
+caller-supplied events as unverified. A real astronomical provider remains
+required for automatic solar-event computation.
+
 The output's `geometricDegreeIndex` is the zero-based coordinate within a
 30-degree sign. It is **not** a verified index into Angelini's *Serto di Iside*
 or Costesèque tables. Existing VirgoStars editorial research explicitly leaves
