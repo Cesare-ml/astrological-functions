@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {mkdtempSync, rmSync, writeFileSync} from 'node:fs';
+import {mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -13,6 +13,9 @@ import {auditNativeHouseAngleOrientation} from '../scripts/audit-native-house-an
 import {diffNativeHouseLatitudes} from '../scripts/diff-native-house-latitudes.mjs';
 import {buildNativeHouseMethodReviewQueue} from
   '../scripts/build-native-house-method-review-queue.mjs';
+import {compareNativeHouseLatitudeAudit} from '../scripts/compare-native-house-latitudes.mjs';
+import {createNativeHouseReferenceTemplate} from
+  '../scripts/create-native-house-reference-template.mjs';
 import {canonicalReportSha256, formatNativeHouseRegressionTriage,
   NATIVE_HOUSE_BUNDLE_FILES,
   verifyNativeHouseRegressionBundle} from
@@ -130,6 +133,26 @@ test('portable bundle checks hashes and recomputes 161-method diff and polar ris
     /\((?:-?80|-?66\.55|-?45|0)°\):/.test(line)).length, 7);
 });
 
+test('reference template is intentionally empty and cannot certify the observed addon', () => {
+  const bundle = makeBundle();
+  const template = createNativeHouseReferenceTemplate(bundle);
+  assert.equal(template.contract, 'VirgoStarsHouseLatitudeReferenceSetV1');
+  assert.equal(template.ephemeris.upstreamCommitSha, 'c'.repeat(40));
+  assert.equal(template.ephemeris.nativeAddonSha256, 'd'.repeat(64));
+  assert.equal(template.scenarios.length, 7);
+  assert.ok(template.scenarios.every(row => row.methods.length === 0 &&
+    !Object.hasOwn(row, 'angleReference')));
+  const compared = compareNativeHouseLatitudeAudit(bundle.reports.nativeGrid, template);
+  assert.equal(compared.status, 'INCOMPLETE_REFERENCES');
+  assert.equal(compared.methodsCompared, 0);
+  assert.equal(compared.missingMethodReferences.length, 161);
+  assert.equal(compared.missingAngleReferences.length, 7);
+  const tampered = structuredClone(bundle);
+  tampered.reports.orientation.scenarios[6].status = 'SETTING_BRANCH';
+  assert.throws(() => createNativeHouseReferenceTemplate(tampered),
+    /E_NATIVE_BUNDLE_CALCULATIONS/, 'cannot template an invalid evidence bundle');
+});
+
 test('human-review queue distinguishes new, persistent, recovered, changed errors and cusps', () => {
   const {baseline, nativeGrid} = makeBundle().reports;
   function markError(grid, index, houseSystem, code) {
@@ -231,6 +254,27 @@ test('CLI accepts a single Windows UTF-16LE/BOM portable file without Rust', () 
     assert.match(human.stdout, /Seven synthetic latitude cases:/);
     assert.match(human.stdout, /161 method outcomes, 7 angle sets/);
     assert.doesNotMatch(human.stdout, /"contract"/);
+    const referenceScript = fileURLToPath(new URL(
+      '../scripts/create-native-house-reference-template.mjs', import.meta.url));
+    const referenceFile = path.join(dir, 'independent-references-EMPTY.json');
+    const generated = spawnSync(process.execPath, [referenceScript,
+      '--bundle', receipt, '--out', referenceFile,
+      '--expected-commit', 'c'.repeat(40), '--expected-baseline-sha256',
+      makeBundle().reports.summary.baselineReceiptSha256], {encoding: 'utf8'});
+    assert.equal(generated.status, 0, generated.stderr);
+    assert.match(generated.stdout, /EMPTY_INDEPENDENT_REFERENCE_TEMPLATE/);
+    const referenceTemplate = JSON.parse(readFileSync(referenceFile, 'utf8'));
+    assert.equal(compareNativeHouseLatitudeAudit(makeBundle().reports.nativeGrid,
+      referenceTemplate).missingMethodReferences.length, 161);
+    const noOverwrite = spawnSync(process.execPath, [referenceScript, '--bundle', receipt,
+      '--out', referenceFile], {encoding: 'utf8'});
+    assert.equal(noOverwrite.status, 1);
+    assert.match(noOverwrite.stderr, /EEXIST/);
+    const wrongReferenceCommit = spawnSync(process.execPath, [referenceScript,
+      '--bundle', receipt, '--out', path.join(dir, 'must-not-exist.json'),
+      '--expected-commit', 'a'.repeat(40)], {encoding: 'utf8'});
+    assert.equal(wrongReferenceCommit.status, 1);
+    assert.match(wrongReferenceCommit.stderr, /E_NATIVE_REFERENCE_COMMIT/);
     const badHuman = spawnSync(process.execPath, [script, '--bundle', receipt, '--triage',
       '--expected-commit', 'd'.repeat(40)], {encoding: 'utf8'});
     assert.equal(badHuman.status, 1);
