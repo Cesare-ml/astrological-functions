@@ -139,6 +139,10 @@ function checkAudit(audit) {
   }
 }
 
+// Reuse the same complete 7 × 23 strict receipt contract for offline
+// version-to-version diagnostics. A valid receipt is not a scientific proof.
+export {checkAudit as validateNativeLatitudeAudit};
+
 function checkReference(reference, audit) {
   if (!plain(reference) || reference.contract !== 'VirgoStarsHouseLatitudeReferenceSetV1' ||
       !keysExactly(reference.ephemeris,
