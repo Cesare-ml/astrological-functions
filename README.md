@@ -99,6 +99,11 @@ receipts**: observed success/error transitions, changed codes, wrapped cusp
 differences and four source-angle shifts at each latitude. It accepts Windows
 UTF-16LE/BOM receipts and cannot certify an improvement merely because a
 method now returns data. See [version-diff protocol](docs/NATIVE_NODE_HOUSE_VERSION_DIFF.md).
+The optional one-command `scripts/run-native-house-latitude-regression.mjs`
+automates the **explicitly pinned local** Rust Node addon build, grid, smoke,
+orientation check and complete before/after report. It never switches Git
+revisions or overwrites old receipts, and still requires a real owner-run
+Windows native build and independent method references before release.
 
 Version: `0.1.0-dev`. The package stays `"private": true` to prevent accidental npm publishing, independently of GitHub repository visibility. There is **no stable API or compatibility commitment yet**.
 
