@@ -27,6 +27,15 @@ parity checks overall. This is a manual, source-blob-pinned check without the
 legacy HTTP service or Swiss astronomy. Real API and scientific validation
 gates remain open; the original files are never bundled in this package.
 
+**Regolo astronomical fact bridge (18 November 2026):** an isolated typed ESM
+subpath now checks a pinned, caller-asserted apparent topocentric Sun altitude
+against an explicitly modelled local horizon, refuses sect decisions within
+the declared uncertainty, and accepts a separately sourced latest-preceding
+new-Moon event or marks dependent parts unavailable. This is a **strict
+injection boundary only**, not an implemented Rust solar-altitude/new-Moon
+producer or independently validated natal calculation. See
+[Regolo astronomical fact bridge](REGOLO_LOTS_ASTRONOMY_BRIDGE.md).
+
 The next stacked draft after #213 introduces a typed, opt-in 24-method selector
 without replacing any existing API, including Gauquelin's separate 36-sector
 result. Its synthetic dispatch/type tests support consumer wiring but do not

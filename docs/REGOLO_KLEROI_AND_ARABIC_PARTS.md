@@ -120,6 +120,11 @@ which lunation applies; that choice is intentionally not guessed here.
 No Swiss source or dependency, no GitHub Actions, npm publication, automatic
 merge, production deployment or GitHub visibility changes.
 
+The follow-on isolated [astronomical fact bridge](REGOLO_LOTS_ASTRONOMY_BRIDGE.md)
+can inject a caller-asserted pinned apparent Sun-horizon observation to derive
+sect and a separately sourced preceding-new-Moon longitude. It does not
+replace the real Rust producer or certify astronomy.
+
 ### Local checks
 
 ```sh

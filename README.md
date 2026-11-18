@@ -30,6 +30,13 @@ These **606 matching checks** establish numeric legacy arithmetic parity, not
 historical or scientific validation. They do not validate astronomical
 sunrise, sect, new-Moon times or historical claims.
 
+A further opt-in typed `./regolo-lots-astronomy-bridge` takes explicitly pinned
+**caller-asserted** apparent Sun-horizon and preceding-new-Moon facts, refuses
+ambiguous day/night cases, and feeds the nine kleroi/92 parts without an
+astronomical fallback. It **does not** calculate the Sun's altitude or the
+new-Moon event; production needs a validated Rust provider. See
+[the Regolo astronomical fact bridge](docs/REGOLO_LOTS_ASTRONOMY_BRIDGE.md).
+
 **Not included:** natal chart interpretations, user accounts, private birth records, databases, API credentials, frontend graphics, NASA/JPL kernels, or production VirgoStars services. Proposed interfaces described in `docs/CONTRACTS.md` are not necessarily shipped APIs.
 
 ## Try the source locally

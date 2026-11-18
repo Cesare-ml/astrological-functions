@@ -13,6 +13,10 @@
       "types": "./src/regolo-arabic-parts.d.mts",
       "import": "./src/regolo-arabic-parts.mjs"
     },
+    "./regolo-lots-astronomy-bridge": {
+      "types": "./src/regolo-lots-astronomy-bridge.d.mts",
+      "import": "./src/regolo-lots-astronomy-bridge.mjs"
+    },
     "./dodecatemoria": {
       "types": "./src/dodecatemoria-methods.d.mts",
       "import": "./src/dodecatemoria-methods.mjs"
