@@ -275,10 +275,20 @@ export function compareNativeHouseLatitudeAudit(audit, reference) {
 
 export function readSmallJson(filename) {
   const stat = statSync(filename);
-  if (!stat.isFile() || stat.size > 5_000_000) {
-    fail('E_LATITUDE_COMPARE_FILE', 'Only regular JSON files up to 5 MB are accepted');
+  if (!stat.isFile() || stat.size === 0 || stat.size > 5_000_000) {
+    fail('E_LATITUDE_COMPARE_FILE', 'Only nonempty regular JSON files up to 5 MB are accepted');
   }
-  return JSON.parse(readFileSync(filename, 'utf8'));
+  const bytes = readFileSync(filename);
+  const utf16le = bytes[0] === 0xff && bytes[1] === 0xfe;
+  try {
+    // Windows PowerShell 5.1 often redirects JSON as UTF-16LE with BOM;
+    // reject malformed Unicode instead of silently replacing corrupt bytes.
+    const text = new TextDecoder(utf16le ? 'utf-16le' : 'utf-8',
+      {fatal: true}).decode(bytes).replace(/^\uFEFF/, '');
+    return JSON.parse(text);
+  } catch {
+    fail('E_LATITUDE_COMPARE_JSON', 'Invalid UTF-8 or UTF-16LE/BOM JSON reference/audit file');
+  }
 }
 
 export const HELP_TEXT = `Offline latitude-grid comparison against caller-sourced numeric and availability references.
@@ -286,6 +296,7 @@ export const HELP_TEXT = `Offline latitude-grid comparison against caller-source
 Exit 0 only if all 161 methods, all seven independent angle sets, and every
 declared expectation match. An exit-0 receipt is NOT scientific certification.
 Method-specific polar unavailability needs an explicit external reference.
+Both input JSON files accept UTF-8 or Windows PowerShell UTF-16LE/BOM.
 See docs/NATIVE_NODE_HOUSE_LATITUDE_COMPARISON.md.`;
 
 function main() {
