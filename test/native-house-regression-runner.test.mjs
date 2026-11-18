@@ -235,6 +235,15 @@ test('synthetic evidence flows through assembly, all seven files and offline ver
     const addonHash = 'c'.repeat(64);
     audit.ephemeris.upstreamCommitSha = options.expectedCommit;
     audit.ephemeris.nativeAddonSha256 = addonHash;
+    // Synthetic rising geometry isolates the binary-identity gate from polar flags.
+    const risingAsc = [7.16881630295217, 12.481452337837476,
+      17.42420249955754, 24.778143295766903, 41.09682061519927,
+      100.47525199627685, 344.5489205114233];
+    for (const [i, row] of audit.scenarios.entries()) {
+      row.sourceAngles = {model: 'IAU2006_2000B_APPROXIMATE_SIDEREAL_TIME',
+        armcDeg: 292.95347186375847, ascendantDeg: risingAsc[i],
+        midheavenDeg: 291.23482098822, trueObliquityDeg: 23.437676823739082};
+    }
     const smoke = {contract: 'VirgoStarsNativeHouseSmokeV1',
       status: 'NATIVE_ADDON_EXECUTED_STRUCTURAL_ONLY',
       validatedScientificParity: false,
@@ -253,7 +262,23 @@ test('synthetic evidence flows through assembly, all seven files and offline ver
     const verified = verifyNativeHouseRegressionBundle(evidence.bundle);
     assert.equal(verified.attempted, 161);
     assert.equal(verified.reportHashesChecked, 6);
+    assert.equal(verified.flaggedAscendants, 0);
+    assert.equal(verified.sameAddonDigest, false);
+    assert.equal(evidence.summary.status, 'STRUCTURAL_CHECKS_COMPLETE_NOT_CERTIFIED');
     assert.equal(evidence.summary.scientificallyCertified, false);
+
+    const unchangedGrid = structuredClone(audit);
+    const unchangedSmoke = structuredClone(smoke);
+    unchangedGrid.ephemeris.nativeAddonSha256 = selected.baseline.ephemeris.nativeAddonSha256;
+    unchangedSmoke.ephemeris.nativeAddonSha256 = selected.baseline.ephemeris.nativeAddonSha256;
+    const suspect = assembleNativeHouseRegressionEvidence({...args,
+      audit: unchangedGrid, smoke: unchangedSmoke,
+      nativeOptions: {...nativeOptions,
+        expectedAddonSha256: selected.baseline.ephemeris.nativeAddonSha256}});
+    assert.equal(suspect.summary.status, 'MANUAL_METHOD_REVIEW_REQUIRED',
+      'identical binary digests need review even without method or rising failures');
+    assert.equal(verifyNativeHouseRegressionBundle(suspect.bundle).sameAddonDigest, true);
+    assert.equal(existsSync(options.outDir), false, 'digest review may not write evidence');
 
     const invalidSmoke = {...smoke, passed: 22};
     assert.throws(() => assembleNativeHouseRegressionEvidence({...args,
