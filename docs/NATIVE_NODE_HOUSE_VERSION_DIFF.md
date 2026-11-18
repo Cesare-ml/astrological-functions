@@ -50,6 +50,23 @@ The output directory must be **new or empty**. This command:
    `house-latitudes-new.json`, `house-smoke-new.json`,
    `house-angle-orientation.json`, `house-latitudes-version-diff.json` and
    `house-regression-summary.json`.
+5. Also saves `house-regression-bundle.json`: **one portable file to attach**
+   for subsequent review. It contains both complete grids, the native smoke,
+   orientation and version diagnostics, summary, and all five report SHA-256s.
+
+Verify the self-contained evidence file offline without Rust, the native addon
+or a network connection:
+
+```powershell
+node scripts/verify-native-house-regression-bundle.mjs `
+  --bundle 'D:\GitHub\astrological-functions\house-regression-20261118\house-regression-bundle.json'
+```
+
+The verifier recomputes all 161 method comparisons and the Ascendant branch
+diagnostic, checks the five report hashes, and rejects incomplete/inconsistent
+data. Checksums detect mismatched report content; they **cannot authenticate
+native build provenance or independent numerical references**. The runner
+also rejects an upstream commit identical to the historical baseline's.
 
 An exit code of **2** is normal when polar methods still need manual review;
 the valid JSON reports are saved anyway. Exit **1** indicates a fatal input,
@@ -116,6 +133,11 @@ Exit **1** means missing, malformed, mismatched or incomplete input.
 report explicitly contains `scientificallyCertified:false` and
 `comparisonToIndependentReference:false`, even if all 161 results are equal.
 The report never defines an automatically acceptable number of failures.
+
+The portable bundle has contract `VirgoStarsNativeHouseRegressionEvidenceV1`.
+A successful verification reports
+`INTERNAL_CONSISTENCY_VERIFIED_NOT_CERTIFIED`: **only** internal consistency,
+never astronomical correctness of house cusp positions.
 
 ## Remaining scientific/release gates
 
