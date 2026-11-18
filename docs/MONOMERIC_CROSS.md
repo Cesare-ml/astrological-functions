@@ -20,6 +20,13 @@ sunset, observer or time-zone provenance, and the output explicitly marks
 caller-supplied events as unverified. A real astronomical provider remains
 required for automatic solar-event computation.
 
+The related `astrological-functions/planetary-hours-solar-adapter` subpath is
+now exported as well. It validates a **caller-asserted**, versioned
+`VIRGOSTARS_EPHEMERIS` source, observer coordinates, horizon/refraction model
+and solar event snapshot before composing the same schedule. It deliberately
+returns `CALLER_ASSERTED_NOT_SCIENTIFICALLY_VERIFIED`: a truthful metadata
+handshake is not an independent accuracy check or a live Rust bridge.
+
 The output's `geometricDegreeIndex` is the zero-based coordinate within a
 30-degree sign. It is **not** a verified index into Angelini's *Serto di Iside*
 or Costesèque tables. Existing VirgoStars editorial research explicitly leaves
