@@ -108,6 +108,8 @@ Save an independently documented `latitude-references.json` matching this
 
 The sample is **not runnable JSON**. Never use a fabricated observation as
 scientific evidence; replace all placeholders with actual reviewed values.
+The comparator accepts both UTF-8 and UTF-16LE with BOM (the default output
+encoding of Windows PowerShell 5.1); malformed Unicode or JSON is rejected.
 When a reference is genuinely unavailable, omit it until obtained. The tool
 reports missing coverage instead of inventing a zero, interpolating output or
 accepting undocumented failure.
