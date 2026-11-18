@@ -173,13 +173,64 @@ export function verifyNativeHouseRegressionBundle(bundle) {
     originalBaselineSha256Checked: true});
 }
 
+/** Compact human-readable review queue, produced only from fully verified evidence. */
+export function formatNativeHouseRegressionTriage(bundle) {
+  const verified = verifyNativeHouseRegressionBundle(bundle);
+  const {baseline, nativeGrid, orientation, versionDiff, methodReview,
+    summary} = bundle.reports;
+  const lines = [
+    'VirgoStars native house regression — INTERNAL CONSISTENCY ONLY; NOT SCIENTIFICALLY CERTIFIED',
+    `Status: ${summary.status}`,
+    `Previous: ${baseline.passed}/${baseline.attempted} returned; ` +
+      `new: ${nativeGrid.passed}/${nativeGrid.attempted} returned`,
+    `Recovered methods: ${verified.recoveredMethods}; ` +
+      `new method errors: ${verified.newlyFailedMethods}; ` +
+      `Ascendant flags: ${verified.flaggedAscendants}/7`,
+    `Identical addon digest: ${verified.sameAddonDigest ? 'YES — investigate' : 'NO'}`,
+    `Source SHA asserted by caller: ${summary.expectedSourceCommitSha}`,
+    'Seven synthetic latitude cases:',
+  ];
+  for (const [i, scenario] of versionDiff.scenarios.entries()) {
+    const branch = orientation.scenarios[i].status;
+    const ascDelta = scenario.angleDeltaArcsec?.ascendantDeg;
+    lines.push(`  ${scenario.id} (${scenario.latitudeDeg}°): ` +
+      `${scenario.before.passed}/23 -> ${scenario.after.passed}/23; ` +
+      `recovered ${scenario.errorToSuccess}, new errors ${scenario.successToError}; ` +
+      `ASC ${branch}; delta ${ascDelta === undefined ? 'unavailable' :
+        `${ascDelta.toFixed(3)} arcsec`}`);
+  }
+  lines.push('Method review priorities (every result still needs an independent reference):');
+  for (const [name, count] of Object.entries(methodReview.priorities)) {
+    lines.push(`  ${name}: ${count}`);
+  }
+  const changes = methodReview.methods.filter(row =>
+    row.triage !== 'P4_STILL_REQUIRES_INDEPENDENT_REFERENCE');
+  const limit = 24;
+  lines.push(`Method outcomes needing attention: ${changes.length}; ` +
+    `showing first ${Math.min(limit, changes.length)} in grid order:`);
+  for (const row of changes.slice(0, limit)) {
+    lines.push(`  ${row.id} / ${row.houseSystem}: ${row.triage}; ` +
+      `${row.transition}; current ${row.currentOutcome}` +
+      (row.currentErrorCode ? ` (${row.currentErrorCode})` : ''));
+  }
+  if (changes.length > limit) {
+    lines.push(`  ... ${changes.length - limit} additional outcomes in the portable bundle`);
+  }
+  lines.push(`Independent references still required: ` +
+    `${verified.independentMethodReferencesStillNeeded} method outcomes, ` +
+    `${verified.independentAngleReferencesStillNeeded} angle sets.`,
+  'Version triage only: no expected polar availability or source-to-binary proof.');
+  return `${lines.join('\n')}\n`;
+}
+
 export const HELP_TEXT = `Offline verification of a single portable VirgoStars 7×23 evidence bundle.
   node scripts/verify-native-house-regression-bundle.mjs --bundle house-regression-bundle.json \\
-    [--expected-commit 40_HEX_PR_SHA] [--expected-baseline-sha256 64_HEX_RECEIPT_SHA]
+    [--expected-commit 40_HEX_PR_SHA] [--expected-baseline-sha256 64_HEX_RECEIPT_SHA] [--triage]
 
 Checks SHA-256 for its exact original UTF-8/UTF-16LE baseline bytes, the six
 individually saved reports, all 161 method outcomes and their review queue,
 the 23-method smoke, horizon branch, before/after diff and summary consistency.
+--triage prints a compact, read-only seven-latitude review report instead of JSON.
 No Rust, native addon, kernel, network, Swiss code, external reference or
 production service is used. Exit 0 only for internally consistent evidence;
 exit 1 for incomplete/tampered/inconsistent data. Neither status can establish
@@ -189,7 +240,8 @@ async function main() {
   try {
     const {values} = parseArgs({args: process.argv.slice(2), strict: true,
       options: {bundle: {type: 'string'}, 'expected-commit': {type: 'string'},
-        'expected-baseline-sha256': {type: 'string'}, help: {type: 'boolean'}}});
+        'expected-baseline-sha256': {type: 'string'}, triage: {type: 'boolean'},
+        help: {type: 'boolean'}}});
     if (values.help) {
       process.stdout.write(`${HELP_TEXT}\n`);
       return;
@@ -217,7 +269,8 @@ async function main() {
           values['expected-baseline-sha256'].toLowerCase()) {
       fail('E_NATIVE_BUNDLE_EXPECTED_BASELINE', 'Evidence differs from the selected old receipt');
     }
-    process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+    process.stdout.write(values.triage ? formatNativeHouseRegressionTriage(receipt)
+      : `${JSON.stringify(output, null, 2)}\n`);
   } catch (caught) {
     process.stderr.write(`${String(caught?.message ?? caught)}\n`);
     process.exitCode = 1;
