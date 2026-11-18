@@ -78,6 +78,17 @@ addon, independent astronomical measurements and reviewed P0 archive coverage
 remain the outstanding gates. See the
 [reference protocol](REGOLO_P0_MOON_EVENT_CANDIDATE.md#offline-independent-reference-comparison-next-validation-gate).
 
+**Regolo native dual-engine operator smoke (18 November 2026):**
+`scripts/verify-native-regolo-moon.mjs` enforces the upstream source
+HEAD/addon checksum, streams local DE441/P0 archive checksums, invokes an
+installed Python `VirgoStarsEvents.open(...,expected_sha256=...)` and feeds
+its native JSON into a Node `Engine.calcUt` candidate audit. The output is
+directly accepted by the lunar reference comparator. Only mocked
+interface/preflight tests were possible here: no native Python wheel,
+compiled addon, actual P0 file or real astronomical comparison has run.
+The candidate remains `UNAVAILABLE` for Regolo parts even after a structural
+smoke exit 0. See [operator recipe](REGOLO_P0_MOON_EVENT_CANDIDATE.md#native-python-p0--rust-node-end-to-end-smoke-operator-only).
+
 The next stacked draft after #213 introduces a typed, opt-in 24-method selector
 without replacing any existing API, including Gauquelin's separate 36-sector
 result. Its synthetic dispatch/type tests support consumer wiring but do not

@@ -175,6 +175,72 @@ binary provenance, time-model and full historical coverage (1919/2018 gaps)
 before any production change. All ten initial tests use **synthetic** values,
 not NASA/JPL or another real astronomical reference.
 
+## Native Python P0 + Rust Node end-to-end smoke (operator-only)
+
+`scripts/verify-native-regolo-moon.mjs` now provides the missing connector
+between **the real installed** Python-first `VirgoStars-Event-Ephemeris`
+P0 archive reader and **the real pinned** `VirgoStars-Ephemeris` Node addon.
+It requires a local archive and DE441 file; it does **not** download, compile,
+install or execute a Swiss-backed service. It uses the original Python
+`VirgoStarsEvents.open(archive, expected_sha256=...)` and
+`get_synods_at(datetimeUtc)` methods, then passes their actual JSON response
+straight to `inspectRegoloRecordedNewMoon` with a separately verified Node
+`Engine.calcUt` instance.
+
+Before loading either binary, it checks:
+
+1. The upstream Node checkout Git HEAD and clean tracked files, plus the
+   exact installed `.node` byte SHA-256 (existing house-runner preflight).
+2. The local DE441 file's actual SHA-256, streamed rather than buffered.
+3. The local P0 archive's actual SHA-256, also streamed. The Python native
+   reader checks its own expected archive digest again on open.
+
+In Windows PowerShell, with both upstream projects **already built/installed**:
+
+```powershell
+cd D:\GitHub\astrological-functions
+node scripts/verify-native-regolo-moon.mjs `
+  --checkout 'D:\GitHub\VirgoStars-Ephemeris' `
+  --expected-commit 'INSERT_VERIFIED_40_HEX_GIT_HEAD' `
+  --expected-addon-sha256 'INSERT_VERIFIED_64_HEX_NODE_ADDON' `
+  --de441 'D:\GitHub\virgo-stars\database\effemeridi\astrodienst\de441.eph' `
+  --expected-de441-sha256 'INSERT_VERIFIED_64_HEX_DE441_FILE' `
+  --python 'INSERT_PYTHON_VENV_WITH_INSTALLED_VIRGOSTARS_EVENTS' `
+  --p0-archive 'INSERT_LOCAL_VSEPH_P0_ARCHIVE_PATH' `
+  --expected-p0-sha256 'INSERT_VERIFIED_64_HEX_P0_FILE' `
+  --datetime-utc '2026-11-18T12:00:00Z' `
+  --time-model 'INSERT_EXPLICIT_VERSIONED_TIME_POLICY' `
+  --dut1-seconds 'INSERT_SOURCED_UT1_AT_EVENT_SECONDS' `
+  --expected-time-source 'INSERT_EXACT_ENGINE_CALC_UT_TIME_SOURCE' `
+  --max-conjunction-residual-deg '0.25'
+```
+
+Before invoking, obtain the actual hashes using `git rev-parse HEAD` and
+`Get-FileHash -Algorithm SHA256` against the addon, DE441 and P0 archive.
+`--expected-time-source` must match the literal value returned by this
+engine at the recorded anchor; it can include Delta-T policy details.
+`--dut1-seconds` is UT1−UTC at that anchor, not an assumed 0 or timezone
+offset. The requested UTC must fall inside the actual P0 and engine range.
+The P0 archive must be readable by the **installed Python native extension**.
+
+The script's stdout is directly usable as `CANDIDATE.json` for
+`compare-regolo-moon-reference.mjs` and adds a `nativeAudit` field containing
+the observed hashes. The result still bears
+`RegoloRecordedMoonCandidateV1` and `precedingNewMoon: UNAVAILABLE`.
+**Exit 0 means a recent conjunction-like recorded anchor was found, not a
+scientifically validated event.** Source build origin, independent numeric
+parity, source coverage and external reference independence remain unverified.
+
+Local smoke unit tests cover the strict CLI, real-byte hash streaming,
+mocked dual-runtime interface, direct comparator compatibility and fail-closed
+paths; the real installed Rust addons and Python wheel were **not** present
+in this sandbox and therefore have not been executed here.
+
+```sh
+node scripts/verify-native-regolo-moon.mjs --help
+node --test test/verify-native-regolo-moon.test.mjs
+```
+
 **Still required for production:** a real installed Python/Rust event reader
 with verified P0 file, compiled real DE441 Node addon and recorded time model;
 independent conjunction-time reference comparisons; reviewed calendar/range

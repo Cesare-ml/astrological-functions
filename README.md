@@ -70,6 +70,14 @@ the reference or lifting the unavailable Moon gate. Initial tests use only
 synthetic reference values; see the
 [reference-input contract](docs/REGOLO_P0_MOON_EVENT_CANDIDATE.md#offline-independent-reference-comparison-next-validation-gate).
 
+The operator command `scripts/verify-native-regolo-moon.mjs` connects the
+**actual installed** Python P0 reader to the SHA-pinned Rust Node
+`Engine.calcUt`, verifying the local P0 archive, DE441 and addon bytes first.
+Its JSON diagnostic feeds the offline comparator directly. This command is
+prepared and mock-tested only; real dual-runtime execution, independent
+astronomical accuracy and historical coverage remain unverified. See the
+[native smoke recipe](docs/REGOLO_P0_MOON_EVENT_CANDIDATE.md#native-python-p0--rust-node-end-to-end-smoke-operator-only).
+
 **Not included:** natal chart interpretations, user accounts, private birth records, databases, API credentials, frontend graphics, NASA/JPL kernels, or production VirgoStars services. Proposed interfaces described in `docs/CONTRACTS.md` are not necessarily shipped APIs.
 
 ## Try the source locally
