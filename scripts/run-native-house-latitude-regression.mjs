@@ -197,6 +197,15 @@ export function assertNativeAddonBuildUpdated(previous, current) {
   }
 }
 
+/** The audited on-disk addon must still be the exact binary selected after build. */
+export function assertNativeAddonStillPinned(addonPath, expectedSha256) {
+  const current = snapshotNativeAddon(addonPath);
+  if (!current || current.sha256 !== expectedSha256) {
+    fail('E_NATIVE_REGRESSION_ADDON_DRIFT',
+      'Native addon bytes changed or disappeared during the audit; refusing evidence');
+  }
+}
+
 /** Build and verify every report IN MEMORY before writing any evidence file. */
 export function assembleNativeHouseRegressionEvidence({selected, options, nativeOptions,
   audit, smoke}) {
@@ -308,8 +317,9 @@ export async function runNativeHouseLatitudeRegression(options) {
   const smoke = await runNativeHouseSmoke(nativeOptions);
   const evidence = assembleNativeHouseRegressionEvidence({selected, options, nativeOptions,
     audit, smoke});
-  // Also refuse evidence if tracked source changed while the addon was audited.
+  // Reject source or binary drift during either the grid or the smoke audit.
   assertPinnedNativeSource(selected.checkout, options.expectedCommit);
+  assertNativeAddonStillPinned(addonPath, nativeOptions.expectedAddonSha256);
   const {summary, auditFile, bundleFile} = saveNativeHouseRegressionEvidence(options.outDir,
     evidence);
   return Object.freeze({summary, auditFile, bundleFile});
