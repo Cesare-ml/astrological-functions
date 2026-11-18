@@ -154,6 +154,28 @@ test('synthetic equal event and positions pass thresholds but NEVER certify astr
   assert.equal(compared.precedingNewMoon.availability, 'UNAVAILABLE');
 });
 
+test('single-case reference audit rejects forged UTC/DUT1/JD relationships', () => {
+  const original = simulatedNative(receipt());
+  const reference = independent(original);
+  for (const changed of [
+    {...original, birthJdUt: original.birthJdUt + 2 / 86400},
+    {...original, datetimeUtc: '2026-11-31T12:00:00.000000Z'},
+    {...original, nativeAudit: {...original.nativeAudit,
+      birthDut1Seconds: 0.25}},
+  ]) {
+    assert.throws(() => compareRegoloConjunctionReference(changed, reference),
+      /E_CONJUNCTION_REFERENCE_RECEIPT/);
+  }
+  const precise = parseNativeConjunctionOptions(args.map(x =>
+    x === datetimeUtc ? '2026-11-18T12:00:00.123456Z' : x));
+  const {engine} = engineFor(birthJd - 7.25);
+  const candidate = simulatedNative(executeNativeConjunctionSearch(engine,
+    source, precise, preflight));
+  const compared = compareRegoloConjunctionReference(candidate,
+    independent(candidate));
+  assert.equal(compared.status, 'NUMERICALLY_WITHIN_CALLER_THRESHOLDS_NOT_CERTIFIED');
+});
+
 test('distinct time and circular longitude mismatches remain independent', () => {
   const r = simulatedNative(receipt());
   const original = independent(r);

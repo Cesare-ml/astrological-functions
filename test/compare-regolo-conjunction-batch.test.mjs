@@ -53,8 +53,8 @@ function syntheticNativeResult(options) {
     nativeAddonExecuted: true, verifiedLocalBytes: true}};
 }
 
-async function syntheticBatch() {
-  const cases = parseNativeConjunctionBatchManifest(manifest, common);
+async function syntheticBatch(input = manifest) {
+  const cases = parseNativeConjunctionBatchManifest(input, common);
   return runNativeConjunctionBatch({cases}, async () => ({
     pinned: {timeModelId: 'test-model'}, preflight: pin,
     kernel: {sha256: kernelSha}, run: syntheticNativeResult}));
@@ -96,6 +96,19 @@ test('two native-shaped synthetic candidates compare as unverified numeric match
   assert.equal(report.maxima.absEventDeltaSeconds, 0);
   assert.equal(report.results[0].comparison.precedingNewMoon.availability,
     'UNAVAILABLE');
+});
+
+test('microsecond UTC plus sourced DUT1 must reconstruct the original birth JD UT1', async () => {
+  const micro = '2000-02-29T12:00:00.123456Z';
+  const batch = await syntheticBatch({...manifest, cases: [
+    {...manifest.cases[0], datetimeUtc: micro}]});
+  const ok = compareRegoloConjunctionBatch(batch, refs(batch));
+  assert.equal(ok.counts.matched, 1);
+  const bad = {...batch, results: [{...batch.results[0],
+    receipt: {...batch.results[0].receipt,
+      birthJdUt: batch.results[0].receipt.birthJdUt + 0.02 / 86400}}]};
+  assert.throws(() => compareRegoloConjunctionBatch(bad, refs(batch)),
+    /E_REGOLO_CONJUNCTION_BATCH_REFERENCE/);
 });
 
 test('a wrong event time and longitude appears only in its own case', async () => {
@@ -161,6 +174,12 @@ test('duplicate/missing/extra reference IDs and malformed batch pins fail closed
     {...batch, results: [{...batch.results[0], id: 123}, batch.results[1]]},
     {...batch, results: [{...batch.results[0], birthDut1Seconds: 0},
       batch.results[1]]},
+    {...batch, results: [{...batch.results[0], receipt: {...batch.results[0].receipt,
+      birthJdUt: batch.results[0].receipt.birthJdUt + 2 / 86400}},
+    batch.results[1]]},
+    {...batch, results: [{...batch.results[0], datetimeUtc: '2000-02-30T12:00:00Z',
+      receipt: {...batch.results[0].receipt,
+        datetimeUtc: '2000-02-30T12:00:00.000000Z'}}, batch.results[1]]},
     {...batch, results: [{...batch.results[0], receipt: {...batch.results[0].receipt,
       precedingNewMoon: {availability: 'AVAILABLE'}}}, batch.results[1]]},
     {...batch, results: [{...batch.results[0], receipt: {...batch.results[0].receipt,

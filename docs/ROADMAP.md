@@ -143,6 +143,15 @@ independence**. All comparator tests are fabricated synthetic data; no real
 Rust/DE441 or source-independent observational parity has been obtained.
 See [full-batch comparison protocol](REGOLO_MOON_CONJUNCTION_SEARCH.md#compare-the-full-batch-against-independent-references).
 
+**Calendar-timescale hardening (18 November 2026):** the batch manifest now
+refuses historical pre-1972 UTC/DUT1 guesses, and the reference auditor
+independently recomputes birth JD UT1 from each original UTC instant and
+per-event sourced DUT1, preserving microsecond fractions. An impossible
+calendar date or a forged JD/UTC relation fails before reference comparison;
+the **standalone** single-case reference comparator now enforces this same
+birth-epoch consistency gate. Synthetic boundary tests cover both. This is
+a provenance/consistency guard, **not** a real astronomy accuracy result.
+
 The next stacked draft after #213 introduces a typed, opt-in 24-method selector
 without replacing any existing API, including Gauquelin's separate 36-sector
 result. Its synthetic dispatch/type tests support consumer wiring but do not

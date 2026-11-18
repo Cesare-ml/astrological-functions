@@ -159,7 +159,7 @@ node scripts/verify-native-regolo-conjunction.mjs `
   --de441 'D:\GitHub\virgo-stars\database\effemeridi\astrodienst\de441.eph' `
   --expected-de441-sha256 'INSERT_REAL_64_HEX_DE441' `
   --datetime-utc '2026-11-18T12:00:00Z' `
-  --birth-dut1-seconds 'INSERT_SOURCED_DUT1' `
+  --birth-dut1-seconds='INSERT_SOURCED_DUT1' `
   --time-model 'INSERT_VERSIONED_NATIVE_TIME_MODEL' `
   --expected-time-source-policy 'INSERT_OBSERVED_NATIVE_TIME_POLICY' `
   --lookback-days '35' `
@@ -172,6 +172,8 @@ node scripts/verify-native-regolo-conjunction.mjs `
 Replace **every** `INSERT_*` placeholder with an independently checked
 actual value; the example birth UTC is a synthetic diagnostic instant, not a
 client chart. A sourced birth DUT1 is required rather than an assumed 0.
+Keep `--birth-dut1-seconds=VALUE` as **one argument**: a separate negative
+number can be interpreted by Node's option parser as another CLI flag.
 `expected-time-source-policy` is the **named** source policy exposed by the
 real Rust `calcUt` calls, not an arbitrary label or a full changing numeric
 Delta-T suffix. A failed command exits 1; do not treat the redirected file
@@ -250,6 +252,10 @@ missing/invalid evidence and mismatched tolerances. The source and build
 origin still require manual audit; `scientificallyCertified` is **always
 false**, as is `referenceIndependenceAudited`. **Never** promote the
 `precedingNewMoon` output to `AVAILABLE` from this receipt.
+The standalone comparator also **independently reconstructs birth JD UT1
+from recorded Gregorian UTC plus birth DUT1**, including microseconds, and
+rejects impossible calendar dates or altered UTC/DUT1/JD combinations before
+accepting an apparently matching astronomical reference.
 
 ```sh
 node --test test/verify-native-regolo-conjunction.test.mjs
@@ -303,9 +309,10 @@ and do not imply the archive/source URL was independently authenticated by
 the script. For diverse scientific coverage, include at least six epochs in
 the **modern era with independently defined UTC and DUT1** (e.g. the IERS
 era), plus leap years, longitude seams and observed time-model changes.
-Do **not** insert a historical pre-UTC calendar epoch into this schema by
-inventing a UT1−UTC correction: historical tests require a separately
-defined time-scale contract.
+The batch parser **rejects dates before 1 January 1972**, deliberately
+avoiding speculative historical UT1−UTC values. Historical tests require a
+separately defined time-scale contract; the lower-level single-event
+experimental solver is a different, caller-driven diagnostic.
 The parser accepts **1–32** strictly specified cases with unique IDs,
 Gregorian UTC instants, numerically bounded sourced DUT1, HTTPS provenance
 URLs and each epoch's *observed* native time-source policy.
@@ -357,7 +364,9 @@ After saving the native batch, use
 its *own* independently supplied reference. This avoids accidentally
 cross-matching the conjunction of one test date to another date. The offline
 comparator checks the native batch's source/kernel/addon pins, counts, case
-IDs, UTC and DUT1 consistency before comparing any values.
+IDs, and **reconstructs each Julian birth UT1 epoch from UTC plus sourced
+DUT1, including six-digit fractions**, before comparing any values. An
+inconsistent or impossible UTC date fails before a numerical comparison.
 
 Prepare a **separate** `conjunction-batch-references.json` manifest with
 **exactly one entry per native `results[].id`**. Initially `reference: null`

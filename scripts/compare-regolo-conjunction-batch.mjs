@@ -24,6 +24,20 @@ const canonicalUtc = s => typeof s === 'string' &&
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/.test(s) ?
   s.replace(/(?:\.(\d{1,6}))?Z$/, (_, f) => `.${(f ?? '').padEnd(6, '0')}Z`) : null;
 
+// Independent batch-receipt audit: do not accept an internally inconsistent
+// UTC/DUT1/JD triple merely because the original numeric comparison matches.
+function utcInstant(utc) {
+  const canonical = canonicalUtc(utc);
+  if (!canonical) return null;
+  const isoMilliseconds = canonical.replace(/(\.\d{3})\d{3}Z$/, '$1Z');
+  const milliseconds = Date.parse(isoMilliseconds);
+  if (!Number.isFinite(milliseconds) ||
+      new Date(milliseconds).toISOString() !== isoMilliseconds) return null;
+  const microseconds = Number(canonical.slice(-4, -1));
+  return Object.freeze({canonical,
+    unixMilliseconds: milliseconds + microseconds / 1000});
+}
+
 function checkedBatch(batch) {
   if (!exact(batch, ['contract', 'status', 'nativeBytesPreflightPerformed',
     'scientificParityCertified', 'referenceIndependenceAudited',
@@ -53,11 +67,12 @@ function checkedBatch(batch) {
   let claimedCandidates = 0;
   for (const item of batch.results) {
     const withReceipt = plain(item) && Object.hasOwn(item, 'receipt');
+    const instant = utcInstant(item?.datetimeUtc);
     if (!exact(item, withReceipt ? ['id', 'datetimeUtc', 'birthDut1Seconds',
       'dut1SourceUri', 'outcome', 'receipt'] :
     ['id', 'datetimeUtc', 'birthDut1Seconds', 'dut1SourceUri', 'outcome', 'error']) ||
         typeof item.id !== 'string' || !ID.test(item.id) || ids.has(item.id) ||
-        !canonicalUtc(item.datetimeUtc) ||
+        !instant ||
         !Number.isFinite(item.birthDut1Seconds) ||
         Math.abs(item.birthDut1Seconds) > 1 ||
         typeof item.dut1SourceUri !== 'string' ||
@@ -71,11 +86,15 @@ function checkedBatch(batch) {
     ids.add(item.id);
     if (withReceipt) {
       const r = item.receipt;
+      const expectedBirthJdUt = 2440587.5 +
+        (instant.unixMilliseconds + item.birthDut1Seconds * 1000) / 86400000;
       if (!plain(r) ||
           r.contract !== 'RegoloPrecedingConjunctionSearchV1' ||
           r.contractVersion !== '0.1.0-experimental' ||
           r.scientificEvidence !== 'UNVERIFIED_INJECTED_VIRGOSTARS_ENGINE' ||
-          canonicalUtc(r.datetimeUtc) !== canonicalUtc(item.datetimeUtc) ||
+          utcInstant(r.datetimeUtc)?.canonical !== instant.canonical ||
+          !Number.isFinite(r.birthJdUt) ||
+          Math.abs((r.birthJdUt - expectedBirthJdUt) * 86400) > 0.001 ||
           !plain(r.expectedEphemeris) ||
           r.expectedEphemeris.engineId !== 'VIRGOSTARS_EPHEMERIS' ||
           r.expectedEphemeris.engineVersion !== batch.source.upstreamCommitSha ||

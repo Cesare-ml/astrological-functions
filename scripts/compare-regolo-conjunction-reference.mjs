@@ -12,6 +12,7 @@ import {parseArgs} from 'node:util';
 const SHA40 = /^[a-f0-9]{40}$/i;
 const SHA64 = /^[a-f0-9]{64}$/i;
 const UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+const BIRTH_UTC = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?Z$/;
 const plain = x => x !== null && typeof x === 'object' && !Array.isArray(x) &&
   [Object.prototype, null].includes(Object.getPrototypeOf(x));
 const fail = (code, reason) => {throw new Error(`${code}: ${reason}`);};
@@ -26,6 +27,23 @@ function fields(value, keys, code) {
       keys.some(key => !Object.hasOwn(value, key))) {
     fail(code, `Exact fields required: ${keys.join(', ')}`);
   }
+}
+
+function validBirthEpoch(receipt) {
+  const match = typeof receipt.datetimeUtc === 'string' ?
+    BIRTH_UTC.exec(receipt.datetimeUtc) : null;
+  if (!match || !Number.isFinite(receipt.nativeAudit?.birthDut1Seconds) ||
+      Math.abs(receipt.nativeAudit.birthDut1Seconds) > 1 ||
+      !Number.isFinite(receipt.birthJdUt)) return false;
+  const fraction = (match[2] ?? '').padEnd(6, '0');
+  const utcMs = `${match[1]}.${fraction.slice(0, 3)}Z`;
+  const milliseconds = Date.parse(utcMs);
+  if (!Number.isFinite(milliseconds) ||
+      new Date(milliseconds).toISOString() !== utcMs) return false;
+  const expected = 2440587.5 + (milliseconds +
+    Number(fraction.slice(3)) / 1000 +
+    receipt.nativeAudit.birthDut1Seconds * 1000) / 86400000;
+  return Math.abs((expected - receipt.birthJdUt) * 86400) <= 0.001;
 }
 
 function checkedReference(reference, candidate, birthJdUt, lookbackDays) {
@@ -107,6 +125,7 @@ function checkedCandidate(receipt) {
       receipt.candidateBrackets < 0 ||
       !plain(receipt.nativeAudit) ||
       receipt.nativeAudit.contract !== 'VirgoStarsNativeConjunctionAuditV1' ||
+      !validBirthEpoch(receipt) ||
       receipt.nativeAudit.scientificParityCertified !== false ||
       receipt.nativeAudit.referenceIndependenceAudited !== false ||
       receipt.nativeAudit.sourceBuildOriginVerified !== false ||

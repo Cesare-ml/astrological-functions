@@ -53,6 +53,7 @@ test('manifest rejects duplicates, unsourced DUT1, personal labels and invalid t
     replace('LEAP_PERIOD', 'birthDut1Seconds', 1.5),
     replace('LEAP_PERIOD', 'dut1SourceUri', 'http://example.org/insecure'),
     replace('LEAP_PERIOD', 'datetimeUtc', '2000-02-30T12:00:00Z'),
+    replace('LEAP_PERIOD', 'datetimeUtc', '1960-03-20T12:00:00Z'),
     replace('LEAP_PERIOD', 'expectedTimeSourcePolicy', 'unknown policy'),
     {...input, cases: [{...input.cases[0], extra: 'hidden'}]},
   ];

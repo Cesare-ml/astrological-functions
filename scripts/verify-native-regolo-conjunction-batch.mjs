@@ -18,6 +18,9 @@ const COMMON = ['checkout', 'expected-commit', 'expected-addon-sha256',
   'max-conjunction-residual-deg'];
 const CASE_FIELDS = ['id', 'datetimeUtc', 'birthDut1Seconds',
   'dut1SourceUri', 'expectedTimeSourcePolicy'];
+// Deliberately conservative: before 1972, a sourced civil UTC/UT1 relation
+// needs a distinct historical timescale contract, not a guessed ±1 s DUT1.
+const MODERN_UTC_START_MS = Date.parse('1972-01-01T00:00:00Z');
 const fail = message => {throw new Error(`E_REGOLO_CONJUNCTION_BATCH: ${message}`);};
 const plain = obj => obj && typeof obj === 'object' && !Array.isArray(obj) &&
   [Object.prototype, null].includes(Object.getPrototypeOf(obj));
@@ -58,6 +61,9 @@ export function parseNativeConjunctionBatchManifest(manifest, common) {
     // Reuse precisely the single-case UTC/UT1, time-policy, interval and
     // SHA pin validation; no second, divergent date conversion algorithm.
     const options = buildCaseOptions(common, item);
+    if (Date.parse(options.datetimeUtc) < MODERN_UTC_START_MS) {
+      fail('multi-epoch DUT1 contract is restricted to UTC instants from 1972 onward; pre-1972 requires a historical time model');
+    }
     return Object.freeze({id: item.id,
       dut1SourceUri: item.dut1SourceUri, options});
   }));
