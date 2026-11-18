@@ -2,14 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync, spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync,
+  utimesSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {ASTRO_COM_HOUSE_SYSTEM_IDS} from '../src/astro-com-house-selector.mjs';
 import {HOUSE_SMOKE_FIXTURE} from '../scripts/verify-native-house-bridge.mjs';
 import {LATITUDE_AUDIT_CASES} from '../scripts/audit-native-house-latitudes.mjs';
-import {parseNativeRegressionOptions, preflightNativeRegression} from
+import {assertNativeAddonBuildUpdated, parseNativeRegressionOptions,
+  preflightNativeRegression, snapshotNativeAddon} from
   '../scripts/run-native-house-latitude-regression.mjs';
 
 function baseline() {
@@ -160,6 +162,60 @@ test('--check-only validates genuine input bytes without building or writing fil
     assert.equal(existsSync(fixture.outDir), false);
   } finally {
     rmSync(fixture.folder, {recursive: true, force: true});
+  }
+});
+
+test('native build checks refuse stale binary and symlinked output without deleting data', () => {
+  const fixture = mkdtempSync(path.join(tmpdir(), 'vs-native-addon-'));
+  try {
+    const nativeDir = path.join(fixture, 'native');
+    const addon = path.join(nativeDir, 'virgostars_ephemeris.node');
+    assert.equal(snapshotNativeAddon(addon), null);
+    mkdirSync(nativeDir);
+    writeFileSync(addon, 'simulated native bytes v1');
+    const before = snapshotNativeAddon(addon);
+    assert.match(before.sha256, /^[a-f\d]{64}$/);
+    assert.doesNotThrow(() => assertNativeAddonBuildUpdated(null, before));
+    assert.throws(() => assertNativeAddonBuildUpdated(before, snapshotNativeAddon(addon)),
+      /E_NATIVE_REGRESSION_STALE_ADDON/);
+    assert.throws(() => assertNativeAddonBuildUpdated(before, null),
+      /E_NATIVE_REGRESSION_ADDON/);
+
+    writeFileSync(addon, 'simulated native bytes v2');
+    const changed = snapshotNativeAddon(addon);
+    assert.notEqual(changed.sha256, before.sha256);
+    assert.doesNotThrow(() => assertNativeAddonBuildUpdated(before, changed));
+    // An identical reproducible binary is still acceptable when actually recopied.
+    writeFileSync(addon, 'simulated native bytes v1');
+    utimesSync(addon, new Date(2_000_000_000_000), new Date(2_000_000_000_000));
+    const recopied = snapshotNativeAddon(addon);
+    assert.equal(recopied.sha256, before.sha256);
+    assert.notEqual(recopied.mtimeMs, before.mtimeMs);
+    assert.doesNotThrow(() => assertNativeAddonBuildUpdated(before, recopied));
+
+    const link = path.join(fixture, 'linked.node');
+    try {
+      symlinkSync(addon, link);
+    } catch (error) {
+      // Some Windows installations cannot create symlinks without Developer Mode.
+      if (process.platform === 'win32' &&
+          (error.code === 'EPERM' || error.code === 'EACCES')) return;
+      throw error;
+    }
+    assert.throws(() => snapshotNativeAddon(link), /E_NATIVE_REGRESSION_ADDON_PATH/);
+    assert.equal(readFileSync(addon, 'utf8'), 'simulated native bytes v1');
+    const linkedOutputDir = path.join(fixture, 'linked-native');
+    try {
+      symlinkSync(nativeDir, linkedOutputDir, 'dir');
+    } catch (error) {
+      if (process.platform === 'win32' &&
+          (error.code === 'EPERM' || error.code === 'EACCES')) return;
+      throw error;
+    }
+    assert.throws(() => snapshotNativeAddon(path.join(linkedOutputDir,
+      'virgostars_ephemeris.node')), /E_NATIVE_REGRESSION_ADDON_PATH/);
+  } finally {
+    rmSync(fixture, {recursive: true, force: true});
   }
 });
 
