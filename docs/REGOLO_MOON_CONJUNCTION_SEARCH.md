@@ -125,3 +125,131 @@ scientific gates has been completed by the present synthetic tests.
 
 No frontend/backend/mobile/desktop consumer is integrated, no workflow or
 GitHub Action is added, and no npm/public release is requested.
+
+## Operator-only native Rust/DE441 execution (no P0 dependency)
+
+`scripts/verify-native-regolo-conjunction.mjs` is now an **optional** native
+smoke. Unlike the recorded-P0 diagnostic, this search needs no Python
+runtime or P0 archive. It reuses the upstream clean-source Git HEAD and
+installed Node `.node` byte SHA-256 preflight, streams the already present
+DE441 hash, and only **then** loads `Engine` and runs the exact experimental
+search above. Neither source checkout nor kernel is downloaded, modified or
+built. The reported hashes identify local bytes; they do **not** prove that
+those binary bytes came from the asserted Rust source commit.
+
+On the owner's Windows machine, from the `astrological-functions` checkout:
+
+```powershell
+Get-FileHash -Algorithm SHA256 'D:\GitHub\VirgoStars-Ephemeris\bindings\node\native\virgostars_ephemeris.node'
+Get-FileHash -Algorithm SHA256 'D:\GitHub\virgo-stars\database\effemeridi\astrodienst\de441.eph'
+git -C D:\GitHub\VirgoStars-Ephemeris rev-parse HEAD
+
+node scripts/verify-native-regolo-conjunction.mjs `
+  --checkout 'D:\GitHub\VirgoStars-Ephemeris' `
+  --expected-commit 'INSERT_REAL_40_HEX_COMMIT' `
+  --expected-addon-sha256 'INSERT_REAL_64_HEX_ADDON' `
+  --de441 'D:\GitHub\virgo-stars\database\effemeridi\astrodienst\de441.eph' `
+  --expected-de441-sha256 'INSERT_REAL_64_HEX_DE441' `
+  --datetime-utc '2026-11-18T12:00:00Z' `
+  --birth-dut1-seconds 'INSERT_SOURCED_DUT1' `
+  --time-model 'INSERT_VERSIONED_NATIVE_TIME_MODEL' `
+  --expected-time-source-policy 'INSERT_OBSERVED_NATIVE_TIME_POLICY' `
+  --lookback-days '35' `
+  --sample-step-hours '6' `
+  --root-tolerance-seconds '0.5' `
+  --max-iterations '64' `
+  --max-conjunction-residual-deg '0.001' > conjunction-candidate.json
+```
+
+Replace **every** `INSERT_*` placeholder with an independently checked
+actual value; the example birth UTC is a synthetic diagnostic instant, not a
+client chart. A sourced birth DUT1 is required rather than an assumed 0.
+`expected-time-source-policy` is the **named** source policy exposed by the
+real Rust `calcUt` calls, not an arbitrary label or a full changing numeric
+Delta-T suffix. A failed command exits 1; do not treat the redirected file
+as complete JSON until exit code and report status are checked. PowerShell
+may create the output file even when the command fails. The runner emits
+`nativeAudit.verifiedLocalBytes=true` **only after** full preflight and the
+actual method invocation; its three scientific/provenance certification
+flags remain `false`, as does the Regolo Moon availability.
+
+### Independent numerical comparison (separate from recorded-P0 comparison)
+
+The native report can be compared offline with
+`scripts/compare-regolo-conjunction-reference.mjs`. The independent reference
+must specify the **same geocentric apparent ecliptic-of-date longitude
+conjunction definition**, and provide:
+
+1. An independently sourced conjunction time **converted to JD UT1** (not
+   an unlabelled JDE/TT/TDB/UTC number), with an explicit documented
+   historical UTC/UT1 and time-scale conversion.
+2. Independent geocentric apparent ecliptic-of-date **Sun and Moon
+   longitudes evaluated at exactly `report.candidate.jdUt`**, not at the
+   reference conjunction's different instant. This prevents false agreement
+   or disagreement from comparing coordinates at different epochs.
+3. A real source URL, acquisition UTC, observable convention, and separately
+   justified event (seconds) and position (arcseconds) tolerances.
+
+Exact JSON schema (the numbers and URL below are **synthetic placeholders**;
+they are **not** real astronomical measurements):
+
+```json
+{
+  "contract": "RegoloIndependentConjunctionReferenceV1",
+  "source": {
+    "kind": "INDEPENDENT_EPHEMERIS_SERVICE",
+    "title": "REPLACE_WITH_REAL_PRIMARY_REFERENCE",
+    "uri": "https://example.org/replace-with-real-source",
+    "acquiredUtc": "2026-11-18T20:00:00Z",
+    "convention": "REPLACE_WITH_EXACT_APPARENT_GEOCENTRIC_OF_DATE_METHOD",
+    "timeScaleConversion": "REPLACE_WITH_SOURCED_TT_TDB_UTC_UT1_CONVERSION"
+  },
+  "event": {
+    "jdUt": 2461355.5,
+    "eventType": "GEOCENTRIC_ECLIPTIC_LONGITUDE_CONJUNCTION"
+  },
+  "positionsAtCandidate": {
+    "atJdUt": 2461355.5,
+    "sunLongitudeDeg": 359.99,
+    "moonLongitudeDeg": 0.01,
+    "observer": "GEOCENTRIC",
+    "frame": "APPARENT_ECLIPTIC_OF_DATE"
+  },
+  "eventToleranceSeconds": 60,
+  "eventToleranceRationale": "REPLACE_WITH_JUSTIFIED_TIME_ERROR_BUDGET",
+  "positionToleranceArcsec": 60,
+  "positionToleranceRationale": "REPLACE_WITH_JUSTIFIED_ANGLE_ERROR_BUDGET"
+}
+```
+
+**Important:** the example's `positionsAtCandidate.atJdUt` must be replaced
+with the **exact** numeric `candidate.jdUt` from the real native receipt. The
+two longitudes must then be calculated independently at that very instant;
+never copy those longitudes from the candidate. The reference event `jdUt`
+must independently represent the true preceding conjunction.
+
+```powershell
+node scripts/compare-regolo-conjunction-reference.mjs `
+  --candidate 'conjunction-candidate.json' `
+  --reference 'independent-conjunction-reference.json'
+```
+
+It separately reports signed conjunction-time error and circular Sun/Moon
+longitude errors. Exit 0 is labelled **
+`NUMERICALLY_WITHIN_CALLER_THRESHOLDS_NOT_CERTIFIED`**; even exact agreement
+does not authenticate a supplied reference's independence. Exit 1 covers
+missing/invalid evidence and mismatched tolerances. The source and build
+origin still require manual audit; `scientificallyCertified` is **always
+false**, as is `referenceIndependenceAudited`. **Never** promote the
+`precedingNewMoon` output to `AVAILABLE` from this receipt.
+
+```sh
+node --test test/verify-native-regolo-conjunction.test.mjs
+node scripts/verify-native-regolo-conjunction.mjs --help
+node scripts/compare-regolo-conjunction-reference.mjs --help
+```
+
+The local suite uses mocked `calcUt` and **fabricated** reference JSON.
+Neither real native binaries nor real external reference data are available
+in the current sandbox, so actual Rust/DE441 execution and independent
+numerical parity remain **PENDING** until the operator supplies them.

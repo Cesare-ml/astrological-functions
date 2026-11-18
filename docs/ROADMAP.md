@@ -100,6 +100,18 @@ be reused as an event DUT1 weeks earlier. It **always** returns an
 `UNAVAILABLE` Regolo new Moon: no 92-part availability inflation or implicit
 production wiring. See [search contract and pending gates](REGOLO_MOON_CONJUNCTION_SEARCH.md).
 
+**Native numerical-conjunction smoke and independent comparison (18 November
+2026):** operator-only scripts now preflight clean Rust upstream HEAD, exact
+Node addon bytes and streamed DE441 digest, invoke the isolated search with
+an explicit birth UT1 conversion, and compare its JD UT1 candidate plus
+geocentric apparent-of-date Sun/Moon longitudes to independently sourced
+values at the same candidate instant. Both scripts have synthetic/mock tests,
+but **no real native execution or independent reference evidence has been
+recorded**. Matching caller-supplied tolerances never certifies the source,
+birth/event time-scale conversion or new-Moon availability. The Regolo
+`NEW_MOON` gate remains closed; see
+[manual native and reference protocol](REGOLO_MOON_CONJUNCTION_SEARCH.md#operator-only-native-rustde441-execution-no-p0-dependency).
+
 The next stacked draft after #213 introduces a typed, opt-in 24-method selector
 without replacing any existing API, including Gauquelin's separate 36-sector
 result. Its synthetic dispatch/type tests support consumer wiring but do not

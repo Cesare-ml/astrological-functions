@@ -86,6 +86,12 @@ opposition crossings, and keeps `NEW_MOON` **unavailable** for all Regolo
 parts pending real native + independent reference validation. Its current
 tests use synthetic positions only. See
 [the experimental preceding-conjunction solver](docs/REGOLO_MOON_CONJUNCTION_SEARCH.md).
+Its separate manual `scripts/verify-native-regolo-conjunction.mjs` verifies a
+real installed addon and DE441 before invoking the search; an independent
+`scripts/compare-regolo-conjunction-reference.mjs` checks UTC/UT1-converted
+conjunction times and positions under declared tolerances without claiming
+scientific certification. Both commands are prepared and mock-tested; a
+real native run and independent astronomical reference are still outstanding.
 
 **Not included:** natal chart interpretations, user accounts, private birth records, databases, API credentials, frontend graphics, NASA/JPL kernels, or production VirgoStars services. Proposed interfaces described in `docs/CONTRACTS.md` are not necessarily shipped APIs.
 
