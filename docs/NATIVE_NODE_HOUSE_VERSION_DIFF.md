@@ -21,26 +21,31 @@ The preferred method is the new **single-command evidence runner**. First,
 manually select the exact latest **PR #596** commit in a clean
 `VirgoStars-Ephemeris` checkout and the combined **PR #225** branch in the
 `astrological-functions` checkout. Confirm that the full Rust SHA equals the
-commit displayed on the GitHub PR; the script does not fetch or switch code.
+commit displayed on the GitHub PR; **copy that SHA from GitHub rather than
+deriving the expected SHA from your local HEAD**. The script does not fetch or
+switch code.
 Then, on Windows PowerShell:
 
 ```powershell
 cd D:\GitHub\astrological-functions
 $ephemerisCheckout = 'D:\GitHub\VirgoStars-Ephemeris'
-$ephemerisCommit = (git -C $ephemerisCheckout rev-parse HEAD).Trim()
+$ephemerisCommit = 'PASTE_EXACT_40_CHARACTER_PR596_HEAD_SHA_FROM_GITHUB'
+$oldReceiptSha256 = '002b567327cdb77f73c5f4c3ca223cd51cb8af4a952dccced3f1f779e7cd1577'
 
 node scripts/run-native-house-latitude-regression.mjs `
   --checkout $ephemerisCheckout `
   --expected-commit $ephemerisCommit `
   --baseline 'D:\GitHub\astrological-functions\house-latitudes-local.json' `
+  --expected-baseline-sha256 $oldReceiptSha256 `
   --out-dir 'D:\GitHub\astrological-functions\house-regression-20261118' `
   --kernel-context HOUSE_ANGLES_NO_KERNEL
 ```
 
 The output directory must be **new or empty**. This command:
 
-1. Checks the exact Rust source commit, unchanged tracked files, baseline
-   format, all 161 method outcomes and matching declared kernel context.
+1. Checks the exact Rust source commit against your independently selected
+   GitHub SHA, unchanged tracked files, **original baseline byte hash**, all
+   161 method outcomes and matching declared kernel context.
 2. Runs `npm run build` in the pinned upstream `bindings/node` folder, using
    the local Rust/Cargo toolchain. Cargo may fetch missing pinned dependencies;
    **no ephemeris kernels are downloaded**.
@@ -51,21 +56,28 @@ The output directory must be **new or empty**. This command:
    `house-angle-orientation.json`, `house-latitudes-version-diff.json` and
    `house-regression-summary.json`.
 5. Also saves `house-regression-bundle.json`: **one portable file to attach**
-   for subsequent review. It contains both complete grids, the native smoke,
-   orientation and version diagnostics, summary, and all five report SHA-256s.
+   for subsequent review. It contains both complete grids, **the unmodified
+   original baseline bytes encoded as base64**, the native smoke, orientation
+   and version diagnostics, summary, and all five report SHA-256s.
 
 Verify the self-contained evidence file offline without Rust, the native addon
 or a network connection:
 
 ```powershell
 node scripts/verify-native-house-regression-bundle.mjs `
-  --bundle 'D:\GitHub\astrological-functions\house-regression-20261118\house-regression-bundle.json'
+  --bundle 'D:\GitHub\astrological-functions\house-regression-20261118\house-regression-bundle.json' `
+  --expected-commit $ephemerisCommit `
+  --expected-baseline-sha256 $oldReceiptSha256
 ```
 
 The verifier recomputes all 161 method comparisons and the Ascendant branch
-diagnostic, checks the five report hashes, and rejects incomplete/inconsistent
-data. Checksums detect mismatched report content; they **cannot authenticate
-native build provenance or independent numerical references**. The runner
+diagnostic, checks **the original 160 KB Windows UTF-16LE baseline file hash
+and parsed contents**, the five report hashes, the two optionally pinned
+external digests, and rejects incomplete/inconsistent data. The baseline
+SHA-256 above was measured from the owner-supplied historical receipt;
+**use a different expected hash if intentionally comparing another baseline**.
+Checksums detect mismatched report content; they **cannot authenticate native
+build provenance or independent numerical references**. The runner
 also rejects an upstream commit identical to the historical baseline's.
 
 An exit code of **2** is normal when polar methods still need manual review;
