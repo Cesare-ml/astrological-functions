@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync, spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync,
+import {existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync,
   utimesSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
@@ -10,9 +10,12 @@ import {fileURLToPath} from 'node:url';
 import {ASTRO_COM_HOUSE_SYSTEM_IDS} from '../src/astro-com-house-selector.mjs';
 import {HOUSE_SMOKE_FIXTURE} from '../scripts/verify-native-house-bridge.mjs';
 import {LATITUDE_AUDIT_CASES} from '../scripts/audit-native-house-latitudes.mjs';
-import {assertNativeAddonBuildUpdated, parseNativeRegressionOptions,
-  preflightNativeRegression, snapshotNativeAddon} from
+import {assembleNativeHouseRegressionEvidence, assertNativeAddonBuildUpdated,
+  parseNativeRegressionOptions, preflightNativeRegression, saveNativeHouseRegressionEvidence,
+  snapshotNativeAddon} from
   '../scripts/run-native-house-latitude-regression.mjs';
+import {NATIVE_HOUSE_BUNDLE_FILES, verifyNativeHouseRegressionBundle} from
+  '../scripts/verify-native-house-regression-bundle.mjs';
 
 function baseline() {
   const methods = ASTRO_COM_HOUSE_SYSTEM_IDS.filter(id => id !== 'SUNSHINE');
@@ -216,6 +219,86 @@ test('native build checks refuse stale binary and symlinked output without delet
       'virgostars_ephemeris.node')), /E_NATIVE_REGRESSION_ADDON_PATH/);
   } finally {
     rmSync(fixture, {recursive: true, force: true});
+  }
+});
+
+test('synthetic evidence flows through assembly, all seven files and offline verification', () => {
+  const fixture = setup();
+  try {
+    const options = parseNativeRegressionOptions([
+      '--checkout', fixture.checkout, '--expected-commit', fixture.expectedCommit,
+      '--baseline', fixture.baseline, '--out-dir', fixture.outDir,
+      '--expected-baseline-sha256', fixture.expectedBaselineSha256,
+      '--kernel-context', fixture.kernelContext]);
+    const selected = preflightNativeRegression(options);
+    const audit = baseline();
+    const addonHash = 'c'.repeat(64);
+    audit.ephemeris.upstreamCommitSha = options.expectedCommit;
+    audit.ephemeris.nativeAddonSha256 = addonHash;
+    const smoke = {contract: 'VirgoStarsNativeHouseSmokeV1',
+      status: 'NATIVE_ADDON_EXECUTED_STRUCTURAL_ONLY',
+      validatedScientificParity: false,
+      addonBuiltFromSelectedCommitIndependentlyVerified: false,
+      ephemeris: {...audit.ephemeris}, fixture: HOUSE_SMOKE_FIXTURE,
+      attempted: 23, passed: 23, failed: 0, failures: [],
+      blocked: [{houseSystem: 'SUNSHINE',
+        reason: 'INDEPENDENT_APPARENT_SUN_DECLINATION_NOT_SUPPLIED'}],
+      results: structuredClone(audit.scenarios[3].results)};
+    const nativeOptions = {checkout: fixture.checkout,
+      expectedCommit: fixture.expectedCommit,
+      expectedAddonSha256: addonHash, kernelContext: fixture.kernelContext};
+    const args = {selected, options, nativeOptions, audit, smoke};
+    const evidence = assembleNativeHouseRegressionEvidence(args);
+    assert.equal(existsSync(options.outDir), false, 'assembly must be entirely in memory');
+    const verified = verifyNativeHouseRegressionBundle(evidence.bundle);
+    assert.equal(verified.attempted, 161);
+    assert.equal(verified.reportHashesChecked, 6);
+    assert.equal(evidence.summary.scientificallyCertified, false);
+
+    const invalidSmoke = {...smoke, passed: 22};
+    assert.throws(() => assembleNativeHouseRegressionEvidence({...args,
+      smoke: invalidSmoke}), /E_NATIVE_BUNDLE_SMOKE/);
+    assert.equal(existsSync(options.outDir), false,
+      'a malformed smoke may not leave partial evidence');
+
+    const redirectTarget = path.join(fixture.folder, 'redirect-target');
+    const redirected = path.join(fixture.folder, 'redirected-receipts');
+    mkdirSync(redirectTarget);
+    let linked = false;
+    try {
+      symlinkSync(redirectTarget, redirected, 'dir');
+      linked = true;
+    } catch (error) {
+      if (process.platform !== 'win32' ||
+          (error.code !== 'EPERM' && error.code !== 'EACCES')) throw error;
+    }
+    if (linked) {
+      assert.throws(() => saveNativeHouseRegressionEvidence(redirected, evidence),
+        /E_NATIVE_REGRESSION_OUTPUT/);
+      assert.equal(readdirSync(redirectTarget).length, 0,
+        'a symlink cannot silently redirect the evidence destination');
+    }
+
+    const saved = saveNativeHouseRegressionEvidence(options.outDir, evidence);
+    assert.equal(readdirSync(options.outDir).length, 7);
+    assert.equal(saved.auditFile, path.join(options.outDir, 'house-latitudes-new.json'));
+    assert.equal(saved.bundleFile, path.join(options.outDir, 'house-regression-bundle.json'));
+    for (const [key, filename] of Object.entries(NATIVE_HOUSE_BUNDLE_FILES)) {
+      const bytes = readFileSync(path.join(options.outDir, filename));
+      assert.deepEqual(JSON.parse(bytes.toString('utf8')), evidence.bundle.reports[key]);
+      assert.equal(createHash('sha256').update(bytes).digest('hex'),
+        evidence.bundle.reportSha256[key]);
+    }
+    const portable = JSON.parse(readFileSync(saved.bundleFile, 'utf8'));
+    assert.equal(verifyNativeHouseRegressionBundle(portable).attempted, 161);
+    assert.equal(portable.reports.summary.baselineReceiptSha256,
+      fixture.expectedBaselineSha256);
+    assert.throws(() => saveNativeHouseRegressionEvidence(options.outDir, evidence),
+      /E_NATIVE_REGRESSION_OUTPUT/);
+    assert.deepEqual(JSON.parse(readFileSync(saved.bundleFile, 'utf8')), portable,
+      'a repeated execution must not overwrite the previous report');
+  } finally {
+    rmSync(fixture.folder, {recursive: true, force: true});
   }
 });
 
