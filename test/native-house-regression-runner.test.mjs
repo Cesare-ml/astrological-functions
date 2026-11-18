@@ -18,6 +18,8 @@ import {assembleNativeHouseRegressionEvidence, assertNativeAddonBuildUpdated,
   '../scripts/run-native-house-latitude-regression.mjs';
 import {NATIVE_HOUSE_BUNDLE_FILES, verifyNativeHouseRegressionBundle} from
   '../scripts/verify-native-house-regression-bundle.mjs';
+import {createNativeHouseReviewWorksheetCsv, reviewCsvCell} from
+  '../scripts/export-native-house-review-worksheet.mjs';
 
 function baseline() {
   const methods = ASTRO_COM_HOUSE_SYSTEM_IDS.filter(id => id !== 'SUNSHINE');
@@ -368,6 +370,40 @@ test('synthetic evidence flows through assembly, all seven files and offline ver
     assert.equal(verifyNativeHouseRegressionBundle(portable).attempted, 161);
     assert.equal(portable.reports.summary.baselineReceiptSha256,
       fixture.expectedBaselineSha256);
+    const worksheet = createNativeHouseReviewWorksheetCsv(portable);
+    assert.ok(worksheet.startsWith('\uFEFF'));
+    const worksheetRows = worksheet.slice(1).trimEnd().split('\r\n');
+    assert.equal(worksheetRows.length, 169, 'one header, 161 methods and seven angle rows');
+    assert.equal(worksheetRows.filter(row => row.startsWith('"METHOD",')).length, 161);
+    assert.equal(worksheetRows.filter(row => row.startsWith('"ANGLES",')).length, 7);
+    assert.ok(worksheetRows.slice(1).every(row => row.endsWith(',"","","","","",""')),
+      'independent source, expectation and review fields must stay empty');
+    assert.equal(reviewCsvCell('=HYPERLINK("https://invalid.example")'),
+      '"\'=HYPERLINK(""https://invalid.example"")"');
+    assert.equal(reviewCsvCell(-80), '"-80"', 'signed numeric latitudes must be preserved');
+
+    const worksheetPath = path.join(fixture.folder, 'review-worksheet.csv');
+    const worksheetArgs = [
+      'scripts/export-native-house-review-worksheet.mjs',
+      '--bundle', saved.bundleFile, '--out', worksheetPath,
+      '--expected-commit', options.expectedCommit,
+      '--expected-baseline-sha256', fixture.expectedBaselineSha256,
+    ];
+    const worksheetRun = spawnSync(process.execPath, worksheetArgs,
+      {encoding: 'utf8'});
+    assert.equal(worksheetRun.status, 0, worksheetRun.stderr);
+    assert.equal(readFileSync(worksheetPath, 'utf8'), worksheet);
+    const worksheetRepeat = spawnSync(process.execPath, worksheetArgs,
+      {encoding: 'utf8'});
+    assert.equal(worksheetRepeat.status, 1, 'worksheet must never overwrite existing evidence');
+    assert.match(worksheetRepeat.stderr, /EEXIST/);
+    const wrongPinFile = path.join(fixture.folder, 'wrong-pin.csv');
+    const worksheetWrongPin = spawnSync(process.execPath,
+      [...worksheetArgs.slice(0, -1), 'f'.repeat(64)].map(arg =>
+        arg === worksheetPath ? wrongPinFile : arg), {encoding: 'utf8'});
+    assert.equal(worksheetWrongPin.status, 1);
+    assert.match(worksheetWrongPin.stderr, /E_NATIVE_WORKSHEET_BASELINE/);
+    assert.equal(existsSync(wrongPinFile), false);
     assert.throws(() => saveNativeHouseRegressionEvidence(options.outDir, evidence),
       /E_NATIVE_REGRESSION_OUTPUT/);
     assert.deepEqual(JSON.parse(readFileSync(saved.bundleFile, 'utf8')), portable,
