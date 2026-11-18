@@ -17,7 +17,51 @@ historical, not expected results of the corrected build.
 ## Run the new comparison
 
 Keep the *old* receipt intact and give the rebuilt audit a **new file name**.
-Windows PowerShell example from the `astrological-functions` checkout:
+The preferred method is the new **single-command evidence runner**. First,
+manually select the exact latest **PR #596** commit in a clean
+`VirgoStars-Ephemeris` checkout and the combined **PR #225** branch in the
+`astrological-functions` checkout. Confirm that the full Rust SHA equals the
+commit displayed on the GitHub PR; the script does not fetch or switch code.
+Then, on Windows PowerShell:
+
+```powershell
+cd D:\GitHub\astrological-functions
+$ephemerisCheckout = 'D:\GitHub\VirgoStars-Ephemeris'
+$ephemerisCommit = (git -C $ephemerisCheckout rev-parse HEAD).Trim()
+
+node scripts/run-native-house-latitude-regression.mjs `
+  --checkout $ephemerisCheckout `
+  --expected-commit $ephemerisCommit `
+  --baseline 'D:\GitHub\astrological-functions\house-latitudes-local.json' `
+  --out-dir 'D:\GitHub\astrological-functions\house-regression-20261118' `
+  --kernel-context HOUSE_ANGLES_NO_KERNEL
+```
+
+The output directory must be **new or empty**. This command:
+
+1. Checks the exact Rust source commit, unchanged tracked files, baseline
+   format, all 161 method outcomes and matching declared kernel context.
+2. Runs `npm run build` in the pinned upstream `bindings/node` folder, using
+   the local Rust/Cargo toolchain. Cargo may fetch missing pinned dependencies;
+   **no ephemeris kernels are downloaded**.
+3. Hashes and preflights the compiled `.node` binary, runs the real 7 × 23
+   grid and 23-method smoke, then analyzes the rising horizon branch.
+4. Saves **five separate JSON reports** without overwriting any prior file:
+   `house-latitudes-new.json`, `house-smoke-new.json`,
+   `house-angle-orientation.json`, `house-latitudes-version-diff.json` and
+   `house-regression-summary.json`.
+
+An exit code of **2** is normal when polar methods still need manual review;
+the valid JSON reports are saved anyway. Exit **1** indicates a fatal input,
+build or execution failure. Compiling Rust on **Windows has not been exercised
+in this development environment**; the runner's preflight/tests use isolated
+fake fixtures and do not claim native build success.
+
+### Manual alternative (reuse a previously built addon)
+
+If you already saved the new full grid independently, use the simpler offline
+comparison below instead. It never builds the native addon. Windows PowerShell
+example from the `astrological-functions` checkout:
 
 ```powershell
 # Existing, original owner-supplied 141/20 receipt:
