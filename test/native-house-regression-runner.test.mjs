@@ -11,6 +11,7 @@ import {ASTRO_COM_HOUSE_SYSTEM_IDS} from '../src/astro-com-house-selector.mjs';
 import {HOUSE_SMOKE_FIXTURE} from '../scripts/verify-native-house-bridge.mjs';
 import {LATITUDE_AUDIT_CASES} from '../scripts/audit-native-house-latitudes.mjs';
 import {assembleNativeHouseRegressionEvidence, assertNativeAddonBuildUpdated,
+  assertNativeAddonStillPinned,
   assertPinnedNativeSource,
   parseNativeRegressionOptions, preflightNativeRegression, saveNativeHouseRegressionEvidence,
   snapshotNativeAddon, verifySavedNativeHouseRegressionEvidence} from
@@ -219,6 +220,7 @@ test('native build checks refuse stale binary and symlinked output without delet
     writeFileSync(addon, 'simulated native bytes v1');
     const before = snapshotNativeAddon(addon);
     assert.match(before.sha256, /^[a-f\d]{64}$/);
+    assert.doesNotThrow(() => assertNativeAddonStillPinned(addon, before.sha256));
     assert.doesNotThrow(() => assertNativeAddonBuildUpdated(null, before));
     assert.throws(() => assertNativeAddonBuildUpdated(before, snapshotNativeAddon(addon)),
       /E_NATIVE_REGRESSION_STALE_ADDON/);
@@ -228,6 +230,9 @@ test('native build checks refuse stale binary and symlinked output without delet
     writeFileSync(addon, 'simulated native bytes v2');
     const changed = snapshotNativeAddon(addon);
     assert.notEqual(changed.sha256, before.sha256);
+    assert.throws(() => assertNativeAddonStillPinned(addon, before.sha256),
+      /E_NATIVE_REGRESSION_ADDON_DRIFT/);
+    assert.doesNotThrow(() => assertNativeAddonStillPinned(addon, changed.sha256));
     assert.doesNotThrow(() => assertNativeAddonBuildUpdated(before, changed));
     // An identical reproducible binary is still acceptable when actually recopied.
     writeFileSync(addon, 'simulated native bytes v1');
@@ -258,6 +263,8 @@ test('native build checks refuse stale binary and symlinked output without delet
     }
     assert.throws(() => snapshotNativeAddon(path.join(linkedOutputDir,
       'virgostars_ephemeris.node')), /E_NATIVE_REGRESSION_ADDON_PATH/);
+    assert.throws(() => assertNativeAddonStillPinned(link, changed.sha256),
+      /E_NATIVE_REGRESSION_ADDON_PATH/);
   } finally {
     rmSync(fixture, {recursive: true, force: true});
   }
