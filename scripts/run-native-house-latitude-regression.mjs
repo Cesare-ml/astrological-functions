@@ -19,6 +19,8 @@ import {auditNativeHouseAngleOrientation} from './audit-native-house-angle-orien
 import {validateNativeLatitudeAudit} from './compare-native-house-latitudes.mjs';
 import {diffNativeHouseLatitudes, parseNativeLatitudeDiffReceiptBytes} from
   './diff-native-house-latitudes.mjs';
+import {buildNativeHouseMethodReviewQueue} from
+  './build-native-house-method-review-queue.mjs';
 import {NATIVE_HOUSE_BUNDLE_FILES, verifyNativeHouseRegressionBundle} from
   './verify-native-house-regression-bundle.mjs';
 
@@ -149,9 +151,11 @@ export async function runNativeHouseLatitudeRegression(options) {
   const smoke = await runNativeHouseSmoke(nativeOptions);
   const orientation = auditNativeHouseAngleOrientation(audit);
   const comparison = diffNativeHouseLatitudes(selected.baseline, audit);
+  const methodReview = buildNativeHouseMethodReviewQueue(selected.baseline, audit);
   exclusiveJson(options.outDir, 'house-smoke-new.json', smoke);
   exclusiveJson(options.outDir, 'house-angle-orientation.json', orientation);
   exclusiveJson(options.outDir, 'house-latitudes-version-diff.json', comparison);
+  exclusiveJson(options.outDir, 'house-method-review-queue.json', methodReview);
 
   const summary = Object.freeze({contract: 'VirgoStarsNativeHouseRegressionBundleV1',
     status: smoke.failed > 0 || orientation.flagged > 0 || audit.failed > 0 ||
@@ -167,6 +171,8 @@ export async function runNativeHouseLatitudeRegression(options) {
     currentPassed: audit.passed, currentFailed: audit.failed,
     attempted: audit.attempted, smokePassed: smoke.passed, smokeFailed: smoke.failed,
     ascendantBranchesFlagged: orientation.flagged,
+    pendingIndependentMethodReferences: methodReview.missingIndependentMethodReferences,
+    pendingIndependentAngleReferences: methodReview.missingIndependentAngleReferences,
     errorToSuccess: comparison.errorToSuccess,
     successToError: comparison.successToError,
     errorCodesChanged: comparison.errorCodesChanged,
@@ -174,11 +180,12 @@ export async function runNativeHouseLatitudeRegression(options) {
     sameAddonDigest: comparison.sameAddonDigest,
     files: ['house-latitudes-new.json', 'house-smoke-new.json',
       'house-angle-orientation.json', 'house-latitudes-version-diff.json',
-      'house-regression-summary.json', 'house-regression-bundle.json'],
+      'house-method-review-queue.json', 'house-regression-summary.json',
+      'house-regression-bundle.json'],
     note: 'Structural and version evidence only; not independent scientific validation.'});
   exclusiveJson(options.outDir, 'house-regression-summary.json', summary);
   const reports = Object.freeze({baseline: selected.baseline, nativeGrid: audit,
-    smoke, orientation, versionDiff: comparison, summary});
+    smoke, orientation, versionDiff: comparison, methodReview, summary});
   const reportSha256 = Object.freeze(Object.fromEntries(
     Object.entries(NATIVE_HOUSE_BUNDLE_FILES).map(([key, file]) =>
       [key, sha256(path.join(options.outDir, file))])));
@@ -206,7 +213,8 @@ Checks exact externally pinned Git HEAD, clean tracked sources, the original
 baseline bytes hash (if provided), the full 161-case baseline,
 and an empty/absent output directory BEFORE running npm run build (cargo).
 Builds the Rust addon, verifies installed bytes, then saves a new full 161-case
-receipt, 23-method smoke, rising-branch analysis, before/after diff and summary.
+receipt, 23-method smoke, rising-branch analysis, before/after diff, a full
+161-method human scientific review queue and summary.
 Also exports a single self-contained house-regression-bundle.json with both
 grids, exact historical receipt bytes (base64) and checksums; verify it with
   node scripts/verify-native-house-regression-bundle.mjs --bundle FILE
@@ -229,6 +237,9 @@ async function main() {
       `${summary.currentPassed}/${summary.attempted}; recovered ` +
       `${summary.errorToSuccess}, new failures ${summary.successToError}; ` +
       `ASC flags ${summary.ascendantBranchesFlagged}.\n` +
+      `Scientific reference review still needed: ` +
+      `${summary.pendingIndependentMethodReferences} method outcomes and ` +
+      `${summary.pendingIndependentAngleReferences} angle sets.\n` +
       `Single portable report to share: ${bundleFile}\n` +
       `${summary.status}; no scientific or method-parity certification.\n`);
     if (summary.status === 'MANUAL_METHOD_REVIEW_REQUIRED') process.exitCode = 2;
