@@ -116,6 +116,18 @@
     "./vehlow-houses": {
       "types": "./src/vehlow-houses.d.mts",
       "import": "./src/vehlow-houses.mjs"
+    },
+    "./planetary-hours": {
+      "types": "./src/planetary-hours.d.mts",
+      "import": "./src/planetary-hours.mjs"
+    },
+    "./virgostars-star-contacts": {
+      "types": "./src/virgostars-star-contacts.d.mts",
+      "import": "./src/virgostars-star-contacts.mjs"
+    },
+    "./regolo-arabic-parts": {
+      "types": "./src/regolo-arabic-parts.d.mts",
+      "import": "./src/regolo-arabic-parts.mjs"
     }
   },
   "engines": {
