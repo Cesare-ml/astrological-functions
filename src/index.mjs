@@ -168,3 +168,6 @@ export async function calculateNatalWithProvider({ datetimeUtc, latitudeDeg, lon
     houses:null, angles:null,
     warnings:Object.freeze([{code:'houses_unavailable',message:'House algorithms not yet integrated'}]) });
 }
+
+// The desktop uses caller-supplied sunrise facts; no ephemeris is computed here.
+export {buildPlanetaryHours, lookupPlanetaryHour, PlanetaryHoursError} from './planetary-hours.mjs';
